@@ -216,9 +216,64 @@ td{padding:11px 13px;font-size:13px;vertical-align:middle}
 @keyframes fi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 
 @media(max-width:768px){th,td{padding:9px 9px}.frow{grid-template-columns:1fr}.sgrid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── 퀴즈 인증 화면 ── */
+#quizGate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
+.qcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 32px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.qbadge{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;width:56px;height:56px;line-height:56px;font-size:26px;margin-bottom:16px}
+.qtitle{font-size:19px;font-weight:800;margin-bottom:6px}
+.qsub{font-size:12px;color:var(--text3);margin-bottom:24px}
+.qprog{display:flex;gap:6px;justify-content:center;margin-bottom:24px}
+.qdot{width:10px;height:10px;border-radius:50%;background:var(--border);transition:all .3s}
+.qdot.done{background:var(--edu)}.qdot.cur{background:var(--accent)}
+.qbox{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px;text-align:left}
+.qnum{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.6px;margin-bottom:8px}
+.qtext{font-size:14px;font-weight:600;line-height:1.55;color:var(--text)}
+.qopts{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.qopt{padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:transparent;color:var(--text);font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;text-align:left;transition:all .15s;font-weight:500}
+.qopt:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,140,255,.06)}
+.qopt.correct{border-color:var(--edu);background:rgba(52,211,153,.12);color:var(--edu)}
+.qopt.wrong{border-color:var(--danger);background:rgba(248,113,113,.12);color:var(--danger)}
+.qopt:disabled{cursor:default}
+.qfb{font-size:13px;font-weight:700;margin:10px 0 4px;min-height:20px}
+.qfb.ok{color:var(--edu)}.qfb.ng{color:var(--danger)}
+.qnext{width:100%;padding:11px 0;border-radius:10px;background:var(--accent);color:#fff;border:none;font-size:14px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;margin-top:6px;transition:all .15s;display:none}
+.qnext:hover{filter:brightness(1.12)}
+.qfail{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:12px;padding:16px;margin-bottom:16px;font-size:13px;color:var(--danger)}
+
+/* ── 관리자 문제은행 ── */
+.qbank{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px}
+.qbank-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.qbank-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px}
+.qlist{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.qitem{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px}
+.qitem-body{flex:1;min-width:0}
+.qitem-q{font-size:13px;font-weight:600;margin-bottom:4px;word-break:keep-all}
+.qitem-meta{font-size:11px;color:var(--text3)}
+.qitem-acts{display:flex;gap:5px;flex-shrink:0}
+.qedit-form{background:var(--surface2);border:1px solid rgba(79,140,255,.25);border-radius:12px;padding:16px;margin-bottom:12px}
+.qedit-form .fl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:4px;display:block}
+.qedit-form .fi{width:100%;background:rgba(13,15,20,.7);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'Noto Sans KR',sans-serif;outline:none;margin-bottom:8px}
+.qedit-form .fi:focus{border-color:var(--accent)}
+.qtype-row{display:flex;gap:8px;margin-bottom:8px}
+.qtype-btn{flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.qtype-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(79,140,255,.08)}
+
 </style>
 </head>
 <body>
+
+
+<!-- ══════════ 퀴즈 인증 게이트 ══════════ -->
+<div id="quizGate">
+  <div class="qcard">
+    <div class="qbadge">🎯</div>
+    <div class="qtitle">접속 인증</div>
+    <div class="qsub">퀴즈 3문제를 모두 맞혀야 입장할 수 있어요!<br><span style="color:var(--warn);font-size:11px">틀리면 처음부터 다시 시작됩니다</span></div>
+    <div class="qprog" id="qProg"></div>
+    <div id="qArea"></div>
+  </div>
+</div>
 
 <header>
 <div class="wrap hdr">
@@ -287,6 +342,20 @@ td{padding:11px 13px;font-size:13px;vertical-align:middle}
       <span class="snum">3</span>해당 탭 선택 → <b>CSV 형식</b>으로 게시 → 링크 복사<br>
       <span class="snum">4</span>위 URL 입력창에 붙여넣고 <b>불러오기</b> 클릭 · 이후엔 시트 업데이트 후 다시 클릭만 하면 됩니다<br>
       <span style="font-size:11px;color:var(--text3)">※ 시트를 하나로 통합 운영 시 한 칸만 입력해도 됩니다</span>
+    </div>
+  </div>
+
+
+  <!-- 문제은행 관리 -->
+  <div class="qbank" id="qbankSection">
+    <div class="qbank-hdr">
+      <div class="qbank-title">🎯 퀴즈 문제은행 <span id="qCountBadge" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
+      <button class="btn bp" onclick="showQForm()">+ 문제 추가</button>
+    </div>
+    <div id="qEditArea"></div>
+    <div class="qlist" id="qList"></div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;padding-top:4px">
+      💡 직원 접속 시 랜덤으로 3문제가 출제됩니다. 모두 맞혀야 입장 가능.
     </div>
   </div>
 
@@ -1290,6 +1359,7 @@ function checkAdmin(){
     document.getElementById('lockBtn').textContent='🔓';
     document.getElementById('lockBtn').title='관리자 모드 종료';
     switchView('admin');
+    renderQBank();
     toast('✅ 관리자 모드 활성화');
   } else {
     document.getElementById('adminPwErr').style.display='block';
@@ -1323,7 +1393,280 @@ document.addEventListener('DOMContentLoaded',()=>{
   switchView('emp');
   // 구글 시트 자동 불러오기
   loadSheets();
+  // 퀴즈 문제은행 로드 & 인증 시작
+  loadQB();
 });
+
+// ════════════════════════════════════════
+// 퀴즈 문제은행 & 인증 시스템
+// ════════════════════════════════════════
+
+// 기본 문제 데이터 (최초 1회 seed)
+const DEFAULT_QUESTIONS = [
+  {id:1, q:'연간 교육/도서비 한도는 50만원이다', type:'ox', opts:['O','X'], ans:'O'},
+  {id:2, q:'교육/도서비 지원은 선품의가 원칙이다', type:'ox', opts:['O','X'], ans:'O'},
+  {id:3, q:'인프런/멀티캠퍼스/유데미도 개인 교육비 사용 가능하다', type:'ox', opts:['O','X'], ans:'X'},
+  {id:4, q:'AI 툴은 교육비 지원이 불가능하다', type:'ox', opts:['O','X'], ans:'X'},
+  {id:5, q:'대표이사의 영문명은 Jay Song 이다', type:'ox', opts:['O','X'], ans:'O'},
+  {id:6, q:"엠로 핵심가치 중 6번째는 '전문성에 대한 자신감'이다", type:'ox', opts:['O','X'], ans:'O'},
+  {id:7, q:"우리회사 구매 솔루션 이름은 'Caidensia'이다", type:'ox', opts:['O','X'], ans:'O'},
+  {id:8, q:'엠로의 상징 색은?', type:'choice', opts:['파란색','보라색'], ans:'보라색'},
+  {id:9, q:'교육담당자 이름은?', type:'choice', opts:['신창호','김우정'], ans:'김우정'},
+  {id:10, q:'EHTM에서 나의 교육 현황을 확인할 수 있다', type:'ox', opts:['O','X'], ans:'O'},
+];
+
+let QB = [];      // 현재 문제은행
+let quizSet = []; // 이번 세션 출제된 3문제
+let quizIdx = 0;  // 현재 문제 인덱스
+let quizWrong = false; // 틀린 적 있는지
+
+// ── Persistent Storage 연동 ──────────────────────────
+async function loadQB() {
+  try {
+    const res = await window.storage.get('quizbank');
+    if (res && res.value) {
+      QB = JSON.parse(res.value);
+    } else {
+      QB = [...DEFAULT_QUESTIONS];
+      await saveQB();
+    }
+  } catch(e) {
+    QB = [...DEFAULT_QUESTIONS];
+  }
+  renderQBank();
+  startQuiz();
+}
+
+async function saveQB() {
+  try {
+    await window.storage.set('quizbank', JSON.stringify(QB));
+  } catch(e) {
+    console.warn('문제은행 저장 실패', e);
+  }
+}
+
+// ── 퀴즈 시작 ────────────────────────────────────────
+function startQuiz() {
+  // 세션에 이미 통과한 경우 스킵
+  if (sessionStorage.getItem('quizPassed') === '1') {
+    document.getElementById('quizGate').style.display = 'none';
+    return;
+  }
+  if (QB.length < 3) {
+    // 문제가 3개 미만이면 통과
+    passQuiz();
+    return;
+  }
+  // 랜덤 3문제 선택
+  const shuffled = [...QB].sort(() => Math.random() - 0.5);
+  quizSet = shuffled.slice(0, 3);
+  quizIdx = 0;
+  quizWrong = false;
+  renderProgress();
+  renderQuestion();
+}
+
+function renderProgress() {
+  const prog = document.getElementById('qProg');
+  prog.innerHTML = quizSet.map((_, i) => 
+    `<div class="qdot ${i < quizIdx ? 'done' : i === quizIdx ? 'cur' : ''}"></div>`
+  ).join('');
+}
+
+function renderQuestion() {
+  const q = quizSet[quizIdx];
+  const area = document.getElementById('qArea');
+  area.innerHTML = `
+    <div class="qbox">
+      <div class="qnum">문제 ${quizIdx + 1} / ${quizSet.length}</div>
+      <div class="qtext">${q.q}</div>
+      <div class="qopts">
+        ${q.opts.map(opt => `<button class="qopt" onclick="answerQuiz('${opt}', this, '${q.ans}')">${opt}</button>`).join('')}
+      </div>
+    </div>
+    <div class="qfb" id="qFb"></div>
+    <button class="qnext" id="qNext" onclick="nextQuestion()">다음 문제 →</button>
+  `;
+}
+
+function answerQuiz(selected, btn, correct) {
+  // 이미 답했으면 무시
+  const opts = btn.closest('.qopts').querySelectorAll('.qopt');
+  opts.forEach(b => b.disabled = true);
+
+  const fb = document.getElementById('qFb');
+  const next = document.getElementById('qNext');
+
+  if (selected === correct) {
+    btn.classList.add('correct');
+    fb.textContent = '✅ 정답!';
+    fb.className = 'qfb ok';
+    // 마지막 문제면 통과, 아니면 다음
+    if (quizIdx === quizSet.length - 1) {
+      next.textContent = '🎉 입장하기';
+      next.onclick = passQuiz;
+    } else {
+      next.textContent = '다음 문제 →';
+      next.onclick = nextQuestion;
+    }
+    next.style.display = 'block';
+  } else {
+    btn.classList.add('wrong');
+    // 정답 표시
+    opts.forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+    fb.textContent = `❌ 오답! 정답은 "${correct}"`;
+    fb.className = 'qfb ng';
+    quizWrong = true;
+    next.textContent = '🔄 처음부터 다시 시작';
+    next.onclick = startQuiz;
+    next.style.display = 'block';
+  }
+}
+
+function nextQuestion() {
+  quizIdx++;
+  renderProgress();
+  renderQuestion();
+}
+
+function passQuiz() {
+  sessionStorage.setItem('quizPassed', '1');
+  const gate = document.getElementById('quizGate');
+  gate.style.transition = 'opacity .4s';
+  gate.style.opacity = '0';
+  setTimeout(() => gate.style.display = 'none', 400);
+}
+
+// ── 관리자 문제은행 관리 UI ──────────────────────────
+function renderQBank() {
+  const list = document.getElementById('qList');
+  const badge = document.getElementById('qCountBadge');
+  if (badge) badge.textContent = `(${QB.length}문제)`;
+  if (!list) return;
+  
+  if (QB.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px">등록된 문제가 없습니다</div>';
+    return;
+  }
+  
+  list.innerHTML = QB.map((q, i) => `
+    <div class="qitem">
+      <div class="qitem-body">
+        <div class="qitem-q">${i+1}. ${q.q}</div>
+        <div class="qitem-meta">
+          ${q.type === 'ox' ? '🔘 OX문제' : '📋 객관식'} &nbsp;·&nbsp; 
+          보기: ${q.opts.join(' / ')} &nbsp;·&nbsp; 
+          정답: <b style="color:var(--edu)">${q.ans}</b>
+        </div>
+      </div>
+      <div class="qitem-acts">
+        <button class="btn bo" style="padding:4px 9px;font-size:11px" onclick="editQForm(${q.id})">수정</button>
+        <button class="btn" style="padding:4px 9px;font-size:11px;background:transparent;border:1px solid rgba(248,113,113,.3);color:var(--danger)" onclick="deleteQ(${q.id})">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let editingQId = null;
+
+function showQForm(id) {
+  editingQId = id || null;
+  const q = id ? QB.find(x => x.id === id) : null;
+  currentQType = q ? q.type : 'ox';
+  const area = document.getElementById('qEditArea');
+  const isOX = !q || q.type === 'ox';
+  
+  area.innerHTML = `
+    <div class="qedit-form">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">${id ? '문제 수정' : '새 문제 추가'}</div>
+      <label class="fl">문제 유형</label>
+      <div class="qtype-row">
+        <button class="qtype-btn ${isOX ? 'on' : ''}" id="typeOX" onclick="setQType('ox')">🔘 OX</button>
+        <button class="qtype-btn ${!isOX ? 'on' : ''}" id="typeChoice" onclick="setQType('choice')">📋 객관식</button>
+      </div>
+      <label class="fl">문제 내용</label>
+      <input class="fi" id="qFormQ" value="${q ? q.q : ''}" placeholder="문제를 입력하세요"/>
+      <div id="qFormOpts">
+        ${buildOptsUI(q)}
+      </div>
+      <label class="fl">정답</label>
+      <input class="fi" id="qFormAns" value="${q ? q.ans : ''}" placeholder="정답 입력"/>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn bo" style="flex:1" onclick="cancelQForm()">취소</button>
+        <button class="btn bp" style="flex:1" onclick="saveQForm()">저장</button>
+      </div>
+    </div>
+  `;
+}
+
+function buildOptsUI(q) {
+  const isOX = !q || q.type === 'ox';
+  if (isOX) {
+    return `<label class="fl">보기 (OX 고정)</label>
+      <input class="fi" value="O / X" disabled style="opacity:.4"/>`;
+  }
+  const opts = q ? q.opts : ['',''];
+  return `<label class="fl">보기 (줄바꿈으로 구분)</label>
+    <textarea class="fi" id="qFormOptsTA" rows="3" style="resize:vertical">${opts.join('\n')}</textarea>`;
+}
+
+let currentQType = 'ox';
+function setQType(type) {
+  currentQType = type;
+  document.getElementById('typeOX').className = 'qtype-btn' + (type==='ox'?' on':'');
+  document.getElementById('typeChoice').className = 'qtype-btn' + (type==='choice'?' on':'');
+  const q = editingQId ? QB.find(x=>x.id===editingQId) : null;
+  document.getElementById('qFormOpts').innerHTML = buildOptsUI(type==='ox' ? null : {type:'choice', opts: q ? q.opts : ['','']});
+}
+
+async function saveQForm() {
+  const q = document.getElementById('qFormQ').value.trim();
+  const ans = document.getElementById('qFormAns').value.trim();
+  if (!q || !ans) { toast('문제와 정답을 입력해주세요'); return; }
+  
+  let opts;
+  if (currentQType === 'ox') {
+    opts = ['O','X'];
+  } else {
+    const ta = document.getElementById('qFormOptsTA');
+    opts = ta ? ta.value.split('\n').map(s=>s.trim()).filter(Boolean) : ['O','X'];
+    if (opts.length < 2) { toast('보기를 2개 이상 입력해주세요'); return; }
+    if (!opts.includes(ans)) { toast('정답이 보기 목록에 없습니다'); return; }
+  }
+
+  if (editingQId) {
+    const idx = QB.findIndex(x => x.id === editingQId);
+    if (idx !== -1) QB[idx] = {...QB[idx], q, type:currentQType, opts, ans};
+  } else {
+    const newId = QB.length ? Math.max(...QB.map(x=>x.id)) + 1 : 1;
+    QB.push({id:newId, q, type:currentQType, opts, ans});
+  }
+  
+  await saveQB();
+  renderQBank();
+  cancelQForm();
+  toast(editingQId ? '✅ 문제 수정 완료' : '✅ 문제 추가 완료');
+}
+
+function editQForm(id) {
+  const q = QB.find(x => x.id === id);
+  if (q) currentQType = q.type;
+  showQForm(id);
+}
+
+async function deleteQ(id) {
+  if (!confirm('이 문제를 삭제할까요?')) return;
+  QB = QB.filter(x => x.id !== id);
+  await saveQB();
+  renderQBank();
+  toast('문제 삭제 완료');
+}
+
+function cancelQForm() {
+  document.getElementById('qEditArea').innerHTML = '';
+  editingQId = null;
+}
+
 </script>
 </body>
 </html>
