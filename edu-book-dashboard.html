@@ -350,9 +350,12 @@ td{padding:11px 13px;font-size:13px;vertical-align:middle}
   <div class="qbank" id="qbankSection">
     <div class="qbank-hdr">
       <div class="qbank-title">🎯 퀴즈 문제은행 <span id="qCountBadge" style="font-size:11px;color:var(--text3);font-weight:400"></span></div>
-      <button class="btn bp" onclick="showQForm()">+ 문제 추가</button>
+      <button class="btn bp" id="qReloadBtn" onclick="reloadQB()">🔄 문제 새로고침</button>
     </div>
-    <div id="qEditArea"></div>
+    <div style="display:flex;align-items:center;gap:7px;background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.18);border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:11px;color:var(--pend)">
+      <span style="font-size:14px">📋</span>
+      <span>문제 추가·수정·삭제는 <b>구글 시트 '문제은행' 탭</b>에서 직접 하세요. 수정 후 위 새로고침 버튼을 누르면 반영됩니다.</span>
+    </div>
     <div class="qlist" id="qList"></div>
     <div style="font-size:11px;color:var(--text3);text-align:center;padding-top:4px">
       💡 직원 접속 시 랜덤으로 3문제가 출제됩니다. 모두 맞혀야 입장 가능.
@@ -1421,29 +1424,54 @@ let quizIdx = 0;  // 현재 문제 인덱스
 let quizWrong = false; // 틀린 적 있는지
 
 // ── Persistent Storage 연동 ──────────────────────────
+// 문제은행 구글 시트 CSV URL
+const QB_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT_fB63Tzt0lv8EtnMDQUxO2ULaDwIZr6rNiYIOqnR8vTwoBx2mKy0ylMdA9A8L7fdgXULlCVs3uliU/pub?gid=2042510245&single=true&output=csv';
+
 async function loadQB() {
   try {
-    const res = await window.storage.get('quizbank');
-    if (res && res.value) {
-      QB = JSON.parse(res.value);
-    } else {
-      QB = [...DEFAULT_QUESTIONS];
-      await saveQB();
-    }
+    const res = await fetch(QB_CSV_URL);
+    if (!res.ok) throw new Error('fetch 실패');
+    const text = await res.text();
+    QB = parseQBcsv(text);
+    if (QB.length === 0) throw new Error('문제 없음');
   } catch(e) {
+    console.warn('구글 시트 문제은행 로드 실패, 기본 문제 사용:', e);
     QB = [...DEFAULT_QUESTIONS];
   }
   renderQBank();
   startQuiz();
 }
 
-async function saveQB() {
-  try {
-    await window.storage.set('quizbank', JSON.stringify(QB));
-  } catch(e) {
-    console.warn('문제은행 저장 실패', e);
-  }
+function parseQBcsv(text) {
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if (lines.length < 2) return [];
+  // 헤더: id, question, option1, option2, answer
+  return lines.slice(1).map((line, i) => {
+    const cols = splitCsvLine(line);
+    const id      = parseInt(cols[0])||i+1;
+    const q       = (cols[1]||'').replace(/^"|"$/g,'').trim();
+    const opt1    = (cols[2]||'').replace(/^"|"$/g,'').trim();
+    const opt2    = (cols[3]||'').replace(/^"|"$/g,'').trim();
+    const ans     = (cols[4]||'').replace(/^"|"$/g,'').trim();
+    if (!q || !ans) return null;
+    const opts = [opt1, opt2].filter(Boolean);
+    // OX 여부: 보기가 O/X 조합이면 ox, 아니면 choice
+    const isOX = opts.length===2 && opts.includes('O') && opts.includes('X');
+    return { id, q, type: isOX ? 'ox' : 'choice', opts, ans };
+  }).filter(Boolean);
 }
+
+// 관리자 탭에서 수동 새로고침
+async function reloadQB() {
+  const btn = document.getElementById('qReloadBtn');
+  if (btn) { btn.textContent = '⏳ 불러오는 중...'; btn.disabled = true; }
+  await loadQB();
+  if (btn) { btn.textContent = '🔄 문제 새로고침'; btn.disabled = false; }
+  toast('✅ 문제은행 새로고침 완료');
+}
+
+// saveQB는 더 이상 로컬 저장 안 함 (시트가 원본)
+async function saveQB() { /* 구글 시트가 원본 — 수정은 시트에서 */ }
 
 // ── 퀴즈 시작 ────────────────────────────────────────
 function startQuiz() {
@@ -1559,10 +1587,7 @@ function renderQBank() {
           정답: <b style="color:var(--edu)">${q.ans}</b>
         </div>
       </div>
-      <div class="qitem-acts">
-        <button class="btn bo" style="padding:4px 9px;font-size:11px" onclick="editQForm(${q.id})">수정</button>
-        <button class="btn" style="padding:4px 9px;font-size:11px;background:transparent;border:1px solid rgba(248,113,113,.3);color:var(--danger)" onclick="deleteQ(${q.id})">삭제</button>
-      </div>
+
     </div>
   `).join('');
 }
