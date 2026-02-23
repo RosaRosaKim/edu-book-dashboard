@@ -354,7 +354,8 @@ td{padding:11px 13px;font-size:13px;vertical-align:middle}
     </div>
     <div style="display:flex;align-items:center;gap:7px;background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.18);border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:11px;color:var(--pend)">
       <span style="font-size:14px">📋</span>
-      <span>문제 추가·수정·삭제는 <b>구글 시트 '문제은행' 탭</b>에서 직접 하세요. 수정 후 위 새로고침 버튼을 누르면 반영됩니다.</span>
+      <span>문제 추가·수정·삭제는 <b>구글 시트 '문제은행' 탭</b>에서 직접 하세요. 수정 후 위 새로고침 버튼을 누르면 반영됩니다.<br>
+      <span id="qSourceBadge" style="font-size:11px;margin-top:3px;display:inline-block"></span></span>
     </div>
     <div class="qlist" id="qList"></div>
     <div style="font-size:11px;color:var(--text3);text-align:center;padding-top:4px">
@@ -1412,7 +1413,7 @@ const DEFAULT_QUESTIONS = [
   {id:4, q:'AI 툴은 교육비 지원이 불가능하다', type:'ox', opts:['O','X'], ans:'X'},
   {id:5, q:'대표이사의 영문명은 Jay Song 이다', type:'ox', opts:['O','X'], ans:'O'},
   {id:6, q:"엠로 핵심가치 중 6번째는 '전문성에 대한 자신감'이다", type:'ox', opts:['O','X'], ans:'O'},
-  {id:7, q:"우리회사 구매 솔루션 이름은 'Caidensia'이다", type:'ox', opts:['O','X'], ans:'O'},
+  {id:7, q:"우리회사 구매 솔루션 이름은 'Caidentia'이다", type:'ox', opts:['O','X'], ans:'O'},
   {id:8, q:'엠로의 상징 색은?', type:'choice', opts:['파란색','보라색'], ans:'보라색'},
   {id:9, q:'교육담당자 이름은?', type:'choice', opts:['신창호','김우정'], ans:'김우정'},
   {id:10, q:'EHTM에서 나의 교육 현황을 확인할 수 있다', type:'ox', opts:['O','X'], ans:'O'},
@@ -1428,15 +1429,23 @@ let quizWrong = false; // 틀린 적 있는지
 const QB_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT_fB63Tzt0lv8EtnMDQUxO2ULaDwIZr6rNiYIOqnR8vTwoBx2mKy0ylMdA9A8L7fdgXULlCVs3uliU/pub?gid=2042510245&single=true&output=csv';
 
 async function loadQB() {
+  let fromSheet = false;
   try {
     const res = await fetch(QB_CSV_URL);
     if (!res.ok) throw new Error('fetch 실패');
     const text = await res.text();
     QB = parseQBcsv(text);
     if (QB.length === 0) throw new Error('문제 없음');
+    fromSheet = true;
   } catch(e) {
     console.warn('구글 시트 문제은행 로드 실패, 기본 문제 사용:', e);
     QB = [...DEFAULT_QUESTIONS];
+  }
+  // 관리자 탭에 로드 출처 표시
+  const badge = document.getElementById('qSourceBadge');
+  if (badge) {
+    badge.textContent = fromSheet ? '✅ 구글 시트에서 로드됨' : '⚠️ 시트 연결 실패 — 기본 문제 표시 중';
+    badge.style.color = fromSheet ? 'var(--edu)' : 'var(--warn)';
   }
   renderQBank();
   startQuiz();
