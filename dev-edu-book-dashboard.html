@@ -52,6 +52,29 @@ tailwind.config = {
   .pill-reject { background:rgba(248,113,113,.08); color:#f87171; } .pill-reject::before { background:#f87171; }
   .pill-pend { background:rgba(96,165,250,.08); color:#60a5fa; }  .pill-pend::before { background:#60a5fa; }
 
+  /* 스켈레톤 시머 */
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #1c2030 25%, #252a3a 37%, #1c2030 63%);
+    background-size: 800px 100%;
+    animation: shimmer 1.6s ease infinite;
+    border-radius: 6px;
+  }
+
+  /* 버튼 로딩 시머 */
+  @keyframes btn-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .btn-loading {
+    background-image: linear-gradient(90deg, rgba(79,140,255,.85) 0%, rgba(79,140,255,1) 40%, rgba(120,170,255,.95) 50%, rgba(79,140,255,1) 60%, rgba(79,140,255,.85) 100%) !important;
+    background-size: 200% 100%;
+    animation: btn-shimmer 1.8s ease infinite;
+  }
+
   /* 모바일 카드 뷰 */
   .record-card { display:none; }
   @media(max-width:640px) {
@@ -67,14 +90,13 @@ tailwind.config = {
   <div class="bg-surface border border-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl fade-in">
     <!-- 아이콘 -->
     <div class="w-14 h-14 mx-auto mb-5 rounded-full bg-gradient-to-br from-accent to-purple-400 flex items-center justify-center text-2xl">📚</div>
-    <h1 class="text-xl font-bold mb-1">교육비 관리 시스템</h1>
-    <p class="text-sm text-slate-400 mb-6">사내 교육비 사용 현황을 조회합니다</p>
+    <h1 class="text-xl font-bold mb-1">교육비 사용 현황</h1>
+    <p class="text-sm text-slate-400 mb-6">사내 교육비 사용 현황을 조회할 수 있어요</p>
 
     <!-- Step 1: 사번 입력 -->
     <div id="authStep1">
-      <label class="block text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Flow ID (사번)</label>
       <div class="flex items-center gap-2 mb-2">
-        <input id="knoxInput" type="text" placeholder="사번 입력"
+        <input id="knoxInput" type="text" placeholder="Flow ID"
           class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm font-mono text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-500"
           onkeydown="if(event.key==='Enter') requestAuth()">
         <span class="text-sm text-slate-500 font-mono shrink-0">@emro.co.kr</span>
@@ -91,7 +113,7 @@ tailwind.config = {
     <div id="authStep2" class="hidden">
       <div class="flex items-center justify-center gap-2 mb-4">
         <div class="w-2 h-2 rounded-full bg-warn pulse-dot"></div>
-        <span class="text-sm text-warn font-semibold">인증번호가 Flow로 발송되었습니다</span>
+        <span class="text-sm text-warn font-semibold">인증번호가 Flow로 발송되었어요!</span>
       </div>
       <div id="timerDisplay" class="font-mono text-3xl font-bold text-accent mb-4">03:00</div>
       <label class="block text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">6자리 인증번호</label>
@@ -138,10 +160,51 @@ tailwind.config = {
   </header>
 
   <main class="max-w-5xl mx-auto px-5 py-7">
-    <!-- 로딩 -->
-    <div id="loadingState" class="flex flex-col items-center justify-center py-20">
-      <div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full spinner mb-3"></div>
-      <span class="text-sm text-slate-400">데이터를 불러오는 중...</span>
+    <!-- 로딩: 스켈레톤 -->
+    <div id="loadingState" class="fade-in">
+      <!-- 예산 요약 스켈레톤 -->
+      <div class="mb-6">
+        <div class="skeleton w-20 h-3 mb-3"></div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+          <div class="flex justify-between items-end mb-4">
+            <div>
+              <div class="skeleton w-14 h-2.5 mb-2"></div>
+              <div class="skeleton w-36 h-8 mb-2"></div>
+              <div class="skeleton w-28 h-3"></div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="skeleton w-14 h-2.5"></div>
+              <div class="skeleton w-24 h-5"></div>
+              <div class="skeleton w-28 h-3"></div>
+            </div>
+          </div>
+          <div class="skeleton w-full h-3 rounded-full mb-3"></div>
+          <div class="flex gap-4">
+            <div class="skeleton w-16 h-3"></div>
+            <div class="skeleton w-20 h-3"></div>
+            <div class="skeleton w-12 h-3"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 알람 토글 스켈레톤 -->
+      <div class="mb-6">
+        <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <div class="skeleton w-32 h-4 mb-2"></div>
+            <div class="skeleton w-56 h-3"></div>
+          </div>
+          <div class="skeleton w-12 h-7 rounded-full shrink-0"></div>
+        </div>
+      </div>
+      <!-- 신청 내역 스켈레톤 -->
+      <div>
+        <div class="skeleton w-16 h-3 mb-3"></div>
+        <div class="bg-surface border border-border rounded-2xl p-4 space-y-3">
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div><div class="skeleton w-12 h-5 rounded-full"></div></div>
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div><div class="skeleton w-12 h-5 rounded-full"></div></div>
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div><div class="skeleton w-12 h-5 rounded-full"></div></div>
+        </div>
+      </div>
     </div>
 
     <!-- 실제 컨텐츠 -->
@@ -187,7 +250,7 @@ tailwind.config = {
         <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between gap-4">
           <div>
             <div class="text-sm font-semibold mb-0.5">Flow 알람 수신 동의</div>
-            <div class="text-xs text-slate-500">교육비 관련 알림을 Flow 메신저로 받습니다.</div>
+            <div class="text-xs text-slate-500">교육비 잔액 변동이 있을 경우 Flow 메신저로 받을 수 있어요.</div>
           </div>
           <button id="alarmToggle" onclick="toggleAlarm()" class="relative w-12 h-7 rounded-full toggle-track cursor-pointer border-0 outline-none shrink-0"
             style="background:var(--toggle-bg, #252a3a);">
@@ -208,7 +271,6 @@ tailwind.config = {
                   <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">No</th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">기간</th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">과정명</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">내용</th>
                   <th class="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider">금액</th>
                   <th class="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">상태</th>
                 </tr>
@@ -218,7 +280,7 @@ tailwind.config = {
           </div>
           <!-- 모바일: 카드 -->
           <div id="recordsCards" class="record-card p-3 space-y-3"></div>
-          <div id="noRecords" class="hidden text-center py-10 text-slate-500 text-sm">신청 내역이 없습니다.</div>
+          <div id="noRecords" class="hidden text-center py-10 text-slate-500 text-sm">신청 내역이 없어요.</div>
         </div>
       </section>
     </div>
@@ -226,7 +288,7 @@ tailwind.config = {
     <!-- 에러 -->
     <div id="errorState" class="hidden flex flex-col items-center justify-center py-20 text-center">
       <div class="text-4xl mb-4">⚠️</div>
-      <div class="text-sm text-slate-400 mb-2" id="errorMsg">데이터를 불러올 수 없습니다.</div>
+      <div class="text-sm text-slate-400 mb-2" id="errorMsg">데이터를 불러올 수 없어요.</div>
       <button onclick="loadDashboard()" class="mt-3 px-5 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">다시 시도</button>
     </div>
   </main>
@@ -253,6 +315,19 @@ let records = [];
 
 /* ─── DOM ─── */
 const $ = id => document.getElementById(id);
+
+/* ─── 버튼 로딩 헬퍼 ─── */
+const SPINNER_SVG = '<svg class="w-4 h-4 spinner" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+function setBtnLoading(btn, loading, label) {
+  btn.disabled = loading;
+  if (loading) {
+    btn.innerHTML = `<span class="inline-flex items-center justify-center gap-2">${SPINNER_SVG}${label}</span>`;
+    btn.classList.add('btn-loading');
+  } else {
+    btn.textContent = label;
+    btn.classList.remove('btn-loading');
+  }
+}
 
 /* ─── GAS fetch 래퍼 (redirect 대응) ─── */
 async function gasFetch(url) {
@@ -293,11 +368,10 @@ function showDashboard() {
 /* Step1 → Step2 */
 window.requestAuth = async function() {
   const knoxId = $('knoxInput').value.trim();
-  if (!knoxId) { showAuthError(1, '사번을 입력해주세요.'); return; }
+  if (!knoxId) { showAuthError(1, 'FlowID를 입력해 주세요.'); return; }
 
   const btn = $('authReqBtn');
-  btn.disabled = true;
-  btn.textContent = '요청 중...';
+  setBtnLoading(btn, true, '요청 중...');
   hideAuthError(1);
 
   try {
@@ -312,21 +386,19 @@ window.requestAuth = async function() {
       $('verifyBtn').disabled = false;
       startTimer();
     } else {
-      showAuthError(1, data.error || data.message || '인증 요청에 실패했습니다.');
+      showAuthError(1, data.error || data.message || '인증 요청에 실패했어요.');
     }
   } catch (e) {
-    showAuthError(1, '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    showAuthError(1, '서버 연결에 실패했어요. 잠시 후 다시 시도해주세요.');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '인증 요청';
+    setBtnLoading(btn, false, '인증 요청');
   }
 };
 
 /* 인증번호 재전송 */
 window.resendCode = async function() {
   const btn = $('resendBtn');
-  btn.disabled = true;
-  btn.textContent = '재전송 중...';
+  setBtnLoading(btn, true, '재전송 중...');
   hideAuthError(2);
 
   try {
@@ -337,15 +409,14 @@ window.resendCode = async function() {
       $('verifyBtn').disabled = false;
       $('codeInput').value = '';
       startTimer();
-      showToast('인증번호가 재전송되었습니다.');
+      showToast('인증번호가 재전송되었어요.');
     } else {
-      showAuthError(2, data.error || data.message || '재전송에 실패했습니다.');
+      showAuthError(2, data.error || data.message || '재전송에 실패했어요.');
     }
   } catch (e) {
-    showAuthError(2, '서버 연결에 실패했습니다.');
+    showAuthError(2, '서버 연결에 실패했어요.');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '인증번호 재전송';
+    setBtnLoading(btn, false, '인증번호 재전송');
   }
 };
 
@@ -355,8 +426,7 @@ window.verifyCode = async function() {
   if (code.length !== 6) { showAuthError(2, '6자리 인증번호를 입력해주세요.'); return; }
 
   const btn = $('verifyBtn');
-  btn.disabled = true;
-  btn.textContent = '확인 중...';
+  setBtnLoading(btn, true, '확인 중...');
   hideAuthError(2);
 
   try {
@@ -368,13 +438,12 @@ window.verifyCode = async function() {
       showDashboard();
       loadDashboard();
     } else {
-      showAuthError(2, data.error || data.message || '인증번호가 올바르지 않습니다.');
+      showAuthError(2, data.error || data.message || '인증번호가 다르네요.');
     }
   } catch (e) {
-    showAuthError(2, '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    showAuthError(2, '서버 연결에 실패했어요. 잠시 후 다시 시도해주세요.');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '확인';
+    setBtnLoading(btn, false, '확인');
   }
 };
 
@@ -450,7 +519,7 @@ async function loadDashboard() {
   } catch (e) {
     $('loadingState').classList.add('hidden');
     $('errorState').classList.remove('hidden');
-    $('errorMsg').textContent = e.message || '데이터를 불러올 수 없습니다.';
+    $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어요.';
   }
 }
 window.loadDashboard = loadDashboard;
@@ -521,9 +590,8 @@ function renderRecords() {
     tr.className = 'border-b border-border/80 hover:bg-accent-light transition';
     tr.innerHTML = `
       <td class="px-4 py-3 text-sm text-slate-500 font-mono">${i + 1}</td>
-      <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${escapeHtml(period)}</td>
+      <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${escapeHtml(r.content || '')}</td>
       <td class="px-4 py-3 text-sm">${escapeHtml(title)}</td>
-      <td class="px-4 py-3 text-sm text-slate-400">${escapeHtml(r.content || '')}</td>
       <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
       <td class="px-4 py-3 text-center"><span class="pill ${pillClass}">${escapeHtml(status || '-')}</span></td>
     `;
@@ -537,9 +605,8 @@ function renderRecords() {
         <span class="text-sm font-semibold">${escapeHtml(title)}</span>
         <span class="pill ${pillClass}">${escapeHtml(status || '-')}</span>
       </div>
-      <div class="text-xs text-slate-400 mb-1">${escapeHtml(r.content || '')}</div>
       <div class="flex items-center justify-between text-xs text-slate-500">
-        <span>${escapeHtml(period)}</span>
+        <span>${escapeHtml(r.content || '')}</span>
         <span class="font-mono font-medium text-slate-300">${formatMoney(amt)}원</span>
       </div>
     `;
@@ -585,12 +652,12 @@ window.toggleAlarm = async function() {
       setToggleState(isOn); // 롤백
       showToast('알람 설정 변경에 실패했습니다.', true);
     } else {
-      showToast(newVal ? 'Flow 알람 수신이 활성화되었습니다.' : 'Flow 알람 수신이 해제되었습니다.');
+      showToast(newVal ? 'Flow 알람 수신이 활성화되었어요.' : 'Flow 알람 수신이 해제되었어요.');
       if (userInfo) userInfo.isAgreed = newVal;
     }
   } catch (e) {
     setToggleState(isOn); // 롤백
-    showToast('서버 연결에 실패했습니다.', true);
+    showToast('서버 연결에 실패했어요.', true);
   }
 };
 

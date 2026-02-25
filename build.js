@@ -41,9 +41,17 @@ async function build() {
         el.html(minified);
       }
     } else {
-      // Main IIFE: obfuscate with javascript-obfuscator
-      console.log('[3/5] Obfuscating main script...');
-      const result = JavaScriptObfuscator.obfuscate(code, {
+      // Main IIFE: strip console.* calls, then obfuscate
+      console.log('[3/5] Stripping console calls & obfuscating main script...');
+      const terser = require('terser');
+      const stripped = await terser.minify(code, {
+        compress: { drop_console: true },
+        mangle: false,
+        format: { comments: true, beautify: true },
+      });
+      const cleanCode = stripped.code || code;
+
+      const result = JavaScriptObfuscator.obfuscate(cleanCode, {
         compact: true,
         controlFlowFlattening: true,
         controlFlowFlatteningThreshold: 0.5,
