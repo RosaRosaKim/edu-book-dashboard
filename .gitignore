@@ -1,0 +1,7 @@
+node_modules/
+edu-book-dashboard.html
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+nul
