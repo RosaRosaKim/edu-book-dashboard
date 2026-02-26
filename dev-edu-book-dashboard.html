@@ -17,7 +17,7 @@ tailwind.config = {
       colors: {
         surface: { DEFAULT: '#141720', 2: '#1c2030' },
         border: '#252a3a',
-        accent: { DEFAULT: '#4f8cff', light: 'rgba(79,140,255,.08)' },
+        accent: { DEFAULT: '#6B2FF5', light: 'rgba(107,47,245,.08)' },
         edu: '#34d399',
         warn: '#f59e0b',
         danger: '#f87171',
@@ -32,8 +32,8 @@ tailwind.config = {
   body::before {
     content: ''; position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(79,140,255,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(79,140,255,.03) 1px, transparent 1px);
+      linear-gradient(rgba(107,47,245,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(107,47,245,.03) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
   .toggle-track { transition: background-color .2s; }
@@ -70,7 +70,7 @@ tailwind.config = {
     100% { background-position: 200% 0; }
   }
   .btn-loading {
-    background-image: linear-gradient(90deg, rgba(79,140,255,.85) 0%, rgba(79,140,255,1) 40%, rgba(120,170,255,.95) 50%, rgba(79,140,255,1) 60%, rgba(79,140,255,.85) 100%) !important;
+    background-image: linear-gradient(90deg, rgba(107,47,245,.85) 0%, rgba(107,47,245,1) 40%, rgba(140,90,255,.95) 50%, rgba(107,47,245,1) 60%, rgba(107,47,245,.85) 100%) !important;
     background-size: 200% 100%;
     animation: btn-shimmer 1.8s ease infinite;
   }
@@ -87,21 +87,23 @@ tailwind.config = {
 
 <!-- ====== 인증 화면 ====== -->
 <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:#0d0f14;">
-  <div class="bg-surface border border-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl fade-in">
-    <!-- 아이콘 -->
-    <div class="w-14 h-14 mx-auto mb-5 rounded-full bg-gradient-to-br from-accent to-purple-400 flex items-center justify-center text-2xl">📚</div>
-    <h1 class="text-xl font-bold mb-1">교육비 사용 현황</h1>
-    <p class="text-sm text-slate-400 mb-6">사내 교육비 사용 현황을 조회할 수 있어요</p>
-
-    <!-- Step 1: 사번 입력 -->
-    <div id="authStep1">
-      <div class="flex items-center gap-2 mb-2">
-        <input id="knoxInput" type="text" placeholder="Flow ID"
-          class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm font-mono text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-500"
-          onkeydown="if(event.key==='Enter') requestAuth()">
-        <span class="text-sm text-slate-500 font-mono shrink-0">@emro.co.kr</span>
+  <div class="bg-surface border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl fade-in">
+    <!-- 브랜딩 -->
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-accent flex items-center justify-center">
+        <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
       </div>
-      <p class="text-xs text-slate-500 mb-4 text-left">인증요청을 누르면 Flow로 인증번호가 발송돼요.</p>
+      <h1 class="text-lg font-bold">교육비 사용 현황</h1>
+      <p class="text-[13px] text-slate-500 mt-1">사내 교육비 사용 현황을 조회할 수 있어요</p>
+    </div>
+
+    <div id="authStep1">
+      <div class="relative mb-2">
+        <input id="knoxInput" type="text" placeholder="Flow ID"
+          class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-600"
+          onkeydown="if(event.key==='Enter') requestAuth()">
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono pointer-events-none">@emro.co.kr</span>
+      </div>
       <button onclick="requestAuth()" id="authReqBtn"
         class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
         인증 요청
@@ -111,31 +113,41 @@ tailwind.config = {
 
     <!-- Step 2: 인증번호 입력 -->
     <div id="authStep2" class="hidden">
-      <div class="flex items-center justify-center gap-2 mb-4">
-        <div class="w-2 h-2 rounded-full bg-warn pulse-dot"></div>
-        <span class="text-sm text-warn font-semibold">인증번호가 Flow로 발송되었어요!</span>
+      <!-- 상태 배너: 발송 안내 + 타이머를 한 줄로 -->
+      <div class="bg-surface-2 border border-border rounded-xl px-4 py-3 mb-5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-1.5 h-1.5 rounded-full bg-warn pulse-dot"></div>
+            <span class="text-[13px] text-warn font-medium">인증번호 발송됨</span>
+          </div>
+          <span id="timerDisplay" class="font-mono text-sm font-bold text-accent">03:00</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1.5">Flow 메신저로 발송된 6자리 인증번호를 입력하세요.</p>
       </div>
-      <div id="timerDisplay" class="font-mono text-3xl font-bold text-accent mb-4">03:00</div>
-      <label class="block text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">6자리 인증번호</label>
+
+      <!-- 인증번호 입력: 주인공 -->
       <input id="codeInput" type="text" maxlength="6" placeholder="000000"
-        class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-center text-lg font-mono tracking-[0.3em] text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-500"
+        class="w-full bg-surface-2 border border-border rounded-lg px-3 py-3.5 text-center text-2xl font-mono tracking-[0.4em] text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-600"
         onkeydown="if(event.key==='Enter') verifyCode()">
+
+      <!-- 확인 버튼 -->
       <button onclick="verifyCode()" id="verifyBtn"
-        class="w-full mt-3 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        class="w-full mt-4 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
         확인
       </button>
-      <button onclick="resendCode()" id="resendBtn" class="w-full mt-2 py-2 rounded-lg border border-border text-slate-400 text-sm hover:border-accent hover:text-accent transition hidden">
-        인증번호 재전송
-      </button>
-      <button onclick="backToStep1()" class="w-full mt-2 py-2 rounded-lg border border-border text-slate-400 text-sm hover:border-accent hover:text-accent transition">
-        다시 입력
-      </button>
+
+      <!-- 보조 액션: 텍스트 링크로 가볍게 -->
+      <div class="flex items-center justify-center gap-4 mt-4">
+        <button onclick="backToStep1()" class="text-slate-500 text-xs hover:text-accent transition">다시 입력</button>
+        <button onclick="resendCode()" id="resendBtn" class="text-accent text-xs font-medium hover:brightness-125 transition hidden">재전송</button>
+      </div>
+
       <div id="authError2" class="text-danger text-xs mt-3 hidden"></div>
     </div>
 
-    <!-- 하단 고정 문의 안내 -->
-    <div class="mt-6 pt-4 border-t border-border/50 text-xs text-slate-500 text-center">
-      문의: 인재성장파트 김우정 프로
+    <!-- 하단 문의 -->
+    <div class="mt-6 pt-4 border-t border-border/50 text-[11px] text-slate-600 text-center">
+      도움이 필요하면 <span class="text-slate-400">인재성장파트 김우정 프로</span>에게!
     </div>
   </div>
 </div>
@@ -144,9 +156,11 @@ tailwind.config = {
 <div id="dashboard" class="hidden">
   <!-- Header -->
   <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(13,15,20,.93);backdrop-filter:blur(16px);">
-    <div class="max-w-5xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
+    <div class="max-w-2xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-purple-400 flex items-center justify-center text-base shrink-0">📚</div>
+        <div class="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        </div>
         <div>
           <div class="text-[15px] font-bold leading-tight">교육비 사용 현황</div>
           <div class="text-[11px] text-slate-500">연간 한도 50만원</div>
@@ -159,7 +173,7 @@ tailwind.config = {
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-5 py-7">
+  <main class="max-w-2xl mx-auto px-5 py-7">
     <!-- 로딩: 스켈레톤 -->
     <div id="loadingState" class="fade-in">
       <!-- 예산 요약 스켈레톤 -->
@@ -228,12 +242,12 @@ tailwind.config = {
           </div>
           <!-- 프로그레스 바 -->
           <div class="h-3 bg-surface-2 rounded-full overflow-visible relative mb-3">
-            <div id="barDone" class="h-full rounded-full bg-gradient-to-r from-accent to-edu transition-all duration-700" style="width:0%"></div>
+            <div id="barDone" class="h-full rounded-full bg-gradient-to-r from-accent to-violet-300 transition-all duration-700" style="width:0%"></div>
             <div id="barPend" class="absolute top-0 h-full rounded-r-full transition-all duration-700" style="width:0%;left:0%;background:repeating-linear-gradient(90deg,#60a5fa 0,#60a5fa 4px,transparent 4px,transparent 8px);opacity:.55"></div>
           </div>
           <div class="flex gap-4 flex-wrap">
             <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-accent to-edu inline-block"></span> 확정 사용
+              <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-accent to-violet-300 inline-block"></span> 확정 사용
             </div>
             <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
               <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:repeating-linear-gradient(90deg,#60a5fa 0,#60a5fa 3px,transparent 3px,transparent 6px)"></span> 진행중(잠정)
@@ -246,7 +260,7 @@ tailwind.config = {
       </section>
 
       <!-- Flow 알람 설정 -->
-      <section class="mb-6">
+      <section class="mb-6 relative">
         <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between gap-4">
           <div>
             <div class="text-sm font-semibold mb-0.5">Flow 알람 수신 동의</div>
@@ -256,6 +270,10 @@ tailwind.config = {
             style="background:var(--toggle-bg, #252a3a);">
             <span class="toggle-thumb absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow" style="transform:var(--toggle-x, translateX(0))"></span>
           </button>
+        </div>
+        <!-- 알람 토스트: 토글 바로 아래 -->
+        <div id="alarmToast" class="absolute left-0 right-0 top-full mt-2 z-10 transition-all duration-300 opacity-0 translate-y-[-8px] pointer-events-none">
+          <div class="bg-surface border rounded-xl px-4 py-2.5 text-[13px] text-center shadow-lg"></div>
         </div>
       </section>
 
@@ -302,7 +320,7 @@ tailwind.config = {
 'use strict';
 
 /* ─── 상수 ─── */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwm206oiHHGBPGHUw17ZvbQVgVES9tq6kwWFvTbQ7UjSJKtwHzf20DbFxiBXAhwQbmg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx5FaShEMksNIlJBclGN0o_lXWdEv-7SAvoUIgUwaw9c--tNORqtM6gPYj7-yQDd8F0/exec';
 const LIMIT = 500000;
 const TOKEN_KEY = 'edu_token';
 
@@ -650,14 +668,14 @@ window.toggleAlarm = async function() {
 
     if (data.status !== 'success') {
       setToggleState(isOn); // 롤백
-      showToast('알람 설정 변경에 실패했습니다.', true);
+      showAlarmToast('알람 설정 변경에 실패했어요.', true);
     } else {
-      showToast(newVal ? 'Flow 알람 수신이 활성화되었어요.' : 'Flow 알람 수신이 해제되었어요.');
+      showAlarmToast(newVal ? 'Flow 알람 수신이 활성화되었어요.' : 'Flow 알람 수신이 해제되었어요.');
       if (userInfo) userInfo.isAgreed = newVal;
     }
   } catch (e) {
     setToggleState(isOn); // 롤백
-    showToast('서버 연결에 실패했어요.', true);
+    showAlarmToast('서버 연결에 실패했어요.', true);
   }
 };
 
@@ -676,6 +694,21 @@ function escapeHtml(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+let alarmToastTimer = null;
+function showAlarmToast(msg, isError) {
+  const wrap = $('alarmToast');
+  const inner = wrap.firstElementChild;
+  inner.textContent = msg;
+  inner.style.borderColor = isError ? '#f87171' : '#34d399';
+  wrap.classList.remove('opacity-0', 'translate-y-[-8px]');
+  wrap.classList.add('opacity-100', 'translate-y-0');
+  clearTimeout(alarmToastTimer);
+  alarmToastTimer = setTimeout(() => {
+    wrap.classList.add('opacity-0', 'translate-y-[-8px]');
+    wrap.classList.remove('opacity-100', 'translate-y-0');
+  }, 2500);
 }
 
 function showToast(msg, isError) {
