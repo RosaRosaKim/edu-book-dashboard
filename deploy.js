@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 
 const DEPLOY_REPO = 'https://github.com/RosaRosaKim/edu-book-dashboard.git';
-const FILE = 'edu-book-dashboard.html';
+const FILES = ['edu-book-dashboard.html', 'admin-dashboard.html'];
 
 function run(cmd, opts = {}) {
   console.log(`$ ${cmd}`);
@@ -16,9 +16,11 @@ async function deploy() {
   console.log('\n=== [1/4] Building... ===');
   run('npm run build');
 
-  if (!fs.existsSync(FILE)) {
-    console.error(`Build output "${FILE}" not found.`);
-    process.exit(1);
+  for (const file of FILES) {
+    if (!fs.existsSync(file)) {
+      console.error(`Build output "${file}" not found.`);
+      process.exit(1);
+    }
   }
 
   // 2. Clone deploy repo to temp dir
@@ -27,9 +29,12 @@ async function deploy() {
   try {
     run(`git clone --depth 1 ${DEPLOY_REPO} "${tmp}"`);
 
-    // 3. Copy built file
-    console.log('\n=== [3/4] Copying built file... ===');
-    fs.copyFileSync(FILE, path.join(tmp, FILE));
+    // 3. Copy built files
+    console.log('\n=== [3/4] Copying built files... ===');
+    for (const file of FILES) {
+      fs.copyFileSync(file, path.join(tmp, file));
+      console.log(`  Copied ${file}`);
+    }
 
     // 4. Commit & push
     console.log('\n=== [4/4] Committing & pushing... ===');

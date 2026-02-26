@@ -4,9 +4,10 @@ const CleanCSS = require('clean-css');
 const { minify: minifyHTML } = require('html-minifier-terser');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
-async function build() {
-  console.log('[1/5] Reading dev-edu-book-dashboard.html...');
-  const html = fs.readFileSync('dev-edu-book-dashboard.html', 'utf-8');
+async function buildFile(inputFile, outputFile) {
+  console.log(`\n========== Building ${inputFile} ==========`);
+  console.log(`[1/5] Reading ${inputFile}...`);
+  const html = fs.readFileSync(inputFile, 'utf-8');
 
   const $ = cheerio.load(html, { decodeEntities: false });
 
@@ -20,7 +21,6 @@ async function build() {
     if (!code || !code.trim()) continue;
 
     if (code.includes('tailwind.config')) {
-      // Tailwind config: minify only — no renaming (CDN reads at runtime)
       console.log('[2/5] Minifying tailwind.config script...');
       try {
         const terser = require('terser');
@@ -31,7 +31,6 @@ async function build() {
         });
         if (result.code) el.html(result.code);
       } catch {
-        // Fallback: simple whitespace reduction
         const minified = code
           .replace(/\/\*[\s\S]*?\*\//g, '')
           .replace(/\/\/.*$/gm, '')
@@ -41,7 +40,6 @@ async function build() {
         el.html(minified);
       }
     } else {
-      // Main IIFE: strip console.* calls, then obfuscate
       console.log('[3/5] Stripping console calls & obfuscating main script...');
       const terser = require('terser');
       const stripped = await terser.minify(code, {
@@ -105,36 +103,64 @@ async function build() {
     removeComments: true,
     removeRedundantAttributes: true,
     removeEmptyAttributes: true,
-    minifyJS: false,  // already handled above
-    minifyCSS: false, // already handled above
+    minifyJS: false,
+    minifyCSS: false,
   });
 
-  fs.writeFileSync('edu-book-dashboard.html', output, 'utf-8');
+  // ── Replace dev links with prod links ──
+  output = output.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
+  output = output.replace(/dev-admin-dashboard\.html/g, 'admin-dashboard.html');
+
+  fs.writeFileSync(outputFile, output, 'utf-8');
 
   const sizeKB = (Buffer.byteLength(output, 'utf-8') / 1024).toFixed(1);
-  console.log(`\nBuild complete: edu-book-dashboard.html (${sizeKB} KB)`);
+  console.log(`\nBuild complete: ${outputFile} (${sizeKB} KB)`);
 
-  // ── Validation ──
-  console.log('\n--- Validation ---');
-  const checks = [
-    ['cdn.tailwindcss.com', output.includes('cdn.tailwindcss.com')],
-    ['tailwind.config', output.includes('tailwind.config')],
-    ['onclick="requestAuth()"', output.includes('requestAuth()')],
-    ['onclick="verifyCode()"', output.includes('verifyCode()')],
-    ['onclick="resendCode()"', output.includes('resendCode()')],
-    ['onclick="backToStep1()"', output.includes('backToStep1()')],
-    ['onclick="loadDashboard()"', output.includes('loadDashboard()')],
-    ['onclick="toggleAlarm()"', output.includes('toggleAlarm()')],
-    ['onclick="logout()"', output.includes('logout()')],
-  ];
+  return output;
+}
 
+function validate(label, output, checks) {
+  console.log(`\n--- Validation: ${label} ---`);
   let allPass = true;
-  checks.forEach(([label, pass]) => {
-    console.log(`  ${pass ? 'PASS' : 'FAIL'} ${label}`);
+  checks.forEach(([name, pass]) => {
+    console.log(`  ${pass ? 'PASS' : 'FAIL'} ${name}`);
     if (!pass) allPass = false;
   });
+  return allPass;
+}
 
-  if (allPass) {
+async function build() {
+  // 1. Build user dashboard
+  const userOutput = await buildFile('dev-edu-book-dashboard.html', 'edu-book-dashboard.html');
+
+  const userPass = validate('edu-book-dashboard.html', userOutput, [
+    ['cdn.tailwindcss.com', userOutput.includes('cdn.tailwindcss.com')],
+    ['tailwind.config', userOutput.includes('tailwind.config')],
+    ['onclick="requestAuth()"', userOutput.includes('requestAuth()')],
+    ['onclick="verifyCode()"', userOutput.includes('verifyCode()')],
+    ['onclick="resendCode()"', userOutput.includes('resendCode()')],
+    ['onclick="backToStep1()"', userOutput.includes('backToStep1()')],
+    ['onclick="loadDashboard()"', userOutput.includes('loadDashboard()')],
+    ['onclick="toggleAlarm()"', userOutput.includes('toggleAlarm()')],
+    ['onclick="logout()"', userOutput.includes('logout()')],
+  ]);
+
+  // 2. Build admin dashboard
+  const adminOutput = await buildFile('dev-admin-dashboard.html', 'admin-dashboard.html');
+
+  const adminPass = validate('admin-dashboard.html', adminOutput, [
+    ['cdn.tailwindcss.com', adminOutput.includes('cdn.tailwindcss.com')],
+    ['chart.js CDN', adminOutput.includes('chart.js')],
+    ['tailwind.config', adminOutput.includes('tailwind.config')],
+    ['onclick="requestAuth()"', adminOutput.includes('requestAuth()')],
+    ['onclick="verifyCode()"', adminOutput.includes('verifyCode()')],
+    ['onclick="loadDashboard()"', adminOutput.includes('loadDashboard()')],
+    ['onclick="logout()"', adminOutput.includes('logout()')],
+    ['doSearch', adminOutput.includes('doSearch')],
+    ['clearAllTags', adminOutput.includes('clearAllTags')],
+  ]);
+
+  if (userPass && adminPass) {
     console.log('\nAll checks passed!');
   } else {
     console.error('\nSome checks FAILED!');

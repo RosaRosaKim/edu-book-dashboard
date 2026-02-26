@@ -320,7 +320,7 @@ tailwind.config = {
 'use strict';
 
 /* ─── 상수 ─── */
-const API_URL = 'https://script.google.com/macros/s/AKfycbx5FaShEMksNIlJBclGN0o_lXWdEv-7SAvoUIgUwaw9c--tNORqtM6gPYj7-yQDd8F0/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzI7GbZU2NybDeu-dzcl9jc1bUe5IWTXlHqStC9RVtFQMLhS5nKTBqXEfcnop5P2wMF/exec';
 const LIMIT = 500000;
 const TOKEN_KEY = 'edu_token';
 
@@ -529,7 +529,7 @@ async function loadDashboard() {
     }
 
     userInfo = data.userInfo || {};
-    records = data.history || [];
+    records = data.myHistory || [];
     renderDashboard();
 
     $('loadingState').classList.add('hidden');
@@ -547,6 +547,17 @@ function renderDashboard() {
   // 인사말
   const name = userInfo.name || '';
   $('userGreeting').textContent = name ? `${name}님` : '';
+
+  // 관리자 버튼 (로그아웃 왼쪽)
+  if (userInfo.isAdmin && !document.getElementById('adminLink')) {
+    const logoutBtn = $('userGreeting').parentElement.querySelector('button[onclick="logout()"]');
+    const link = document.createElement('a');
+    link.id = 'adminLink';
+    link.href = 'dev-admin-dashboard.html';
+    link.className = 'text-xs text-accent border border-accent/30 rounded-lg px-3 py-1.5 hover:bg-accent-light transition';
+    link.textContent = '관리자';
+    logoutBtn.parentElement.insertBefore(link, logoutBtn);
+  }
 
   // 금액 계산 — API에서 확정(완료) 금액을 제공, 나머지는 레코드에서 계산
   const confirmedSum = userInfo.usedBudget || 0;
@@ -608,7 +619,7 @@ function renderRecords() {
     tr.className = 'border-b border-border/80 hover:bg-accent-light transition';
     tr.innerHTML = `
       <td class="px-4 py-3 text-sm text-slate-500 font-mono">${i + 1}</td>
-      <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${escapeHtml(r.content || '')}</td>
+      <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${escapeHtml(r.period || '')}</td>
       <td class="px-4 py-3 text-sm">${escapeHtml(title)}</td>
       <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
       <td class="px-4 py-3 text-center"><span class="pill ${pillClass}">${escapeHtml(status || '-')}</span></td>
@@ -624,7 +635,7 @@ function renderRecords() {
         <span class="pill ${pillClass}">${escapeHtml(status || '-')}</span>
       </div>
       <div class="flex items-center justify-between text-xs text-slate-500">
-        <span>${escapeHtml(r.content || '')}</span>
+        <span>${escapeHtml(r.period || '')}</span>
         <span class="font-mono font-medium text-slate-300">${formatMoney(amt)}원</span>
       </div>
     `;
@@ -654,14 +665,32 @@ function setToggleState(on) {
   el.dataset.on = on ? '1' : '0';
 }
 
+function setToggleLoading(loading) {
+  const el = $('alarmToggle');
+  const thumb = el.querySelector('.toggle-thumb');
+  el.dataset.loading = loading ? '1' : '0';
+  el.style.opacity = loading ? '0.7' : '1';
+  if (loading) {
+    thumb.innerHTML = '<svg class="w-3.5 h-3.5 spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+    thumb.style.display = 'flex';
+    thumb.style.alignItems = 'center';
+    thumb.style.justifyContent = 'center';
+  } else {
+    thumb.innerHTML = '';
+    thumb.style.display = '';
+  }
+}
+
 window.toggleAlarm = async function() {
   const el = $('alarmToggle');
+  if (el.dataset.loading === '1') return; // 중복 클릭 방지
   const isOn = el.dataset.on === '1';
   const newVal = !isOn;
   const token = localStorage.getItem(TOKEN_KEY);
 
-  // 즉시 UI 반영
+  // 즉시 UI 반영 + 로딩 표시
   setToggleState(newVal);
+  setToggleLoading(true);
 
   try {
     const data = await gasFetch(`${API_URL}?action=updateAlarm&token=${encodeURIComponent(token)}&isAgreed=${newVal}`);
@@ -676,6 +705,8 @@ window.toggleAlarm = async function() {
   } catch (e) {
     setToggleState(isOn); // 롤백
     showAlarmToast('서버 연결에 실패했어요.', true);
+  } finally {
+    setToggleLoading(false);
   }
 };
 
