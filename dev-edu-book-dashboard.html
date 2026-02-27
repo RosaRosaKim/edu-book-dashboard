@@ -333,11 +333,30 @@ tailwind.config = {
 const API_URL = 'https://script.google.com/macros/s/AKfycby8_T37FXsohyVrIKStEIaV2DYenigsBb8WQ4OPI1FTroQRPCFZKOo5g7cdG9BfGqCO/exec';
 const LIMIT = 500000;
 const TOKEN_KEY = 'edu_token';
+const AUTH_SESSION_KEY = 'edu_auth_session';
 
 /* ─── 상태 ─── */
 let timerInterval = null;
 let timerSec = 180;
 let currentKnoxId = '';
+
+/* ─── 인증 세션 헬퍼 (Flow 앱 재진입 대응) ─── */
+function saveAuthSession(knoxId) {
+  const data = { knoxId, expiresAt: Date.now() + 180000 };
+  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(data));
+}
+function loadAuthSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (Date.now() > data.expiresAt) { clearAuthSession(); return null; }
+    return data;
+  } catch { clearAuthSession(); return null; }
+}
+function clearAuthSession() {
+  localStorage.removeItem(AUTH_SESSION_KEY);
+}
 let userInfo = null;
 let records = [];
 
@@ -404,7 +423,26 @@ function init() {
     showDashboard();
     loadDashboard();
   } else {
-    showAuth();
+    // Flow 앱 재진입: 인증 세션이 살아있으면 Step2 복원
+    const session = loadAuthSession();
+    if (session) {
+      currentKnoxId = session.knoxId;
+      showAuth();
+      $('authStep1').classList.add('hidden');
+      $('authStep2').classList.remove('hidden');
+      $('resendBtn').classList.add('hidden');
+      $('verifyBtn').disabled = false;
+      const remainSec = Math.max(Math.floor((session.expiresAt - Date.now()) / 1000), 0);
+      if (remainSec > 0) {
+        startTimer(remainSec);
+      } else {
+        updateTimerDisplay();
+        $('verifyBtn').disabled = true;
+        $('resendBtn').classList.remove('hidden');
+      }
+    } else {
+      showAuth();
+    }
   }
 }
 
@@ -436,6 +474,7 @@ window.requestAuth = async function() {
 
     if (data.status === 'success') {
       currentKnoxId = fullKnoxId;
+      saveAuthSession(fullKnoxId);
       $('authStep1').classList.add('hidden');
       $('authStep2').classList.remove('hidden');
       $('resendBtn').classList.add('hidden');
@@ -464,6 +503,7 @@ window.resendCode = async function() {
     const data = await gasFetch(`${API_URL}?action=sendCode&knoxId=${encodeURIComponent(currentKnoxId)}`);
 
     if (data.status === 'success') {
+      saveAuthSession(currentKnoxId);
       btn.classList.add('hidden');
       $('verifyBtn').disabled = false;
       $('codeInput').value = '';
@@ -495,6 +535,7 @@ window.verifyCode = async function() {
 
     if (data.status === 'success' && data.token) {
       clearInterval(timerInterval);
+      clearAuthSession();
       localStorage.setItem(TOKEN_KEY, data.token);
       showDashboard();
       loadDashboard();
@@ -511,8 +552,8 @@ window.verifyCode = async function() {
 };
 
 /* 3분 타이머 */
-function startTimer() {
-  timerSec = 180;
+function startTimer(resumeSec) {
+  timerSec = resumeSec || 180;
   clearInterval(timerInterval);
   updateTimerDisplay();
   timerInterval = setInterval(() => {
