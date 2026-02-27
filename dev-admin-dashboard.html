@@ -88,6 +88,14 @@ tailwind.config = {
   .rejected-row td { color: rgba(220,38,38,.5); }
   .rejected-row .course-name { text-decoration: line-through; }
 
+  /* 헤더 아이콘 전환 */
+  .header-icon-wrap { position:relative; width:36px; height:36px; overflow:visible; border-radius:12px; }
+  .header-icon-wrap img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .header-icon-wrap img.icon-hidden { opacity:0; pointer-events:none; }
+  .header-icon-wrap img.icon-visible { opacity:1; }
+  #headerSmail.icon-visible { transform:scale(1.3); transform-origin:center; }
+  #headerDance.icon-visible { transform:scale(3.5); }
+
   canvas { max-width: 100%; }
 
   /* Report section */
@@ -132,7 +140,10 @@ tailwind.config = {
   <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(255,247,238,.93);backdrop-filter:blur(16px);">
     <div class="max-w-4xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <img src="img/preview-full-256.png" alt="QuickLogin" class="w-9 h-9 rounded-xl object-cover shrink-0">
+        <div class="header-icon-wrap shrink-0">
+          <img id="headerSmail" src="img/preview-full-256.png" alt="QuickLogin" class="icon-visible object-cover">
+          <img id="headerDance" src="img/dance1.gif" alt="dancing" class="icon-hidden">
+        </div>
         <div>
           <div class="text-[15px] font-bold leading-tight">관리자 대시보드</div>
           <div class="text-[11px] text-[#6e7f7b]">전사 교육비 통합 관제</div>
@@ -447,6 +458,7 @@ async function loadDashboard() {
     $('searchSkeleton').classList.add('hidden');
     $('searchReal').classList.remove('hidden');
     $('dashContent').classList.remove('hidden');
+    initIdleWatcher();
   } catch (e) {
     $('loadingState').classList.add('hidden');
     $('danceOverlay').classList.add('hidden');
@@ -1304,6 +1316,52 @@ function initReport() {
 }
 
 /* ========== 시작 ========== */
+/* ═══════════════ 헤더 아이콘 idle 전환 ═══════════════ */
+let idleTimer = null;
+let isDancing = false;
+const IDLE_MS = 5000;
+
+function showDance() {
+  if (isDancing) return;
+  isDancing = true;
+  const wrap = $('headerSmail')?.parentElement;
+  const smail = $('headerSmail');
+  const dance = $('headerDance');
+  if (!smail || !dance) return;
+  smail.classList.remove('icon-visible');
+  smail.classList.add('icon-hidden');
+  dance.classList.remove('icon-hidden');
+  dance.classList.add('icon-visible');
+  if (wrap) wrap.classList.add('dancing');
+}
+
+function showSmail() {
+  if (!isDancing) return;
+  isDancing = false;
+  const wrap = $('headerSmail')?.parentElement;
+  const smail = $('headerSmail');
+  const dance = $('headerDance');
+  if (!smail || !dance) return;
+  dance.classList.remove('icon-visible');
+  dance.classList.add('icon-hidden');
+  smail.classList.remove('icon-hidden');
+  smail.classList.add('icon-visible');
+  if (wrap) wrap.classList.remove('dancing');
+}
+
+function resetIdleTimer() {
+  showSmail();
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(showDance, IDLE_MS);
+}
+
+function initIdleWatcher() {
+  ['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(evt =>
+    document.addEventListener(evt, resetIdleTimer, { passive: true })
+  );
+  idleTimer = setTimeout(showDance, IDLE_MS);
+}
+
 document.addEventListener('DOMContentLoaded', init);
 
 })();
