@@ -320,7 +320,7 @@ tailwind.config = {
 'use strict';
 
 /* ─── 상수 ─── */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzI7GbZU2NybDeu-dzcl9jc1bUe5IWTXlHqStC9RVtFQMLhS5nKTBqXEfcnop5P2wMF/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby8_T37FXsohyVrIKStEIaV2DYenigsBb8WQ4OPI1FTroQRPCFZKOo5g7cdG9BfGqCO/exec';
 const LIMIT = 500000;
 const TOKEN_KEY = 'edu_token';
 
@@ -349,8 +349,22 @@ function setBtnLoading(btn, loading, label) {
 
 /* ─── GAS fetch 래퍼 (redirect 대응) ─── */
 async function gasFetch(url) {
-  const res = await fetch(url, { redirect: 'follow' });
-  return res.json();
+  console.log('[gasFetch] 요청:', url);
+  let res;
+  try {
+    res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
+  } catch (e) {
+    console.error('[gasFetch] fetch 실패 (네트워크/CORS):', e.message);
+    throw e;
+  }
+  console.log('[gasFetch] 응답:', res.status, res.url);
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('[gasFetch] JSON 파싱 실패:', res.status, text.substring(0, 500));
+    throw new Error('PARSE_ERROR');
+  }
 }
 
 /* ═══════════════ 초기화 ═══════════════ */
@@ -407,6 +421,7 @@ window.requestAuth = async function() {
       showAuthError(1, data.error || data.message || '인증 요청에 실패했어요.');
     }
   } catch (e) {
+    console.error('인증 요청 오류:', e);
     showAuthError(1, '서버 연결에 실패했어요. 잠시 후 다시 시도해주세요.');
   } finally {
     setBtnLoading(btn, false, '인증 요청');
@@ -554,7 +569,7 @@ function renderDashboard() {
     const link = document.createElement('a');
     link.id = 'adminLink';
     link.href = 'dev-admin-dashboard.html';
-    link.className = 'text-xs text-accent border border-accent/30 rounded-lg px-3 py-1.5 hover:bg-accent-light transition';
+    link.className = 'text-xs text-slate-300 border border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-700/50 hover:text-white transition';
     link.textContent = '관리자';
     logoutBtn.parentElement.insertBefore(link, logoutBtn);
   }

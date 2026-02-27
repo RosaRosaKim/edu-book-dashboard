@@ -7,7 +7,15 @@ const JavaScriptObfuscator = require('javascript-obfuscator');
 async function buildFile(inputFile, outputFile) {
   console.log(`\n========== Building ${inputFile} ==========`);
   console.log(`[1/5] Reading ${inputFile}...`);
-  const html = fs.readFileSync(inputFile, 'utf-8');
+  let html = fs.readFileSync(inputFile, 'utf-8');
+
+  // ── Replace GAS dev deployment URL with prod URL (before obfuscation) ──
+  const clasp = JSON.parse(fs.readFileSync('.clasp.json', 'utf-8'));
+  if (clasp.devDeploymentId && clasp.deploymentId) {
+    const devUrl = `https://script.google.com/macros/s/${clasp.devDeploymentId}/exec`;
+    const prodUrl = `https://script.google.com/macros/s/${clasp.deploymentId}/exec`;
+    html = html.replace(new RegExp(devUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), prodUrl);
+  }
 
   const $ = cheerio.load(html, { decodeEntities: false });
 
@@ -152,12 +160,10 @@ async function build() {
     ['cdn.tailwindcss.com', adminOutput.includes('cdn.tailwindcss.com')],
     ['chart.js CDN', adminOutput.includes('chart.js')],
     ['tailwind.config', adminOutput.includes('tailwind.config')],
-    ['onclick="requestAuth()"', adminOutput.includes('requestAuth()')],
-    ['onclick="verifyCode()"', adminOutput.includes('verifyCode()')],
     ['onclick="loadDashboard()"', adminOutput.includes('loadDashboard()')],
     ['onclick="logout()"', adminOutput.includes('logout()')],
     ['doSearch', adminOutput.includes('doSearch')],
-    ['clearAllTags', adminOutput.includes('clearAllTags')],
+    ['resetRange', adminOutput.includes('resetRange')],
   ]);
 
   if (userPass && adminPass) {

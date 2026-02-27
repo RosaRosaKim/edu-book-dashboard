@@ -5,3 +5,5 @@ edu-book-dashboard.html
 .DS_Store
 Thumbs.db
 nul
+.clasp.json
+.clasprc.json

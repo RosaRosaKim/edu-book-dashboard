@@ -13,7 +13,7 @@ const DATA_COL = {
 };
 
 const ADMIN_COL = {
-  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, AUTH_CODE: 4, AUTH_TIME: 5
+  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, AUTH_CODE: 4, AUTH_TIME: 5, DEPT: 6, NAME: 8
 };
 
 /**
@@ -59,6 +59,52 @@ const doGet = (e) => {
       return createResponse({ status: "success", token: uuid });
     }
     return createResponse({ error: "INVALID_OR_EXPIRED" });
+  }
+
+  // [기능 4] 관리자 → 사용자에게 잔액 정보 Flow 발송
+  if (action === "sendBalanceInfo" && token && e.parameter.targetKnoxId) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+
+    const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
+    const managerData = managerSheet.getDataRange().getValues();
+    const isAdmin = managerData.some(row => String(row[0]).trim().toLowerCase() === String(currentKnoxId).trim().toLowerCase());
+    if (!isAdmin) return createResponse({ error: "NOT_ADMIN" });
+
+    const targetKnoxId = e.parameter.targetKnoxId;
+    let allApplyData = [];
+    if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; }); allApplyData.push(...d); }
+    if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; }); allApplyData.push(...d); }
+
+    let used = 0;
+    const details = [];
+    allApplyData.forEach(row => {
+      if (String(row[DATA_COL.KNOX_ID]) === targetKnoxId && row[DATA_COL.STATUS] === "완료") {
+        const cost = Number(row[DATA_COL.COST]) || 0;
+        used += cost;
+        const type = row._reqType || (row[DATA_COL.VENDOR] ? "교육" : "");
+        details.push(`  ${type ? "[" + type + "] " : ""}${row[DATA_COL.TITLE]} (${cost.toLocaleString()}원)`);
+      }
+    });
+
+    const remain = LIMIT_BUDGET - used;
+    let content = `[교육비 잔액 안내]\n- 사용 금액: ${used.toLocaleString()}원\n- 잔여 금액: ${remain.toLocaleString()}원\n- 연간 한도: ${LIMIT_BUDGET.toLocaleString()}원`;
+    if (details.length > 0) {
+      content += `\n\n[사용 내역]\n${details.join("\n")}`;
+    }
+
+    sendFlowGAS(targetKnoxId, content);
+    return createResponse({ status: "success" });
+  }
+
+  // [기능 5] 알람 수신 동의 변경
+  if (action === "updateAlarm" && token) {
+    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
+    if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
+
+    const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
+    adminSheet.getRange(rowIndex + 1, ADMIN_COL.AGREE + 1).setValue(newVal);
+    return createResponse({ status: "success" });
   }
 
   // [기능 3] 통합 데이터 조회
@@ -129,7 +175,7 @@ const doGet = (e) => {
       adminData.forEach((row, idx) => {
         if (idx === 0) return;
         const uId = String(row[ADMIN_COL.KNOX_ID]);
-        userMap.set(uId, { knoxId: uId, name: "미확인", used: 0, pending: 0, eduUsed: 0, bookUsed: 0 });
+        userMap.set(uId, { knoxId: uId, name: row[ADMIN_COL.NAME] || "미확인", dept: row[ADMIN_COL.DEPT] || "", used: 0, pending: 0, eduUsed: 0, bookUsed: 0 });
       });
 
       // 신청서 데이터 순회 및 집계
@@ -149,7 +195,6 @@ const doGet = (e) => {
 
         if (userMap.has(sId)) {
           const u = userMap.get(sId);
-          u.name = row[DATA_COL.NAME] || u.name;
 
           if (status === "완료") {
             u.used += cost;
@@ -309,7 +354,7 @@ function sendFlowGAS(userId, content) {
   const payload = 'JSONData=' + encodeURIComponent(JSON.stringify({
     API_KEY: 'FLOW_BOT_NOTI_API',
     CNTS_CRTC_KEY: CNTS_CRTC_KEY,
-    REQ_DATA: { BOT_ID: 'd2sbot', RCVR_USER_ID: fullUserId, CNTN: content, PREVIEW_TTL: '교육비 알림', PREVIEW_CNTN: '상세내역 확인' }
+    REQ_DATA: { BOT_ID: 'helpdesk', RCVR_USER_ID: fullUserId, CNTN: content, PREVIEW_TTL: '교육비 알림', PREVIEW_CNTN: '상세내역 확인' }
   }));
 
   const response = UrlFetchApp.fetch(API_URL, { 'method': 'post', 'contentType': 'application/x-www-form-urlencoded', 'payload': payload, 'muteHttpExceptions': true });

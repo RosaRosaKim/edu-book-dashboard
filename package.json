@@ -4,9 +4,15 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "deploy": "node deploy.js"
+    "deploy": "node deploy.js",
+    "gas:login": "clasp login",
+    "gas:push": "node deployGAS.js",
+    "gas:deploy": "node deployGAS.js --deploy",
+    "gas:open": "clasp open",
+    "gas:logs": "clasp logs"
   },
   "devDependencies": {
+    "@google/clasp": "^3.2.0",
     "cheerio": "^1.0.0",
     "clean-css": "^5.3.3",
     "html-minifier-terser": "^7.2.0",
