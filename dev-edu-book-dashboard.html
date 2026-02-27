@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>교육비 사용 현황</title>
+<link rel="icon" type="image/x-icon" href="img/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="img/favicon-48.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
@@ -15,31 +19,35 @@ tailwind.config = {
         mono: ['IBM Plex Mono', 'monospace'],
       },
       colors: {
-        surface: { DEFAULT: '#141720', 2: '#1c2030' },
-        border: '#252a3a',
-        accent: { DEFAULT: '#6B2FF5', light: 'rgba(107,47,245,.08)' },
-        edu: '#34d399',
-        warn: '#f59e0b',
-        danger: '#f87171',
-        pend: '#60a5fa',
+        surface: { DEFAULT: '#f1fbf7', 2: '#e2f5ef' },
+        border: '#ccebe2',
+        accent: { DEFAULT: '#2d8a7e', light: 'rgba(45,138,126,.08)' },
+        edu: '#059669',
+        warn: '#d97706',
+        danger: '#dc2626',
+        pend: '#b98e72',
       }
     }
   }
 }
 </script>
 <style>
-  body { background: #0d0f14; }
+  body { background: #fff7ee; }
   body::before {
     content: ''; position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(107,47,245,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(107,47,245,.03) 1px, transparent 1px);
+      linear-gradient(rgba(45,138,126,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,138,126,.04) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
   .toggle-track { transition: background-color .2s; }
   .toggle-thumb { transition: transform .2s; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
   .fade-in { animation: fadeIn .35s ease; }
+  @keyframes mascotOut { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(40px) scale(.7); } }
+  @keyframes mascotIn  { from { opacity:0; transform:translateY(40px) scale(.7); } to { opacity:1; transform:translateY(0) scale(1); } }
+  .mascot-out { animation: mascotOut .3s ease forwards; }
+  .mascot-in  { animation: mascotIn  .3s ease forwards; }
   @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
   .pulse-dot { animation: pulse-dot 1.2s infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -47,10 +55,10 @@ tailwind.config = {
   /* status pill */
   .pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:500; white-space:nowrap; }
   .pill::before { content:''; width:5px; height:5px; border-radius:50%; }
-  .pill-ok   { background:rgba(52,211,153,.08); color:#34d399; }  .pill-ok::before   { background:#34d399; }
-  .pill-wait { background:rgba(245,158,11,.08); color:#f59e0b; }  .pill-wait::before { background:#f59e0b; }
-  .pill-reject { background:rgba(248,113,113,.08); color:#f87171; } .pill-reject::before { background:#f87171; }
-  .pill-pend { background:rgba(96,165,250,.08); color:#60a5fa; }  .pill-pend::before { background:#60a5fa; }
+  .pill-ok   { background:rgba(5,150,105,.12); color:#059669; }  .pill-ok::before   { background:#059669; }
+  .pill-wait { background:rgba(217,119,6,.12); color:#d97706; }  .pill-wait::before { background:#d97706; }
+  .pill-reject { background:rgba(220,38,38,.12); color:#dc2626; } .pill-reject::before { background:#dc2626; }
+  .pill-pend { background:rgba(185,142,114,.12); color:#b98e72; }  .pill-pend::before { background:#b98e72; }
 
   /* 스켈레톤 시머 */
   @keyframes shimmer {
@@ -58,7 +66,7 @@ tailwind.config = {
     100% { background-position: 400px 0; }
   }
   .skeleton {
-    background: linear-gradient(90deg, #1c2030 25%, #252a3a 37%, #1c2030 63%);
+    background: linear-gradient(90deg, #e2f5ef 25%, #ccebe2 37%, #e2f5ef 63%);
     background-size: 800px 100%;
     animation: shimmer 1.6s ease infinite;
     border-radius: 6px;
@@ -70,7 +78,7 @@ tailwind.config = {
     100% { background-position: 200% 0; }
   }
   .btn-loading {
-    background-image: linear-gradient(90deg, rgba(107,47,245,.85) 0%, rgba(107,47,245,1) 40%, rgba(140,90,255,.95) 50%, rgba(107,47,245,1) 60%, rgba(107,47,245,.85) 100%) !important;
+    background-image: linear-gradient(90deg, rgba(45,138,126,.85) 0%, rgba(45,138,126,1) 40%, rgba(75,168,156,.95) 50%, rgba(45,138,126,1) 60%, rgba(45,138,126,.85) 100%) !important;
     background-size: 200% 100%;
     animation: btn-shimmer 1.8s ease infinite;
   }
@@ -83,31 +91,32 @@ tailwind.config = {
   }
 </style>
 </head>
-<body class="font-sans text-slate-200 min-h-screen relative">
+<body class="font-sans text-[#47635f] min-h-screen relative">
 
 <!-- ====== 인증 화면 ====== -->
-<div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:#0d0f14;">
+<div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:#fff7ee;">
   <div class="bg-surface border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl fade-in">
     <!-- 브랜딩 -->
     <div class="text-center mb-8">
-      <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-accent flex items-center justify-center">
-        <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
-      </div>
+      <img id="mascotImg" src="img/preview-full-256.png" alt="QuickLogin" class="w-16 h-16 mx-auto mb-4 object-contain">
       <h1 class="text-lg font-bold">교육비 사용 현황</h1>
-      <p class="text-[13px] text-slate-500 mt-1">사내 교육비 사용 현황을 조회할 수 있어요</p>
+      <p class="text-[13px] text-[#6e7f7b] mt-1">사내 교육비 사용 현황을 조회할 수 있어요</p>
     </div>
 
     <div id="authStep1">
       <div class="relative mb-2">
         <input id="knoxInput" type="text" placeholder="Flow ID"
-          class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-600"
+          class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
           onkeydown="if(event.key==='Enter') requestAuth()">
-        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono pointer-events-none">@emro.co.kr</span>
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6e7f7b] font-mono pointer-events-none">@emro.co.kr</span>
       </div>
-      <button onclick="requestAuth()" id="authReqBtn"
-        class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
-        인증 요청
-      </button>
+      <div class="relative">
+        <button onclick="requestAuth()" id="authReqBtn"
+          class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+          인증 요청
+        </button>
+        <img id="authReqGif" src="img/working.gif" alt="loading" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-14 h-14">
+      </div>
       <div id="authError1" class="text-danger text-xs mt-3 hidden"></div>
     </div>
 
@@ -122,23 +131,26 @@ tailwind.config = {
           </div>
           <span id="timerDisplay" class="font-mono text-sm font-bold text-accent">03:00</span>
         </div>
-        <p class="text-[11px] text-slate-500 mt-1.5">Flow 메신저로 발송된 6자리 인증번호를 입력하세요.</p>
+        <p class="text-[11px] text-[#6e7f7b] mt-1.5">Flow 메신저로 발송된 6자리 인증번호를 입력하세요.</p>
       </div>
 
       <!-- 인증번호 입력: 주인공 -->
       <input id="codeInput" type="text" maxlength="6" placeholder="000000"
-        class="w-full bg-surface-2 border border-border rounded-lg px-3 py-3.5 text-center text-2xl font-mono tracking-[0.4em] text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-600"
+        class="w-full bg-surface-2 border border-border rounded-lg px-3 py-3.5 text-center text-2xl font-mono tracking-[0.4em] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
         onkeydown="if(event.key==='Enter') verifyCode()">
 
       <!-- 확인 버튼 -->
-      <button onclick="verifyCode()" id="verifyBtn"
-        class="w-full mt-4 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
-        확인
-      </button>
+      <div class="relative">
+        <button onclick="verifyCode()" id="verifyBtn"
+          class="w-full mt-4 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+          확인
+        </button>
+        <img id="verifyGif" src="img/working.gif" alt="verifying" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-14 h-14">
+      </div>
 
       <!-- 보조 액션: 텍스트 링크로 가볍게 -->
       <div class="flex items-center justify-center gap-4 mt-4">
-        <button onclick="backToStep1()" class="text-slate-500 text-xs hover:text-accent transition">다시 입력</button>
+        <button onclick="backToStep1()" class="text-[#6e7f7b] text-xs hover:text-accent transition">다시 입력</button>
         <button onclick="resendCode()" id="resendBtn" class="text-accent text-xs font-medium hover:brightness-125 transition hidden">재전송</button>
       </div>
 
@@ -146,8 +158,8 @@ tailwind.config = {
     </div>
 
     <!-- 하단 문의 -->
-    <div class="mt-6 pt-4 border-t border-border/50 text-[11px] text-slate-600 text-center">
-      도움이 필요하면 <span class="text-slate-400">인재성장파트 김우정 프로</span>에게!
+    <div class="mt-6 pt-4 border-t border-border/50 text-[11px] text-[#6e7f7b]/60 text-center">
+      도움이 필요하면 <span class="text-[#6e7f7b]">인재성장파트 김우정 프로</span>에게!
     </div>
   </div>
 </div>
@@ -155,22 +167,23 @@ tailwind.config = {
 <!-- ====== 대시보드 ====== -->
 <div id="dashboard" class="hidden">
   <!-- Header -->
-  <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(13,15,20,.93);backdrop-filter:blur(16px);">
+  <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(255,247,238,.93);backdrop-filter:blur(16px);">
     <div class="max-w-2xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
-          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
-        </div>
+        <img src="img/smail.png" alt="QuickLogin" style="width:48px">
         <div>
           <div class="text-[15px] font-bold leading-tight">교육비 사용 현황</div>
         </div>
       </div>
       <div class="flex items-center gap-3 flex-wrap">
-        <span id="userGreeting" class="text-xs text-slate-400"></span>
-        <button onclick="logout()" class="text-xs text-slate-500 border border-border rounded-lg px-3 py-1.5 hover:border-danger hover:text-danger transition">로그아웃</button>
+        <span id="userGreeting" class="text-xs text-[#6e7f7b]"></span>
+        <button onclick="logout()" class="text-xs text-[#6e7f7b] border border-border rounded-lg px-3 py-1.5 hover:border-danger hover:text-danger transition">로그아웃</button>
       </div>
     </div>
   </header>
+
+  <!-- dance2.gif 오버레이 (transform 영향 밖) -->
+  <div id="danceOverlay" class="fixed inset-0 z-30 flex items-start justify-center pt-[30vh] pointer-events-none"><img src="img/dance2.gif" alt="loading" class="w-28 h-28 drop-shadow-lg"></div>
 
   <main class="max-w-2xl mx-auto px-5 py-7">
     <!-- 로딩: 스켈레톤 -->
@@ -227,29 +240,29 @@ tailwind.config = {
         <div class="bg-surface border border-border rounded-2xl p-5">
           <div class="flex justify-between items-end flex-wrap gap-3 mb-4">
             <div>
-              <div class="text-[10px] text-slate-500 mb-1">사용 금액</div>
+              <div class="text-[10px] text-[#6e7f7b] mb-1">사용 금액</div>
               <div class="font-mono text-3xl font-semibold" id="usedAmount">0</div>
-              <div class="text-xs text-slate-500 mt-1" id="usedSub"></div>
+              <div class="text-xs text-[#6e7f7b] mt-1" id="usedSub"></div>
             </div>
             <div class="text-right">
-              <div class="text-[10px] text-slate-500">남은 잔액</div>
-              <div class="font-mono text-lg font-semibold text-slate-300" id="remainAmount">0</div>
-              <div class="text-xs text-slate-500 mt-0.5">연간 한도 <span class="font-mono">500,000</span>원</div>
+              <div class="text-[10px] text-[#6e7f7b]">남은 잔액</div>
+              <div class="font-mono text-lg font-semibold text-[#47635f]" id="remainAmount">0</div>
+              <div class="text-xs text-[#6e7f7b] mt-0.5">연간 한도 <span class="font-mono">500,000</span>원</div>
             </div>
           </div>
           <!-- 프로그레스 바 -->
           <div class="h-3 bg-surface-2 rounded-full overflow-visible relative mb-3">
-            <div id="barDone" class="h-full rounded-full bg-gradient-to-r from-accent to-violet-300 transition-all duration-700" style="width:0%"></div>
-            <div id="barPend" class="absolute top-0 h-full rounded-r-full transition-all duration-700" style="width:0%;left:0%;background:repeating-linear-gradient(90deg,#60a5fa 0,#60a5fa 4px,transparent 4px,transparent 8px);opacity:.55"></div>
+            <div id="barDone" class="h-full rounded-full bg-gradient-to-r from-[#2d8a7e] to-[#34d399] transition-all duration-700" style="width:0%"></div>
+            <div id="barPend" class="absolute top-0 h-full rounded-r-full transition-all duration-700" style="width:0%;left:0%;background:repeating-linear-gradient(90deg,#b98e72 0,#b98e72 4px,transparent 4px,transparent 8px);opacity:.55"></div>
           </div>
           <div class="flex gap-4 flex-wrap">
-            <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-accent to-violet-300 inline-block"></span> 확정 사용
+            <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+              <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-[#2d8a7e] to-[#34d399] inline-block"></span> 확정 사용
             </div>
-            <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:repeating-linear-gradient(90deg,#60a5fa 0,#60a5fa 3px,transparent 3px,transparent 6px)"></span> 진행중(잠정)
+            <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+              <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:repeating-linear-gradient(90deg,#b98e72 0,#b98e72 3px,transparent 3px,transparent 6px)"></span> 진행중(잠정)
             </div>
-            <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
               <span class="w-2.5 h-2.5 rounded-sm bg-surface-2 inline-block"></span> 잔액
             </div>
           </div>
@@ -261,10 +274,10 @@ tailwind.config = {
         <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between gap-4">
           <div>
             <div class="text-sm font-semibold mb-0.5">Flow 알람 수신 동의</div>
-            <div class="text-xs text-slate-500">교육비 잔액 변동이 있을 경우 Flow 메신저로 받을 수 있어요.</div>
+            <div class="text-xs text-[#6e7f7b]">교육비 잔액 변동이 있을 경우 Flow 메신저로 받을 수 있어요.</div>
           </div>
           <button id="alarmToggle" onclick="toggleAlarm()" class="relative w-12 h-7 rounded-full toggle-track cursor-pointer border-0 outline-none shrink-0"
-            style="background:var(--toggle-bg, #252a3a);">
+            style="background:var(--toggle-bg, #ccebe2);">
             <span class="toggle-thumb absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow" style="transform:var(--toggle-x, translateX(0))"></span>
           </button>
         </div>
@@ -276,18 +289,18 @@ tailwind.config = {
 
       <!-- 상세 내역 -->
       <section>
-        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-3">신청 내역</div>
+        <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">신청 내역</div>
         <div id="recordsWrap" class="bg-surface border border-border rounded-2xl overflow-hidden">
           <!-- 데스크탑: 테이블 -->
           <div class="overflow-x-auto record-table-wrap">
             <table class="w-full" id="recordsTable">
               <thead>
                 <tr class="bg-surface-2 border-b border-border">
-                  <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">No</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">기간</th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">과정명</th>
-                  <th class="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider">금액</th>
-                  <th class="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">상태</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">No</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">기간</th>
+                  <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">과정명</th>
+                  <th class="px-4 py-3 text-right text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">금액</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">상태</th>
                 </tr>
               </thead>
               <tbody id="recordsBody"></tbody>
@@ -295,15 +308,15 @@ tailwind.config = {
           </div>
           <!-- 모바일: 카드 -->
           <div id="recordsCards" class="record-card p-3 space-y-3"></div>
-          <div id="noRecords" class="hidden text-center py-10 text-slate-500 text-sm">신청 내역이 없어요.</div>
+          <div id="noRecords" class="hidden text-center py-10 text-[#6e7f7b] text-sm"><img src="img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">신청 내역이 없어요.</div>
         </div>
       </section>
     </div>
 
     <!-- 에러 -->
     <div id="errorState" class="hidden flex flex-col items-center justify-center py-20 text-center">
-      <div class="text-4xl mb-4">⚠️</div>
-      <div class="text-sm text-slate-400 mb-2" id="errorMsg">데이터를 불러올 수 없어요.</div>
+      <img src="img/working.gif" alt="error" class="w-24 h-24 mb-4">
+      <div class="text-sm text-[#6e7f7b] mb-2" id="errorMsg">데이터를 불러올 수 없어요.</div>
       <button onclick="loadDashboard()" class="mt-3 px-5 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">다시 시도</button>
     </div>
   </main>
@@ -330,6 +343,18 @@ let records = [];
 
 /* ─── DOM ─── */
 const $ = id => document.getElementById(id);
+
+/* ─── 마스코트 애니메이션 헬퍼 ─── */
+function mascotHide() {
+  const m = $('mascotImg');
+  m.classList.remove('mascot-in');
+  m.classList.add('mascot-out');
+}
+function mascotShow() {
+  const m = $('mascotImg');
+  m.classList.remove('mascot-out');
+  m.classList.add('mascot-in');
+}
 
 /* ─── 버튼 로딩 헬퍼 ─── */
 const SPINNER_SVG = '<svg class="w-4 h-4 spinner" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
@@ -402,6 +427,8 @@ window.requestAuth = async function() {
   const btn = $('authReqBtn');
   setBtnLoading(btn, true, '요청 중...');
   hideAuthError(1);
+  mascotHide();
+  $('authReqGif').classList.remove('hidden');
 
   try {
     const fullKnoxId = knoxId;
@@ -422,6 +449,8 @@ window.requestAuth = async function() {
     showAuthError(1, '서버 연결에 실패했어요. 잠시 후 다시 시도해주세요.');
   } finally {
     setBtnLoading(btn, false, '인증 요청');
+    $('authReqGif').classList.add('hidden');
+    mascotShow();
   }
 };
 
@@ -458,6 +487,8 @@ window.verifyCode = async function() {
   const btn = $('verifyBtn');
   setBtnLoading(btn, true, '확인 중...');
   hideAuthError(2);
+  mascotHide();
+  $('verifyGif').classList.remove('hidden');
 
   try {
     const data = await gasFetch(`${API_URL}?action=verify&knoxId=${encodeURIComponent(currentKnoxId)}&authCode=${encodeURIComponent(code)}`);
@@ -474,6 +505,8 @@ window.verifyCode = async function() {
     showAuthError(2, '서버 연결에 실패했어요. 잠시 후 다시 시도해주세요.');
   } finally {
     setBtnLoading(btn, false, '확인');
+    $('verifyGif').classList.add('hidden');
+    mascotShow();
   }
 };
 
@@ -525,6 +558,7 @@ async function loadDashboard() {
   if (!token) { showAuth(); return; }
 
   $('loadingState').classList.remove('hidden');
+  $('danceOverlay').classList.remove('hidden');
   $('dashContent').classList.add('hidden');
   $('errorState').classList.add('hidden');
 
@@ -545,9 +579,11 @@ async function loadDashboard() {
     renderDashboard();
 
     $('loadingState').classList.add('hidden');
+    $('danceOverlay').classList.add('hidden');
     $('dashContent').classList.remove('hidden');
   } catch (e) {
     $('loadingState').classList.add('hidden');
+    $('danceOverlay').classList.add('hidden');
     $('errorState').classList.remove('hidden');
     $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어요.';
   }
@@ -566,7 +602,7 @@ function renderDashboard() {
     const link = document.createElement('a');
     link.id = 'adminLink';
     link.href = 'dev-admin-dashboard.html';
-    link.className = 'text-xs text-slate-300 border border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-700/50 hover:text-white transition';
+    link.className = 'text-xs text-[#47635f] border border-[#ccebe2] rounded-lg px-3 py-1.5 hover:bg-[#e2f5ef] hover:text-[#47635f] transition';
     link.textContent = '관리자';
     logoutBtn.parentElement.insertBefore(link, logoutBtn);
   }
@@ -630,8 +666,8 @@ function renderRecords() {
     const tr = document.createElement('tr');
     tr.className = 'border-b border-border/80 hover:bg-accent-light transition';
     tr.innerHTML = `
-      <td class="px-4 py-3 text-sm text-slate-500 font-mono">${i + 1}</td>
-      <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${escapeHtml(r.period || '')}</td>
+      <td class="px-4 py-3 text-sm text-[#6e7f7b] font-mono">${i + 1}</td>
+      <td class="px-4 py-3 text-sm text-[#6e7f7b] whitespace-nowrap">${escapeHtml(r.period || '')}</td>
       <td class="px-4 py-3 text-sm">${escapeHtml(title)}</td>
       <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
       <td class="px-4 py-3 text-center"><span class="pill ${pillClass}">${escapeHtml(status || '-')}</span></td>
@@ -646,9 +682,9 @@ function renderRecords() {
         <span class="text-sm font-semibold">${escapeHtml(title)}</span>
         <span class="pill ${pillClass}">${escapeHtml(status || '-')}</span>
       </div>
-      <div class="flex items-center justify-between text-xs text-slate-500">
+      <div class="flex items-center justify-between text-xs text-[#6e7f7b]">
         <span>${escapeHtml(r.period || '')}</span>
-        <span class="font-mono font-medium text-slate-300">${formatMoney(amt)}원</span>
+        <span class="font-mono font-medium text-[#47635f]">${formatMoney(amt)}원</span>
       </div>
     `;
     cards.appendChild(card);
@@ -668,10 +704,10 @@ function statusPillClass(status) {
 function setToggleState(on) {
   const el = $('alarmToggle');
   if (on) {
-    el.style.setProperty('--toggle-bg', '#34d399');
+    el.style.setProperty('--toggle-bg', '#059669');
     el.style.setProperty('--toggle-x', 'translateX(20px)');
   } else {
-    el.style.setProperty('--toggle-bg', '#252a3a');
+    el.style.setProperty('--toggle-bg', '#ccebe2');
     el.style.setProperty('--toggle-x', 'translateX(0)');
   }
   el.dataset.on = on ? '1' : '0';
@@ -744,7 +780,7 @@ function showAlarmToast(msg, isError) {
   const wrap = $('alarmToast');
   const inner = wrap.firstElementChild;
   inner.textContent = msg;
-  inner.style.borderColor = isError ? '#f87171' : '#34d399';
+  inner.style.borderColor = isError ? '#dc2626' : '#059669';
   wrap.classList.remove('opacity-0', 'translate-y-[-8px]');
   wrap.classList.add('opacity-100', 'translate-y-0');
   clearTimeout(alarmToastTimer);
@@ -757,7 +793,7 @@ function showAlarmToast(msg, isError) {
 function showToast(msg, isError) {
   const t = $('toast');
   t.textContent = msg;
-  t.style.borderColor = isError ? '#f87171' : '#34d399';
+  t.style.borderColor = isError ? '#dc2626' : '#059669';
   t.classList.remove('translate-y-24', 'opacity-0');
   t.classList.add('translate-y-0', 'opacity-100');
   setTimeout(() => {

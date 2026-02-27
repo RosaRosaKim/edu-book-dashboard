@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>교육비 관리자 대시보드</title>
+<link rel="icon" type="image/x-icon" href="img/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="img/favicon-48.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,25 +20,25 @@ tailwind.config = {
         mono: ['IBM Plex Mono', 'monospace'],
       },
       colors: {
-        surface: { DEFAULT: '#141720', 2: '#1c2030' },
-        border: '#252a3a',
-        accent: { DEFAULT: '#6B2FF5', light: 'rgba(107,47,245,.08)' },
-        edu: '#34d399',
-        warn: '#f59e0b',
-        danger: '#f87171',
-        pend: '#60a5fa',
+        surface: { DEFAULT: '#f1fbf7', 2: '#e2f5ef' },
+        border: '#ccebe2',
+        accent: { DEFAULT: '#2d8a7e', light: 'rgba(45,138,126,.08)' },
+        edu: '#059669',
+        warn: '#d97706',
+        danger: '#dc2626',
+        pend: '#b98e72',
       }
     }
   }
 }
 </script>
 <style>
-  body { background: #0d0f14; }
+  body { background: #fff7ee; }
   body::before {
     content: ''; position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(107,47,245,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(107,47,245,.03) 1px, transparent 1px);
+      linear-gradient(rgba(45,138,126,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,138,126,.04) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
   @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -46,17 +50,17 @@ tailwind.config = {
 
   .pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:500; white-space:nowrap; }
   .pill::before { content:''; width:5px; height:5px; border-radius:50%; }
-  .pill-ok   { background:rgba(52,211,153,.08); color:#34d399; }  .pill-ok::before   { background:#34d399; }
-  .pill-wait { background:rgba(245,158,11,.08); color:#f59e0b; }  .pill-wait::before { background:#f59e0b; }
-  .pill-reject { background:rgba(248,113,113,.08); color:#f87171; } .pill-reject::before { background:#f87171; }
-  .pill-pend { background:rgba(96,165,250,.08); color:#60a5fa; }  .pill-pend::before { background:#60a5fa; }
+  .pill-ok   { background:rgba(5,150,105,.12); color:#059669; }  .pill-ok::before   { background:#059669; }
+  .pill-wait { background:rgba(217,119,6,.12); color:#d97706; }  .pill-wait::before { background:#d97706; }
+  .pill-reject { background:rgba(220,38,38,.12); color:#dc2626; } .pill-reject::before { background:#dc2626; }
+  .pill-pend { background:rgba(185,142,114,.12); color:#b98e72; }  .pill-pend::before { background:#b98e72; }
 
   @keyframes shimmer {
     0% { background-position: -400px 0; }
     100% { background-position: 400px 0; }
   }
   .skeleton {
-    background: linear-gradient(90deg, #1c2030 25%, #252a3a 37%, #1c2030 63%);
+    background: linear-gradient(90deg, #e2f5ef 25%, #ccebe2 37%, #e2f5ef 63%);
     background-size: 800px 100%;
     animation: shimmer 1.6s ease infinite;
     border-radius: 6px;
@@ -67,57 +71,57 @@ tailwind.config = {
     100% { background-position: 200% 0; }
   }
   .btn-loading {
-    background-image: linear-gradient(90deg, rgba(107,47,245,.85) 0%, rgba(107,47,245,1) 40%, rgba(140,90,255,.95) 50%, rgba(107,47,245,1) 60%, rgba(107,47,245,.85) 100%) !important;
+    background-image: linear-gradient(90deg, rgba(45,138,126,.85) 0%, rgba(45,138,126,1) 40%, rgba(75,168,156,.95) 50%, rgba(45,138,126,1) 60%, rgba(45,138,126,.85) 100%) !important;
     background-size: 200% 100%;
     animation: btn-shimmer 1.8s ease infinite;
   }
 
   .tag-item {
-    background: rgba(107,47,245,.1);
-    border: 1px solid rgba(107,47,245,.3);
-    color: #a78bfa;
+    background: rgba(45,138,126,.1);
+    border: 1px solid rgba(45,138,126,.3);
+    color: #2d8a7e;
   }
 
   .progress-bar-fill { transition: width 0.8s ease-in-out; }
 
-  .rejected-row { background: rgba(248,113,113,.04); }
-  .rejected-row td { color: rgba(248,113,113,.5); }
+  .rejected-row { background: rgba(220,38,38,.04); }
+  .rejected-row td { color: rgba(220,38,38,.5); }
   .rejected-row .course-name { text-decoration: line-through; }
 
   canvas { max-width: 100%; }
 
   /* Report section */
-  .report-toggle { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; font-size:12px; font-weight:600; border:1px solid #252a3a; background:transparent; color:#64748b; cursor:pointer; transition:all .2s; }
-  .report-toggle.active { background:rgba(107,47,245,.12); border-color:rgba(107,47,245,.4); color:#a78bfa; }
-  .report-toggle:hover { border-color:rgba(107,47,245,.3); }
-  .month-tabs { display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin; scrollbar-color:#252a3a transparent; }
-  .month-tabs::-webkit-scrollbar { height:4px; } .month-tabs::-webkit-scrollbar-thumb { background:#252a3a; border-radius:4px; }
-  .month-tab { flex-shrink:0; padding:5px 14px; border-radius:8px; font-size:12px; font-weight:500; border:1px solid #252a3a; background:transparent; color:#64748b; cursor:pointer; transition:all .2s; white-space:nowrap; }
-  .month-tab.active { background:rgba(107,47,245,.12); border-color:rgba(107,47,245,.4); color:#a78bfa; }
-  .month-tab:hover { border-color:rgba(107,47,245,.3); }
+  .report-toggle { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; font-size:12px; font-weight:600; border:1px solid #ccebe2; background:transparent; color:#6e7f7b; cursor:pointer; transition:all .2s; }
+  .report-toggle.active { background:rgba(45,138,126,.12); border-color:rgba(45,138,126,.4); color:#2d8a7e; }
+  .report-toggle:hover { border-color:rgba(45,138,126,.3); }
+  .month-tabs { display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin; scrollbar-color:#ccebe2 transparent; }
+  .month-tabs::-webkit-scrollbar { height:4px; } .month-tabs::-webkit-scrollbar-thumb { background:#ccebe2; border-radius:4px; }
+  .month-tab { flex-shrink:0; padding:5px 14px; border-radius:8px; font-size:12px; font-weight:500; border:1px solid #ccebe2; background:transparent; color:#6e7f7b; cursor:pointer; transition:all .2s; white-space:nowrap; }
+  .month-tab.active { background:rgba(45,138,126,.12); border-color:rgba(45,138,126,.4); color:#2d8a7e; }
+  .month-tab:hover { border-color:rgba(45,138,126,.3); }
   .report-panel { display:none; }
   .report-panel.active { display:block; }
   .report-clickable { cursor:pointer; transition:all .2s; }
   .report-clickable:hover { filter:brightness(1.15); transform:translateY(-1px); }
 
   .dual-range { position: relative; height: 8px; }
-  .dual-range .track { position: absolute; inset: 0; border-radius: 9999px; background: linear-gradient(to right,#f87171,#f59e0b,#34d399); }
-  .dual-range .fill { position: absolute; height: 100%; border-radius: 9999px; background: rgba(107,47,245,.5); pointer-events: none; }
+  .dual-range .track { position: absolute; inset: 0; border-radius: 9999px; background: linear-gradient(to right,#dc2626,#d97706,#059669); }
+  .dual-range .fill { position: absolute; height: 100%; border-radius: 9999px; background: rgba(45,138,126,.5); pointer-events: none; }
   .dual-range input[type=range] { -webkit-appearance: none; position: absolute; width: 100%; height: 100%; top: 0; left: 0; background: transparent; pointer-events: none; margin: 0; outline: none; }
-  .dual-range input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid #6B2FF5; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: auto; }
-  .dual-range input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid #6B2FF5; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: auto; }
+  .dual-range input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid #2d8a7e; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: auto; }
+  .dual-range input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid #2d8a7e; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: auto; }
 </style>
 </head>
-<body class="font-sans text-slate-200 min-h-screen relative">
+<body class="font-sans text-[#47635f] min-h-screen relative">
 
 <!-- ====== 토큰 없음 안내 화면 ====== -->
-<div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:#0d0f14;">
+<div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:#fff7ee;">
   <div class="flex flex-col items-center justify-center text-center fade-in">
     <div class="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4">
       <svg class="w-8 h-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
     </div>
-    <div class="text-lg font-bold text-slate-300 mb-2">관리자 전용 페이지입니다</div>
-    <div class="text-sm text-slate-500 mb-6">일반 대시보드의 관리자 버튼을 통해 접근해 주세요.</div>
+    <div class="text-lg font-bold text-[#47635f] mb-2">관리자 전용 페이지입니다</div>
+    <div class="text-sm text-[#6e7f7b] mb-6">일반 대시보드의 관리자 버튼을 통해 접근해 주세요.</div>
     <a href="dev-edu-book-dashboard.html" class="px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">일반 대시보드로 이동</a>
   </div>
 </div>
@@ -125,24 +129,25 @@ tailwind.config = {
 <!-- ====== 관리자 대시보드 ====== -->
 <div id="dashboard" class="hidden">
   <!-- Header -->
-  <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(13,15,20,.93);backdrop-filter:blur(16px);">
+  <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(255,247,238,.93);backdrop-filter:blur(16px);">
     <div class="max-w-4xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-accent flex items-center justify-center shrink-0">
-          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
-        </div>
+        <img src="img/preview-full-256.png" alt="QuickLogin" class="w-9 h-9 rounded-xl object-cover shrink-0">
         <div>
           <div class="text-[15px] font-bold leading-tight">관리자 대시보드</div>
-          <div class="text-[11px] text-slate-500">전사 교육비 통합 관제</div>
+          <div class="text-[11px] text-[#6e7f7b]">전사 교육비 통합 관제</div>
         </div>
       </div>
       <div class="flex items-center gap-3 flex-wrap">
-        <span id="userGreeting" class="text-xs text-slate-400"></span>
-        <a id="userDashLink" href="dev-edu-book-dashboard.html" class="text-xs text-slate-300 border border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-700/50 hover:text-white transition">일반 대시보드</a>
-        <button onclick="logout()" class="text-xs text-slate-500 border border-border rounded-lg px-3 py-1.5 hover:border-danger hover:text-danger transition">로그아웃</button>
+        <span id="userGreeting" class="text-xs text-[#6e7f7b]"></span>
+        <a id="userDashLink" href="dev-edu-book-dashboard.html" class="text-xs text-[#47635f] border border-[#ccebe2] rounded-lg px-3 py-1.5 hover:bg-[#e2f5ef] hover:text-[#47635f] transition">일반 대시보드</a>
+        <button onclick="logout()" class="text-xs text-[#6e7f7b] border border-border rounded-lg px-3 py-1.5 hover:border-danger hover:text-danger transition">로그아웃</button>
       </div>
     </div>
   </header>
+
+  <!-- dance2.gif 오버레이 (transform 영향 밖) -->
+  <div id="danceOverlay" class="fixed inset-0 z-30 flex items-start justify-center pt-[30vh] pointer-events-none"><img src="img/dance2.gif" alt="loading" class="w-28 h-28 drop-shadow-lg"></div>
 
   <main class="max-w-4xl mx-auto px-5 py-7">
     <!-- 스켈레톤 로딩 -->
@@ -162,8 +167,8 @@ tailwind.config = {
       <div class="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center mb-4">
         <svg class="w-8 h-8 text-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <div class="text-lg font-bold text-slate-300 mb-2">관리자 권한이 없습니다</div>
-      <div class="text-sm text-slate-500 mb-6">이 페이지는 관리자만 접근할 수 있어요.</div>
+      <div class="text-lg font-bold text-[#47635f] mb-2">관리자 권한이 없습니다</div>
+      <div class="text-sm text-[#6e7f7b] mb-6">이 페이지는 관리자만 접근할 수 있어요.</div>
       <a href="dev-edu-book-dashboard.html" class="px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">일반 대시보드로 이동</a>
     </div>
 
@@ -173,35 +178,35 @@ tailwind.config = {
       <!-- KPI 카드 3열 -->
       <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-surface border border-border rounded-2xl p-5 text-center">
-          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-2">확정 금액</div>
-          <div class="font-mono text-xl font-bold text-slate-100" id="kpiConfirmed">0</div>
+          <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-2">확정 금액</div>
+          <div class="font-mono text-xl font-bold text-[#47635f]" id="kpiConfirmed">0</div>
         </div>
         <div class="bg-surface border border-accent/30 rounded-2xl p-5 text-center cursor-pointer hover:border-accent/60 transition-colors" onclick="addTag('status','진행중'); applyFilters();">
-          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-2">진행중 금액</div>
+          <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-2">진행중 금액</div>
           <div class="font-mono text-xl font-bold text-accent" id="kpiPending">0</div>
         </div>
         <div class="bg-surface border border-edu/20 rounded-2xl p-5 text-center">
-          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-2">잔여 예산</div>
+          <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-2">잔여 예산</div>
           <div class="font-mono text-xl font-bold text-edu" id="kpiRemaining">0</div>
         </div>
       </section>
 
       <!-- 전사 예산 소진율 게이지 -->
       <section class="bg-surface border border-border rounded-2xl p-6">
-        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-4">전사 예산 소진율</div>
+        <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">전사 예산 소진율</div>
         <div class="h-10 bg-surface-2 rounded-full overflow-hidden relative flex p-1.5 border border-border">
-          <div id="burnConfirmed" class="h-full rounded-full bg-gradient-to-r from-slate-600 to-slate-500 flex items-center justify-center text-[10px] font-bold text-white progress-bar-fill" style="width:0%"></div>
+          <div id="burnConfirmed" class="h-full rounded-full bg-gradient-to-r from-[#6e7f7b] to-[#6e7f7b] flex items-center justify-center text-[10px] font-bold text-white progress-bar-fill" style="width:0%"></div>
           <div id="burnPending" class="h-full rounded-full bg-accent flex items-center justify-center text-[10px] font-bold text-white ml-1 progress-bar-fill shadow-lg" style="width:0%"></div>
         </div>
         <div class="flex gap-4 mt-3 flex-wrap">
-          <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span class="w-2.5 h-2.5 rounded-sm bg-slate-500 inline-block"></span> 확정 <span id="burnConfPct" class="font-mono">0%</span>
+          <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+            <span class="w-2.5 h-2.5 rounded-sm bg-[#6e7f7b] inline-block"></span> 확정 <span id="burnConfPct" class="font-mono">0%</span>
           </div>
-          <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
+          <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
             <span class="w-2.5 h-2.5 rounded-sm bg-accent inline-block"></span> 진행중 <span id="burnPendPct" class="font-mono">0%</span>
           </div>
-          <div class="text-[11px] text-slate-500 ml-auto font-mono">
-            총 예산: <span id="burnTotal" class="text-slate-400">0</span>
+          <div class="text-[11px] text-[#6e7f7b] ml-auto font-mono">
+            총 예산: <span id="burnTotal" class="text-[#47635f]">0</span>
           </div>
         </div>
       </section>
@@ -209,7 +214,7 @@ tailwind.config = {
       <!-- 월간 리포트 -->
       <section id="reportSection" class="bg-surface border border-border rounded-2xl p-6 space-y-4">
         <div class="flex items-center justify-between flex-wrap gap-3">
-          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px]">월간 리포트</div>
+          <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px]">월간 리포트</div>
         </div>
         <!-- 패널1: 확정 금액/건수 -->
         <div id="panelAmount" class="report-panel active"></div>
@@ -223,17 +228,17 @@ tailwind.config = {
       <section class="pt-4 border-t border-border space-y-4">
         <div class="flex gap-2">
           <input type="text" id="searchInput" placeholder="이름으로 검색..."
-            class="flex-1 px-4 py-3 bg-surface-2 border border-border rounded-xl text-sm text-slate-200 outline-none focus:border-accent transition placeholder:text-slate-600"
+            class="flex-1 px-4 py-3 bg-surface-2 border border-border rounded-xl text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
             onkeydown="if(event.key==='Enter') doSearch()">
           <button onclick="doSearch()" class="bg-accent text-white px-6 rounded-xl text-sm font-semibold hover:brightness-110 transition">검색</button>
         </div>
         <!-- 잔여금액 듀얼 슬라이더 -->
         <div class="bg-surface-2 border border-border rounded-xl px-4 py-3">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-[11px] text-slate-500">잔여 금액 범위</span>
+            <span class="text-[11px] text-[#6e7f7b]">잔여 금액 범위</span>
             <div class="flex items-center gap-3">
-              <span class="text-[12px] font-mono text-slate-300"><span id="rangeMinLabel" class="text-white font-bold">0</span> ~ <span id="rangeMaxLabel" class="text-white font-bold">500,000</span>원</span>
-              <button onclick="resetRange()" class="text-[11px] border border-border text-slate-500 rounded-lg px-2.5 py-1 hover:border-danger hover:text-danger transition">초기화</button>
+              <span class="text-[12px] font-mono text-[#47635f]"><span id="rangeMinLabel" class="text-[#47635f] font-bold">0</span> ~ <span id="rangeMaxLabel" class="text-[#47635f] font-bold">500,000</span>원</span>
+              <button onclick="resetRange()" class="text-[11px] border border-border text-[#6e7f7b] rounded-lg px-2.5 py-1 hover:border-danger hover:text-danger transition">초기화</button>
             </div>
           </div>
           <div class="dual-range">
@@ -242,7 +247,7 @@ tailwind.config = {
             <input type="range" id="rangeMin" min="0" max="500000" step="10000" value="0" oninput="onDualRange()">
             <input type="range" id="rangeMax" min="0" max="500000" step="10000" value="500000" oninput="onDualRange()">
           </div>
-          <div class="flex justify-between text-[10px] text-slate-600 font-mono mt-2">
+          <div class="flex justify-between text-[10px] text-[#6e7f7b]/60 font-mono mt-2">
             <span>0원</span><span>25만</span><span>50만</span>
           </div>
         </div>
@@ -254,27 +259,27 @@ tailwind.config = {
         <div id="resultArea" class="hidden fade-in">
           <div class="bg-surface border border-border rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
-              <span id="resultCount" class="text-[11px] text-slate-500"></span>
+              <span id="resultCount" class="text-[11px] text-[#6e7f7b]"></span>
               <div id="resultSummary" class="flex items-center gap-4 text-[11px] font-mono"></div>
             </div>
             <div class="overflow-y-auto" style="max-height:440px;">
               <table class="w-full text-left text-[12px]">
                 <thead class="bg-surface-2 border-b border-border sticky top-0 z-10">
                   <tr>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">사번</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">부서</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">이름</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">확정</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">진행중</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">잔여</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">상태</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Flow</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">사번</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">부서</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">이름</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-right">확정</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-right">진행중</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-right">잔여</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-center">상태</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-center">Flow</th>
                   </tr>
                 </thead>
                 <tbody id="resultBody" class="divide-y divide-border/50"></tbody>
               </table>
             </div>
-            <div id="noResults" class="hidden text-center py-10 text-slate-500 text-sm">검색 결과가 없어요.</div>
+            <div id="noResults" class="hidden text-center py-10 text-[#6e7f7b] text-sm">검색 결과가 없어요.</div>
           </div>
         </div>
 
@@ -288,13 +293,13 @@ tailwind.config = {
                   <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </div>
                 <div>
-                  <span class="text-sm font-bold text-white" id="detailName">-</span>
-                  <span class="text-[11px] text-slate-500 font-mono ml-2" id="detailKnoxId">-</span>
+                  <span class="text-sm font-bold text-[#47635f]" id="detailName">-</span>
+                  <span class="text-[11px] text-[#6e7f7b] font-mono ml-2" id="detailKnoxId">-</span>
                 </div>
               </div>
               <div class="flex items-center gap-4 text-[11px] font-mono">
-                <span class="text-slate-400">사용: <span id="detailUsed" class="text-white font-bold">0</span></span>
-                <span class="text-slate-400">잔여: <span id="detailRemain" class="text-edu font-bold">0</span></span>
+                <span class="text-[#6e7f7b]">사용: <span id="detailUsed" class="text-[#47635f] font-bold">0</span></span>
+                <span class="text-[#6e7f7b]">잔여: <span id="detailRemain" class="text-edu font-bold">0</span></span>
               </div>
             </div>
             <!-- 신청 내역 테이블 -->
@@ -302,17 +307,17 @@ tailwind.config = {
               <table class="w-full text-left text-[12px]">
                 <thead class="bg-surface-2 border-b border-border">
                   <tr>
-                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">No</th>
-                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">기간</th>
-                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">과정명</th>
-                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">금액</th>
-                    <th class="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">상태</th>
+                    <th class="px-4 py-2.5 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">No</th>
+                    <th class="px-4 py-2.5 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">기간</th>
+                    <th class="px-4 py-2.5 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">과정명</th>
+                    <th class="px-4 py-2.5 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-right">금액</th>
+                    <th class="px-4 py-2.5 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider text-center">상태</th>
                   </tr>
                 </thead>
                 <tbody id="detailBody" class="divide-y divide-border/50"></tbody>
               </table>
             </div>
-            <div id="detailEmpty" class="hidden text-center py-8 text-slate-500 text-sm">신청 내역이 없어요.</div>
+            <div id="detailEmpty" class="hidden text-center py-8 text-[#6e7f7b] text-sm">신청 내역이 없어요.</div>
           </div>
         </div>
       </section>
@@ -320,8 +325,8 @@ tailwind.config = {
 
     <!-- 에러 -->
     <div id="errorState" class="hidden flex flex-col items-center justify-center py-20 text-center">
-      <div class="text-4xl mb-4">&#x26A0;&#xFE0F;</div>
-      <div class="text-sm text-slate-400 mb-2" id="errorMsg">데이터를 불러올 수 없어요.</div>
+      <img src="img/working.gif" alt="error" class="w-24 h-24 mb-4">
+      <div class="text-sm text-[#6e7f7b] mb-2" id="errorMsg">데이터를 불러올 수 없어요.</div>
       <button onclick="loadDashboard()" class="mt-3 px-5 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">다시 시도</button>
     </div>
   </main>
@@ -394,6 +399,7 @@ async function loadDashboard() {
   if (!token) { location.href = 'dev-edu-book-dashboard.html'; return; }
 
   $('loadingState').classList.remove('hidden');
+  $('danceOverlay').classList.remove('hidden');
   $('dashContent').classList.add('hidden');
   $('errorState').classList.add('hidden');
   $('accessDenied').classList.add('hidden');
@@ -415,6 +421,7 @@ async function loadDashboard() {
     // 관리자 권한 체크
     if (!userInfo.isAdmin) {
       $('loadingState').classList.add('hidden');
+      $('danceOverlay').classList.add('hidden');
       $('accessDenied').classList.remove('hidden');
       return;
     }
@@ -428,9 +435,11 @@ async function loadDashboard() {
     initReport();
 
     $('loadingState').classList.add('hidden');
+    $('danceOverlay').classList.add('hidden');
     $('dashContent').classList.remove('hidden');
   } catch (e) {
     $('loadingState').classList.add('hidden');
+    $('danceOverlay').classList.add('hidden');
     $('errorState').classList.remove('hidden');
     $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어요.';
   }
@@ -517,7 +526,7 @@ function renderTags() {
     return `<div class="tag-item flex items-center px-3 py-1.5 rounded-xl text-[11px] font-medium">
       <span class="opacity-60 mr-1">${escapeHtml(tagLabel(tag.type))}:</span>
       <span>${escapeHtml(tag.value)}</span>
-      <button onclick="removeTag('${escapeAttr(tag.type)}', '${escapeAttr(tag.value)}')" class="ml-2 hover:text-white text-xs">&times;</button>
+      <button onclick="removeTag('${escapeAttr(tag.type)}', '${escapeAttr(tag.value)}')" class="ml-2 hover:text-[#47635f] text-xs">&times;</button>
     </div>`;
   }).join('');
 }
@@ -685,8 +694,8 @@ function renderUserDetail(user) {
       const tr = document.createElement('tr');
       tr.className = 'border-b border-border/80 hover:bg-accent-light transition';
       tr.innerHTML = `
-        <td class="px-4 py-2.5 text-sm text-slate-500 font-mono">${i + 1}</td>
-        <td class="px-4 py-2.5 text-sm text-slate-400 whitespace-nowrap">${escapeHtml(r.period || '')}</td>
+        <td class="px-4 py-2.5 text-sm text-[#6e7f7b] font-mono">${i + 1}</td>
+        <td class="px-4 py-2.5 text-sm text-[#6e7f7b] whitespace-nowrap">${escapeHtml(r.period || '')}</td>
         <td class="px-4 py-2.5 text-sm">${escapeHtml(r.courseName || '-')}</td>
         <td class="px-4 py-2.5 text-sm text-right font-mono font-medium">${formatMoney(r.cost || 0)}원</td>
         <td class="px-4 py-2.5 text-center"><span class="pill ${pillClass}">${escapeHtml(status || '-')}</span></td>
@@ -728,8 +737,8 @@ function renderTable(users) {
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-accent-light transition cursor-pointer';
     tr.innerHTML = `
-      <td class="px-4 py-3 font-mono text-slate-500">${escapeHtml(u.knoxId || '')}</td>
-      <td class="px-4 py-3 text-slate-400">${escapeHtml(u.dept || '')}</td>
+      <td class="px-4 py-3 font-mono text-[#6e7f7b]">${escapeHtml(u.knoxId || '')}</td>
+      <td class="px-4 py-3 text-[#6e7f7b]">${escapeHtml(u.dept || '')}</td>
       <td class="px-4 py-3">${escapeHtml(u.name || '')}</td>
       <td class="px-4 py-3 text-right font-mono font-medium">${formatMoney(used)}원</td>
       <td class="px-4 py-3 text-right font-mono text-pend">${formatMoney(pending)}원</td>
@@ -737,7 +746,7 @@ function renderTable(users) {
       <td class="px-4 py-3 text-center"><span class="pill ${pillClass}">${statusLabel}</span></td>
       <td class="px-4 py-3 text-center">
         <button data-flow-btn="${escapeAttr(u.knoxId)}" onclick="event.stopPropagation(); sendBalanceFlow('${escapeAttr(u.knoxId)}')"
-          class="text-[11px] bg-slate-700/50 text-slate-200 border border-slate-600 rounded-lg px-2.5 py-1 hover:bg-slate-600/50 hover:text-white transition whitespace-nowrap">발송</button>
+          class="text-[11px] bg-[#e2f5ef] text-[#47635f] border border-[#ccebe2] rounded-lg px-2.5 py-1 hover:bg-[#ccebe2]/50 hover:text-[#47635f] transition whitespace-nowrap">발송</button>
       </td>
     `;
     tr.addEventListener('click', () => {
@@ -752,7 +761,7 @@ function renderTable(users) {
   const mTag = activeTags.find(t => t.type === 'month');
   if (isStatusPending) {
     const totalPending = users.reduce((s, u) => s + (u.pending || 0), 0);
-    $('resultSummary').innerHTML = `<span class="text-slate-400">진행중: <span class="text-pend font-bold">${formatMoney(totalPending)}원</span></span>`;
+    $('resultSummary').innerHTML = `<span class="text-[#6e7f7b]">진행중: <span class="text-pend font-bold">${formatMoney(totalPending)}원</span></span>`;
   } else if (mTag) {
     // 해당 월 레코드 기반 확정 금액 합산 (차트와 동일)
     const records = adminStats.allRecords || [];
@@ -765,10 +774,10 @@ function renderTable(users) {
       const key = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
       return key === mTag.value ? s + (r.cost || 0) : s;
     }, 0);
-    $('resultSummary').innerHTML = `<span class="text-slate-400">사용: <span class="text-white font-bold">${formatMoney(sum)}원</span></span>`;
+    $('resultSummary').innerHTML = `<span class="text-[#6e7f7b]">사용: <span class="text-[#47635f] font-bold">${formatMoney(sum)}원</span></span>`;
   } else {
     const totalUsed = users.reduce((s, u) => s + (u.used || 0), 0);
-    $('resultSummary').innerHTML = `<span class="text-slate-400">사용: <span class="text-white font-bold">${formatMoney(totalUsed)}원</span></span>`;
+    $('resultSummary').innerHTML = `<span class="text-[#6e7f7b]">사용: <span class="text-[#47635f] font-bold">${formatMoney(totalUsed)}원</span></span>`;
   }
 }
 
@@ -829,7 +838,7 @@ function escapeAttr(str) {
 function showToast(msg, isError) {
   const t = $('toast');
   t.textContent = msg;
-  t.style.borderColor = isError ? '#f87171' : '#34d399';
+  t.style.borderColor = isError ? '#dc2626' : '#059669';
   t.classList.remove('translate-y-24', 'opacity-0');
   t.classList.add('translate-y-0', 'opacity-100');
   setTimeout(() => {
@@ -840,11 +849,14 @@ function showToast(msg, isError) {
 
 /* ========== 월간 리포트 ========== */
 const reportState = { month: '누적', panels: { amount: true, dept: true, ratio: true }, detail: { type: null, month: null, dept: null, reqType: null } };
-const MONTH_COLORS = ['#6B2FF5','#3b82f6','#059669','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4','#84cc16','#a855f7','#f87171'];
+const MONTH_COLORS = ['#2d8a7e','#059669','#0d9488','#047857','#b98e72','#d9b79b','#d97706','#b45309','#e6b9b2','#6e7f7b','#a16207','#dc2626'];
 
-/* --- Chart.js 다크 테마 기본값 --- */
-Chart.defaults.color = '#94a3b8';
-Chart.defaults.borderColor = '#252a3a';
+/* --- Chart.js 라이트 테마 기본값 --- */
+Chart.defaults.color = '#6e7f7b';
+Chart.defaults.borderColor = '#ccebe2';
+Chart.defaults.plugins.tooltip.backgroundColor = '#47635f';
+Chart.defaults.plugins.tooltip.titleColor = '#fff7ee';
+Chart.defaults.plugins.tooltip.bodyColor = '#fff7ee';
 Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
 Chart.defaults.font.size = 11;
 
@@ -948,8 +960,8 @@ function renderAmountPanel() {
   if (sel === '누적') {
     const amountData = allMonths.map(k => (monthMap.get(k) || { confirmed: 0 }).confirmed);
     const countData = allMonths.map(k => (monthMap.get(k) || { confirmedCount: 0 }).confirmedCount);
-    const bgColors = allMonths.map(k => monthMap.has(k) ? '#6B2FF5cc' : 'rgba(100,116,139,.15)');
-    const countColors = allMonths.map(k => monthMap.has(k) ? '#6B2FF544' : 'rgba(100,116,139,.08)');
+    const bgColors = allMonths.map(k => monthMap.has(k) ? '#2d8a7ecc' : 'rgba(110,127,123,.15)');
+    const countColors = allMonths.map(k => monthMap.has(k) ? '#2d8a7e44' : 'rgba(110,127,123,.08)');
 
     panel.innerHTML = '<div style="position:relative;height:220px;"><canvas id="chartAmount"></canvas></div>';
     const ctx = $('chartAmount').getContext('2d');
@@ -996,7 +1008,7 @@ function renderAmountPanel() {
         scales: {
           y: {
             beginAtZero: true, position: 'left',
-            grid: { color: '#252a3a' },
+            grid: { color: '#ccebe2' },
             ticks: { callback: v => v >= 10000 ? (v / 10000).toFixed(0) + '만' : formatMoney(v) }
           },
           y1: {
@@ -1019,15 +1031,15 @@ function renderAmountPanel() {
     // 월별 모드: 해당 월의 확정 금액 + 건수 (진행중 제외)
     const data = monthMap.get(sel) || { confirmed: 0, confirmedCount: 0 };
 
-    panel.innerHTML = `<div class="text-[11px] text-slate-400 mb-3 font-medium">${sel} 확정 금액 · 건수</div><div style="position:relative;height:220px;"><canvas id="chartAmount"></canvas></div>`;
+    panel.innerHTML = `<div class="text-[11px] text-[#6e7f7b] mb-3 font-medium">${sel} 확정 금액 · 건수</div><div style="position:relative;height:220px;"><canvas id="chartAmount"></canvas></div>`;
     const ctx = $('chartAmount').getContext('2d');
 
     // 해당 월 위치 하이라이트 — 12개월 중 선택 월만 값 표시
     const selIdx = allMonths.indexOf(sel);
     const amountData = allMonths.map((k, i) => i === selIdx ? data.confirmed : ((monthMap.get(k) || { confirmed: 0 }).confirmed));
     const countData = allMonths.map((k, i) => i === selIdx ? data.confirmedCount : ((monthMap.get(k) || { confirmedCount: 0 }).confirmedCount));
-    const bgColors = allMonths.map((k, i) => i === selIdx ? '#6B2FF5' : (monthMap.has(k) ? 'rgba(100,116,139,.25)' : 'rgba(100,116,139,.08)'));
-    const countColors = allMonths.map((_, i) => i === selIdx ? 'rgba(245,158,11,.25)' : 'rgba(245,158,11,.06)');
+    const bgColors = allMonths.map((k, i) => i === selIdx ? '#2d8a7e' : (monthMap.has(k) ? 'rgba(110,127,123,.25)' : 'rgba(110,127,123,.08)'));
+    const countColors = allMonths.map((_, i) => i === selIdx ? 'rgba(217,119,6,.25)' : 'rgba(217,119,6,.06)');
 
     charts.amount = new Chart(ctx, {
       type: 'bar',
@@ -1072,7 +1084,7 @@ function renderAmountPanel() {
         scales: {
           y: {
             beginAtZero: true, position: 'left',
-            grid: { color: '#252a3a' },
+            grid: { color: '#ccebe2' },
             ticks: { callback: v => v >= 10000 ? (v / 10000).toFixed(0) + '만' : formatMoney(v) }
           },
           y1: {
@@ -1094,13 +1106,13 @@ function renderAmountPanel() {
   }
 }
 
-const DEPT_COLORS = ['#059669','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4','#84cc16','#a855f7','#f87171','#6B2FF5'];
+const DEPT_COLORS = ['#059669','#2d8a7e','#0d9488','#b98e72','#d97706','#047857','#d9b79b','#b45309','#e6b9b2','#6e7f7b','#a16207','#dc2626'];
 
 function renderDeptPanel() {
   const panel = $('panelDept');
   const depts = aggregateByDept(reportState.month);
   destroyChart('dept');
-  if (depts.length === 0) { panel.innerHTML = '<div class="text-sm text-slate-500 text-center py-4">데이터가 없어요.</div>'; return; }
+  if (depts.length === 0) { panel.innerHTML = '<div class="text-sm text-[#6e7f7b] text-center py-4">데이터가 없어요.</div>'; return; }
 
   const labels = depts.map(d => d.dept);
   const amountData = depts.map(d => d.amount);
@@ -1110,8 +1122,8 @@ function renderDeptPanel() {
   const label = reportState.month === '누적' ? '부서별 누적 사용액' : `${reportState.month} 부서별 사용액`;
   const barW = Math.max(depts.length * 56, 300);
 
-  panel.innerHTML = `<div class="text-[11px] text-slate-400 mb-3 font-medium">${label}</div>
-    <div style="overflow-x:auto;scrollbar-width:thin;scrollbar-color:#252a3a transparent;">
+  panel.innerHTML = `<div class="text-[11px] text-[#6e7f7b] mb-3 font-medium">${label}</div>
+    <div style="overflow-x:auto;scrollbar-width:thin;scrollbar-color:#ccebe2 transparent;">
       <div style="position:relative;height:220px;min-width:${barW}px;"><canvas id="chartDept"></canvas></div>
     </div>`;
 
@@ -1166,7 +1178,7 @@ function renderDeptPanel() {
       },
       scales: {
         y: {
-          beginAtZero: true, position: 'left', grid: { color: '#252a3a' },
+          beginAtZero: true, position: 'left', grid: { color: '#ccebe2' },
           ticks: { callback: v => v >= 10000 ? (v / 10000).toFixed(0) + '만' : formatMoney(v) }
         },
         y1: {
@@ -1206,14 +1218,14 @@ function renderRatioPanel() {
   panel.innerHTML = `
     <div class="grid grid-cols-2 gap-3">
       <div class="bg-surface-2 border border-border rounded-xl p-3 text-center report-clickable" onclick="showReportDetail({reqType:'교육'})">
-        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">교육</div>
-        <div class="font-mono text-sm font-bold text-[#a78bfa]">${formatMoney(edu)}원</div>
-        <div class="text-[10px] text-slate-500 mt-0.5">${eduPct}%</div>
+        <div class="text-[10px] text-[#6e7f7b] uppercase tracking-wider mb-1">교육</div>
+        <div class="font-mono text-sm font-bold text-[#2d8a7e]">${formatMoney(edu)}원</div>
+        <div class="text-[10px] text-[#6e7f7b] mt-0.5">${eduPct}%</div>
       </div>
       <div class="bg-surface-2 border border-border rounded-xl p-3 text-center report-clickable" onclick="showReportDetail({reqType:'도서'})">
-        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">도서</div>
+        <div class="text-[10px] text-[#6e7f7b] uppercase tracking-wider mb-1">도서</div>
         <div class="font-mono text-sm font-bold text-edu">${formatMoney(book)}원</div>
-        <div class="text-[10px] text-slate-500 mt-0.5">${bookPct}%</div>
+        <div class="text-[10px] text-[#6e7f7b] mt-0.5">${bookPct}%</div>
       </div>
     </div>`;
 }
