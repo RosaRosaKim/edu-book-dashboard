@@ -86,6 +86,20 @@ tailwind.config = {
 
   canvas { max-width: 100%; }
 
+  /* Report section */
+  .report-toggle { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; font-size:12px; font-weight:600; border:1px solid #252a3a; background:transparent; color:#64748b; cursor:pointer; transition:all .2s; }
+  .report-toggle.active { background:rgba(107,47,245,.12); border-color:rgba(107,47,245,.4); color:#a78bfa; }
+  .report-toggle:hover { border-color:rgba(107,47,245,.3); }
+  .month-tabs { display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin; scrollbar-color:#252a3a transparent; }
+  .month-tabs::-webkit-scrollbar { height:4px; } .month-tabs::-webkit-scrollbar-thumb { background:#252a3a; border-radius:4px; }
+  .month-tab { flex-shrink:0; padding:5px 14px; border-radius:8px; font-size:12px; font-weight:500; border:1px solid #252a3a; background:transparent; color:#64748b; cursor:pointer; transition:all .2s; white-space:nowrap; }
+  .month-tab.active { background:rgba(107,47,245,.12); border-color:rgba(107,47,245,.4); color:#a78bfa; }
+  .month-tab:hover { border-color:rgba(107,47,245,.3); }
+  .report-panel { display:none; }
+  .report-panel.active { display:block; }
+  .report-clickable { cursor:pointer; transition:all .2s; }
+  .report-clickable:hover { filter:brightness(1.15); transform:translateY(-1px); }
+
   .dual-range { position: relative; height: 8px; }
   .dual-range .track { position: absolute; inset: 0; border-radius: 9999px; background: linear-gradient(to right,#f87171,#f59e0b,#34d399); }
   .dual-range .fill { position: absolute; height: 100%; border-radius: 9999px; background: rgba(107,47,245,.5); pointer-events: none; }
@@ -139,9 +153,7 @@ tailwind.config = {
         <div class="bg-surface border border-border rounded-2xl p-5"><div class="skeleton w-20 h-3 mb-3"></div><div class="skeleton w-32 h-7"></div></div>
       </div>
       <div class="bg-surface border border-border rounded-2xl p-6"><div class="skeleton w-40 h-3 mb-4"></div><div class="skeleton w-full h-10 rounded-full"></div></div>
-      <div class="bg-surface border border-border rounded-2xl p-6"><div class="skeleton w-40 h-3 mb-4"></div><div class="skeleton w-full h-40"></div></div>
-      <div class="bg-surface border border-border rounded-2xl p-6"><div class="skeleton w-40 h-3 mb-4"></div><div class="skeleton w-full h-40"></div></div>
-      <div class="bg-surface border border-border rounded-2xl p-6"><div class="skeleton w-40 h-3 mb-4"></div><div class="skeleton w-full h-32"></div></div>
+      <div class="bg-surface border border-border rounded-2xl p-6"><div class="skeleton w-28 h-3 mb-4"></div><div class="skeleton w-full h-6 mb-3"></div><div class="skeleton w-full h-24 mb-3"></div><div class="skeleton w-3/4 h-20"></div></div>
       <div class="bg-surface border border-border rounded-2xl p-6"><div class="skeleton w-40 h-3 mb-4"></div><div class="skeleton w-full h-32"></div></div>
     </div>
 
@@ -164,9 +176,9 @@ tailwind.config = {
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-2">확정 금액</div>
           <div class="font-mono text-xl font-bold text-slate-100" id="kpiConfirmed">0</div>
         </div>
-        <div class="bg-accent rounded-2xl p-5 text-center shadow-lg shadow-accent/20">
-          <div class="text-[10px] font-bold text-white/70 uppercase tracking-[1.5px] mb-2">진행중 금액</div>
-          <div class="font-mono text-xl font-bold text-white" id="kpiPending">0</div>
+        <div class="bg-surface border border-accent/30 rounded-2xl p-5 text-center cursor-pointer hover:border-accent/60 transition-colors" onclick="addTag('status','진행중'); applyFilters();">
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-2">진행중 금액</div>
+          <div class="font-mono text-xl font-bold text-accent" id="kpiPending">0</div>
         </div>
         <div class="bg-surface border border-edu/20 rounded-2xl p-5 text-center">
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-2">잔여 예산</div>
@@ -194,40 +206,17 @@ tailwind.config = {
         </div>
       </section>
 
-      <!-- Gemini 기술 트렌드 분석 -->
-      <section class="bg-surface border border-border rounded-2xl p-6">
-        <div class="flex items-center justify-between mb-2">
-          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px]">Gemini 기술 트렌드 분석</div>
-          <div id="categoryTotal" class="text-[11px] text-slate-500 font-mono"></div>
+      <!-- 월간 리포트 -->
+      <section id="reportSection" class="bg-surface border border-border rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px]">월간 리포트</div>
         </div>
-        <div id="trendInsight" class="text-[12px] text-accent mb-4"></div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div>
-            <div class="text-[10px] text-slate-500 mb-2 text-center">금액 기준</div>
-            <canvas id="trendDonut"></canvas>
-          </div>
-          <div>
-            <div class="text-[10px] text-slate-500 mb-2 text-center">빈도 기준</div>
-            <canvas id="trendBar"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <!-- 학습 사각지대 관리 -->
-      <section class="bg-surface border border-border rounded-2xl p-6">
-        <div class="flex items-center justify-between mb-2">
-          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px]">학습 사각지대 관리</div>
-          <div class="text-[11px] text-slate-500">부서별 인당 평균 사용액</div>
-        </div>
-        <div id="gapInsight" class="text-[12px] text-warn mb-4"></div>
-        <canvas id="deptGapBar"></canvas>
-        <div id="gapWarnings" class="mt-3 text-[11px] text-warn"></div>
-      </section>
-
-      <!-- 인기 콘텐츠 TOP 5 -->
-      <section class="bg-surface border border-border rounded-2xl p-6">
-        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] mb-4">인기 콘텐츠 TOP 5</div>
-        <div id="topContentCards" class="space-y-3"></div>
+        <!-- 패널1: 확정 금액/건수 -->
+        <div id="panelAmount" class="report-panel active"></div>
+        <!-- 패널2: 부서별 사용액 -->
+        <div id="panelDept" class="report-panel active"></div>
+        <!-- 패널3: 교육 vs 도서 -->
+        <div id="panelRatio" class="report-panel active"></div>
       </section>
 
       <!-- 검색 + 퀵필터 -->
@@ -264,27 +253,28 @@ tailwind.config = {
         <!-- 결과 테이블 -->
         <div id="resultArea" class="hidden fade-in">
           <div class="bg-surface border border-border rounded-2xl overflow-hidden">
-            <table class="w-full text-left text-[12px]">
-              <thead class="bg-surface-2 border-b border-border sticky top-0 z-10">
-                <tr>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">사번</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">부서</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">이름</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">확정</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">진행중</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">잔여</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">상태</th>
-                  <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Flow</th>
-                </tr>
-              </thead>
-            </table>
-            <div class="overflow-y-auto" style="max-height:400px;">
+            <div class="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
+              <span id="resultCount" class="text-[11px] text-slate-500"></span>
+              <div id="resultSummary" class="flex items-center gap-4 text-[11px] font-mono"></div>
+            </div>
+            <div class="overflow-y-auto" style="max-height:440px;">
               <table class="w-full text-left text-[12px]">
+                <thead class="bg-surface-2 border-b border-border sticky top-0 z-10">
+                  <tr>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">사번</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">부서</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">이름</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">확정</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">진행중</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">잔여</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">상태</th>
+                    <th class="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Flow</th>
+                  </tr>
+                </thead>
                 <tbody id="resultBody" class="divide-y divide-border/50"></tbody>
               </table>
             </div>
             <div id="noResults" class="hidden text-center py-10 text-slate-500 text-sm">검색 결과가 없어요.</div>
-            <div id="resultCount" class="px-4 py-2 text-[11px] text-slate-500 border-t border-border"></div>
           </div>
         </div>
 
@@ -435,14 +425,10 @@ async function loadDashboard() {
 
     renderKPIs();
     renderBurnGauge();
+    initReport();
 
     $('loadingState').classList.add('hidden');
     $('dashContent').classList.remove('hidden');
-    requestAnimationFrame(() => {
-      renderGeminiTrend();
-      renderEngagementGap();
-      renderTopContent();
-    });
   } catch (e) {
     $('loadingState').classList.add('hidden');
     $('errorState').classList.remove('hidden');
@@ -488,164 +474,6 @@ function renderBurnGauge() {
   $('burnTotal').textContent = formatMoney(total) + '원';
 }
 
-/* ========== Chart.js 인스턴스 ========== */
-let pieChart, freqBarChart, deptBarChart;
-const CHART_COLORS = ['#6B2FF5', '#34d399', '#f59e0b', '#f87171', '#60a5fa', '#a78bfa', '#4ade80'];
-
-/* ========== Section 1: Gemini 기술 트렌드 분석 ========== */
-function renderGeminiTrend() {
-  const rawCat = adminStats.categories || [];
-  const totalAmt = rawCat.reduce((s, c) => s + (c.amount || 0), 0);
-  $('categoryTotal').textContent = totalAmt ? `합계 ${formatMoney(totalAmt)}원` : '';
-
-  // 인사이트 텍스트
-  if (rawCat.length > 0) {
-    const top = rawCat.reduce((a, b) => (b.amount || 0) > (a.amount || 0) ? b : a, rawCat[0]);
-    const pct = totalAmt ? ((top.amount / totalAmt) * 100).toFixed(0) : 0;
-    $('trendInsight').textContent = `Gemini 분석 결과: 조직의 관심사가 ${top.name} 분야로 집중되고 있습니다 (${pct}%)`;
-  }
-
-  const labels = rawCat.map(c => c.name);
-  const amounts = rawCat.map(c => c.amount || 0);
-  const freqs = rawCat.map(c => c.frequency || 0);
-  const colors = rawCat.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
-
-  // 도넛 차트
-  if (pieChart) pieChart.destroy();
-  pieChart = new Chart($('trendDonut'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data: amounts, backgroundColor: colors, borderWidth: 0 }] },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12 } },
-        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMoney(ctx.raw)}원` } }
-      },
-      onClick: (_, els) => { if (els.length > 0) addTag('category', labels[els[0].index]); }
-    }
-  });
-
-  // 빈도 수평 막대
-  if (freqBarChart) freqBarChart.destroy();
-  freqBarChart = new Chart($('trendBar'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: freqs, backgroundColor: colors, borderWidth: 0, borderRadius: 4 }] },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `${ctx.raw}건` } }
-      },
-      scales: {
-        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.05)' } },
-        y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } }
-      },
-      onClick: (_, els) => { if (els.length > 0) addTag('category', labels[els[0].index]); }
-    }
-  });
-}
-
-/* ========== Section 2: 학습 사각지대 관리 ========== */
-function renderEngagementGap() {
-  const users = adminStats.allUserList || [];
-  // 부서별 그룹화
-  const deptMap = {};
-  users.forEach(u => {
-    const dept = u.dept || '미지정';
-    if (!deptMap[dept]) deptMap[dept] = { total: 0, count: 0 };
-    deptMap[dept].total += (u.used || 0);
-    deptMap[dept].count += 1;
-  });
-
-  const depts = Object.keys(deptMap).sort((a, b) => (deptMap[b].total / deptMap[b].count) - (deptMap[a].total / deptMap[a].count));
-  const avgs = depts.map(d => Math.round(deptMap[d].total / deptMap[d].count));
-  const WARN_THRESHOLD = 100000;
-  const barColors = avgs.map(v => v < WARN_THRESHOLD ? '#f59e0b' : '#6B2FF5');
-
-  // 경고 부서
-  const warnDepts = depts.filter((d, i) => avgs[i] < WARN_THRESHOLD);
-  if (warnDepts.length > 0) {
-    $('gapInsight').textContent = `저참여 부서 ${warnDepts.length}개: ${warnDepts.join(', ')}`;
-    $('gapWarnings').textContent = `* 인당 평균 10만원 미만 부서는 amber로 표시됩니다.`;
-  } else {
-    $('gapInsight').textContent = '모든 부서가 적정 수준의 교육비를 활용하고 있습니다.';
-    $('gapWarnings').textContent = '';
-  }
-
-  if (deptBarChart) deptBarChart.destroy();
-  deptBarChart = new Chart($('deptGapBar'), {
-    type: 'bar',
-    data: {
-      labels: depts.map(d => `${d} (${deptMap[d].count}명)`),
-      datasets: [{
-        data: avgs,
-        backgroundColor: barColors,
-        borderWidth: 0,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `인당 평균: ${formatMoney(ctx.raw)}원` } }
-      },
-      scales: {
-        x: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => formatMoney(v) + '원' }, grid: { color: 'rgba(255,255,255,.05)' } },
-        y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } }
-      }
-    }
-  });
-}
-
-/* ========== Section 3: 인기 콘텐츠 TOP 5 ========== */
-function renderTopContent() {
-  const records = adminStats.allRecords || [];
-  // 완료 건만 집계
-  const completed = records.filter(r => {
-    const s = (r.status || '').trim();
-    return s === '완료' || s === '승인';
-  });
-
-  const courseMap = {};
-  completed.forEach(r => {
-    const name = r.courseName || '(알 수 없음)';
-    if (!courseMap[name]) courseMap[name] = { count: 0, totalCost: 0, type: r.type || '교육' };
-    courseMap[name].count += 1;
-    courseMap[name].totalCost += (r.cost || 0);
-  });
-
-  const sorted = Object.entries(courseMap)
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 5);
-
-  const medals = ['🥇', '🥈', '🥉', '4', '5'];
-  const container = $('topContentCards');
-
-  if (sorted.length === 0) {
-    container.innerHTML = '<div class="text-sm text-slate-500 text-center py-6">완료된 콘텐츠 데이터가 없습니다.</div>';
-    return;
-  }
-
-  container.innerHTML = sorted.map(([name, info], i) => {
-    const medal = i < 3 ? `<span class="text-lg">${medals[i]}</span>` : `<span class="text-[14px] font-bold text-slate-500">${medals[i]}</span>`;
-    const typePill = info.type === '도서' ? 'pill-pend' : 'pill-ok';
-    return `<div class="flex items-center gap-4 bg-surface-2 border border-border rounded-xl px-4 py-3 hover:border-accent/30 transition">
-      <div class="w-8 text-center shrink-0">${medal}</div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[13px] font-medium text-slate-200 truncate">${escapeHtml(name)}</div>
-        <div class="flex items-center gap-2 mt-1">
-          <span class="pill ${typePill} text-[10px]">${escapeHtml(info.type)}</span>
-          <span class="text-[11px] text-slate-500 font-mono">${info.count}건</span>
-          <span class="text-[11px] text-slate-500 font-mono">${formatMoney(info.totalCost)}원</span>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
 /* ========== 태그 시스템 ========== */
 function addTag(type, value) {
   if (!value || activeTags.find(t => t.type === type && t.value === value)) return;
@@ -659,6 +487,7 @@ function removeTag(type, value) {
   renderTags();
   applyFilters();
 }
+window.addTag = addTag;
 window.removeTag = removeTag;
 
 function clearAllTags() {
@@ -669,13 +498,24 @@ function clearAllTags() {
   $('resultArea').classList.add('hidden');
 }
 window.clearAllTags = clearAllTags;
+window.applyFilters = applyFilters;
+
+function tagLabel(type) {
+  switch(type) {
+    case 'user': return '사용자';
+    case 'month': return '월';
+    case 'dept': return '부서';
+    case 'reqType': return '유형';
+    case 'status': return '상태';
+    default: return type;
+  }
+}
 
 function renderTags() {
   const container = $('tagContainer');
   container.innerHTML = activeTags.map(tag => {
-    const typeLabel = tag.type === 'category' ? '분야' : tag.type === 'user' ? '사용자' : tag.type;
     return `<div class="tag-item flex items-center px-3 py-1.5 rounded-xl text-[11px] font-medium">
-      <span class="opacity-60 mr-1">${escapeHtml(typeLabel)}:</span>
+      <span class="opacity-60 mr-1">${escapeHtml(tagLabel(tag.type))}:</span>
       <span>${escapeHtml(tag.value)}</span>
       <button onclick="removeTag('${escapeAttr(tag.type)}', '${escapeAttr(tag.value)}')" class="ml-2 hover:text-white text-xs">&times;</button>
     </div>`;
@@ -685,10 +525,59 @@ function renderTags() {
 /* ========== 필터링 ========== */
 function applyFilters() {
   const users = adminStats.allUserList || [];
+  const records = adminStats.allRecords || [];
   const lo = Math.min(Number($('rangeMin').value), Number($('rangeMax').value));
   const hi = Math.max(Number($('rangeMin').value), Number($('rangeMax').value));
 
+  // 차트 태그(month/dept/reqType)가 있으면 해당 레코드의 knoxId만 추출
+  const monthTag = activeTags.find(t => t.type === 'month');
+  const deptTag = activeTags.find(t => t.type === 'dept');
+  const reqTypeTag = activeTags.find(t => t.type === 'reqType');
+  const statusTag = activeTags.find(t => t.type === 'status');
+  let chartKnoxIds = null;
+
+  if (monthTag || deptTag || reqTypeTag) {
+    let fr = records.filter(r => {
+      const st = (r.status || '').trim();
+      return st === '완료' || st.includes('대기') || st.includes('진행');
+    });
+    if (monthTag) {
+      fr = fr.filter(r => {
+        if (!r.date) return false;
+        const d = new Date(r.date);
+        return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}` === monthTag.value;
+      });
+    }
+    if (reqTypeTag) {
+      fr = fr.filter(r => r.reqType === reqTypeTag.value);
+    }
+    if (deptTag) {
+      const deptIds = new Set(users.filter(u => u.dept === deptTag.value).map(u => u.knoxId));
+      fr = fr.filter(r => deptIds.has(r.knoxId));
+    }
+    chartKnoxIds = new Set(fr.map(r => r.knoxId));
+  }
+
   let filtered = users;
+
+  // 차트 태그 필터
+  if (chartKnoxIds) {
+    filtered = filtered.filter(u => chartKnoxIds.has(u.knoxId));
+  }
+
+  // 상태 태그 필터 (진행중)
+  if (statusTag) {
+    const pendingIds = new Set(records.filter(r => {
+      const st = (r.status || '').trim();
+      return st.includes('대기') || st.includes('진행');
+    }).map(r => r.knoxId));
+    filtered = filtered.filter(u => pendingIds.has(u.knoxId));
+  }
+
+  // 부서 태그 필터 (레코드 없는 사용자도 부서로 필터)
+  if (deptTag && !monthTag && !reqTypeTag) {
+    filtered = filtered.filter(u => u.dept === deptTag.value);
+  }
 
   // 듀얼 슬라이더 범위 필터
   if (lo > 0 || hi < LIMIT) {
@@ -698,6 +587,7 @@ function applyFilters() {
     });
   }
 
+  // 사용자 검색 태그
   activeTags.forEach(tag => {
     if (tag.type === 'user') {
       const q = tag.value.toLowerCase();
@@ -707,6 +597,14 @@ function applyFilters() {
       );
     }
   });
+
+  // 태그나 범위 필터가 없으면 테이블 숨김
+  const hasFilter = activeTags.length > 0 || lo > 0 || hi < LIMIT;
+  if (!hasFilter) {
+    $('resultArea').classList.add('hidden');
+    $('userDetail').classList.add('hidden');
+    return;
+  }
 
   renderTable(filtered);
 }
@@ -810,11 +708,11 @@ function renderTable(users) {
   if (users.length === 0) {
     $('noResults').classList.remove('hidden');
     $('resultCount').textContent = '';
+    $('resultSummary').innerHTML = '';
     return;
   }
 
   $('noResults').classList.add('hidden');
-  $('resultCount').textContent = `총 ${users.length}명`;
 
   users.forEach(u => {
     const used = u.used || 0;
@@ -849,6 +747,29 @@ function renderTable(users) {
     body.appendChild(tr);
   });
 
+  $('resultCount').textContent = `총 ${users.length}명`;
+  const isStatusPending = activeTags.some(t => t.type === 'status' && t.value === '진행중');
+  const mTag = activeTags.find(t => t.type === 'month');
+  if (isStatusPending) {
+    const totalPending = users.reduce((s, u) => s + (u.pending || 0), 0);
+    $('resultSummary').innerHTML = `<span class="text-slate-400">진행중: <span class="text-pend font-bold">${formatMoney(totalPending)}원</span></span>`;
+  } else if (mTag) {
+    // 해당 월 레코드 기반 확정 금액 합산 (차트와 동일)
+    const records = adminStats.allRecords || [];
+    const userIds = new Set(users.map(u => u.knoxId));
+    const sum = records.reduce((s, r) => {
+      if (!r.date || !userIds.has(r.knoxId)) return s;
+      const st = (r.status || '').trim();
+      if (st !== '완료') return s;
+      const d = new Date(r.date);
+      const key = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return key === mTag.value ? s + (r.cost || 0) : s;
+    }, 0);
+    $('resultSummary').innerHTML = `<span class="text-slate-400">사용: <span class="text-white font-bold">${formatMoney(sum)}원</span></span>`;
+  } else {
+    const totalUsed = users.reduce((s, u) => s + (u.used || 0), 0);
+    $('resultSummary').innerHTML = `<span class="text-slate-400">사용: <span class="text-white font-bold">${formatMoney(totalUsed)}원</span></span>`;
+  }
 }
 
 function statusPillClass(status) {
@@ -865,7 +786,7 @@ window.sendBalanceFlow = async function(knoxId) {
   if (!knoxId) return;
 
   const btn = document.querySelector(`[data-flow-btn="${knoxId}"]`);
-  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="w-3.5 h-3.5 spinner inline-block" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>'; }
 
   try {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -915,6 +836,435 @@ function showToast(msg, isError) {
     t.classList.add('translate-y-24', 'opacity-0');
     t.classList.remove('translate-y-0', 'opacity-100');
   }, 2500);
+}
+
+/* ========== 월간 리포트 ========== */
+const reportState = { month: '누적', panels: { amount: true, dept: true, ratio: true }, detail: { type: null, month: null, dept: null, reqType: null } };
+const MONTH_COLORS = ['#6B2FF5','#3b82f6','#059669','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4','#84cc16','#a855f7','#f87171'];
+
+/* --- Chart.js 다크 테마 기본값 --- */
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#252a3a';
+Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+Chart.defaults.font.size = 11;
+
+const charts = { amount: null, dept: null };
+function destroyChart(key) { if (charts[key]) { charts[key].destroy(); charts[key] = null; } }
+
+function aggregateByMonth() {
+  const records = adminStats.allRecords || [];
+  const map = new Map();
+  records.forEach(r => {
+    if (!r.date) return;
+    const d = new Date(r.date);
+    const key = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!map.has(key)) map.set(key, { confirmed: 0, confirmedCount: 0, pending: 0, pendingCount: 0, edu: 0, book: 0 });
+    const m = map.get(key);
+    const cost = r.cost || 0;
+    const status = (r.status || '').trim();
+    if (status === '완료') {
+      m.confirmed += cost;
+      m.confirmedCount++;
+      if (r.reqType === '교육') m.edu += cost;
+      else if (r.reqType === '도서') m.book += cost;
+    } else if (status.includes('대기') || status.includes('진행')) {
+      m.pending += cost;
+      m.pendingCount++;
+    }
+  });
+  return new Map([...map.entries()].sort());
+}
+
+function aggregateByDept(monthKey) {
+  const users = adminStats.allUserList || [];
+  const records = adminStats.allRecords || [];
+  const deptMap = new Map();
+
+  // 부서별 인원수 (항상 전체 기준)
+  const deptCount = new Map();
+  users.forEach(u => {
+    if (!u.dept) return;
+    deptCount.set(u.dept, (deptCount.get(u.dept) || 0) + 1);
+  });
+
+  if (monthKey === '누적') {
+    users.forEach(u => {
+      if (!u.dept) return;
+      deptMap.set(u.dept, (deptMap.get(u.dept) || 0) + (u.used || 0));
+    });
+  } else {
+    records.forEach(r => {
+      if ((r.status || '').trim() !== '완료') return;
+      if (!r.date) return;
+      const d = new Date(r.date);
+      const key = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (key !== monthKey) return;
+      const user = users.find(u => u.knoxId === r.knoxId);
+      const dept = user ? user.dept : '기타';
+      if (!dept) return;
+      deptMap.set(dept, (deptMap.get(dept) || 0) + (r.cost || 0));
+    });
+  }
+
+  const result = [...deptMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([dept, amount]) => ({ dept, amount, count: deptCount.get(dept) || 0 }));
+  return result;
+}
+
+function renderMonthTabs() {
+  const monthMap = aggregateByMonth();
+  const tabs = $('monthTabs');
+  const months = ['누적', ...monthMap.keys()];
+  tabs.innerHTML = months.map(m =>
+    `<button class="month-tab${reportState.month === m ? ' active' : ''}" data-month="${escapeAttr(m)}">${m}</button>`
+  ).join('');
+  tabs.querySelectorAll('.month-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      reportState.month = btn.dataset.month;
+      tabs.querySelectorAll('.month-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderReportPanels();
+    });
+  });
+}
+
+function renderAmountPanel() {
+  const panel = $('panelAmount');
+  const monthMap = aggregateByMonth();
+  const sel = reportState.month;
+  destroyChart('amount');
+
+  // 연도 감지
+  const keys = [...monthMap.keys()];
+  const year = keys.length > 0 ? keys[0].split('.')[0] : String(new Date().getFullYear());
+  // 12개월 고정 슬롯
+  const allMonths = Array.from({ length: 12 }, (_, i) => {
+    const mm = String(i + 1).padStart(2, '0');
+    return `${year}.${mm}`;
+  });
+  const allLabels = allMonths.map((_, i) => `${i + 1}월`);
+
+  if (sel === '누적') {
+    const amountData = allMonths.map(k => (monthMap.get(k) || { confirmed: 0 }).confirmed);
+    const countData = allMonths.map(k => (monthMap.get(k) || { confirmedCount: 0 }).confirmedCount);
+    const bgColors = allMonths.map(k => monthMap.has(k) ? '#6B2FF5cc' : 'rgba(100,116,139,.15)');
+    const countColors = allMonths.map(k => monthMap.has(k) ? '#6B2FF544' : 'rgba(100,116,139,.08)');
+
+    panel.innerHTML = '<div style="position:relative;height:220px;"><canvas id="chartAmount"></canvas></div>';
+    const ctx = $('chartAmount').getContext('2d');
+    charts.amount = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: '확정 금액',
+            data: amountData,
+            backgroundColor: bgColors,
+            borderRadius: 4,
+            borderSkipped: false,
+            yAxisID: 'y',
+          },
+          {
+            label: '건수',
+            data: countData,
+            backgroundColor: countColors,
+            borderRadius: 3,
+            borderSkipped: false,
+            yAxisID: 'y1',
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: true, position: 'top', align: 'end',
+            labels: { boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 10 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: (tip) => {
+                if (tip.datasetIndex === 0) return `금액: ${formatMoney(tip.raw)}원`;
+                return `건수: ${tip.raw}건`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true, position: 'left',
+            grid: { color: '#252a3a' },
+            ticks: { callback: v => v >= 10000 ? (v / 10000).toFixed(0) + '만' : formatMoney(v) }
+          },
+          y1: {
+            beginAtZero: true, position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { stepSize: 1, callback: v => Number.isInteger(v) ? v + '건' : '' }
+          },
+          x: { grid: { display: false } }
+        },
+        onClick: (_, els) => {
+          if (els.length > 0) {
+            const idx = els[0].index;
+            const mk = allMonths[idx];
+            if (monthMap.has(mk)) showReportDetail({ month: mk });
+          }
+        }
+      }
+    });
+  } else {
+    // 월별 모드: 해당 월의 확정 금액 + 건수 (진행중 제외)
+    const data = monthMap.get(sel) || { confirmed: 0, confirmedCount: 0 };
+
+    panel.innerHTML = `<div class="text-[11px] text-slate-400 mb-3 font-medium">${sel} 확정 금액 · 건수</div><div style="position:relative;height:220px;"><canvas id="chartAmount"></canvas></div>`;
+    const ctx = $('chartAmount').getContext('2d');
+
+    // 해당 월 위치 하이라이트 — 12개월 중 선택 월만 값 표시
+    const selIdx = allMonths.indexOf(sel);
+    const amountData = allMonths.map((k, i) => i === selIdx ? data.confirmed : ((monthMap.get(k) || { confirmed: 0 }).confirmed));
+    const countData = allMonths.map((k, i) => i === selIdx ? data.confirmedCount : ((monthMap.get(k) || { confirmedCount: 0 }).confirmedCount));
+    const bgColors = allMonths.map((k, i) => i === selIdx ? '#6B2FF5' : (monthMap.has(k) ? 'rgba(100,116,139,.25)' : 'rgba(100,116,139,.08)'));
+    const countColors = allMonths.map((_, i) => i === selIdx ? 'rgba(245,158,11,.25)' : 'rgba(245,158,11,.06)');
+
+    charts.amount = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: '확정 금액',
+            data: amountData,
+            backgroundColor: bgColors,
+            borderRadius: 4,
+            borderSkipped: false,
+            yAxisID: 'y',
+          },
+          {
+            label: '건수',
+            data: countData,
+            backgroundColor: countColors,
+            borderRadius: 3,
+            borderSkipped: false,
+            yAxisID: 'y1',
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: true, position: 'top', align: 'end',
+            labels: { boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 10 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: (tip) => {
+                if (tip.datasetIndex === 0) return `금액: ${formatMoney(tip.raw)}원`;
+                return `건수: ${tip.raw}건`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true, position: 'left',
+            grid: { color: '#252a3a' },
+            ticks: { callback: v => v >= 10000 ? (v / 10000).toFixed(0) + '만' : formatMoney(v) }
+          },
+          y1: {
+            beginAtZero: true, position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { stepSize: 1, callback: v => Number.isInteger(v) ? v + '건' : '' }
+          },
+          x: { grid: { display: false } }
+        },
+        onClick: (_, els) => {
+          if (els.length > 0) {
+            const idx = els[0].index;
+            const mk = allMonths[idx];
+            if (monthMap.has(mk)) showReportDetail({ month: mk });
+          }
+        }
+      }
+    });
+  }
+}
+
+const DEPT_COLORS = ['#059669','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4','#84cc16','#a855f7','#f87171','#6B2FF5'];
+
+function renderDeptPanel() {
+  const panel = $('panelDept');
+  const depts = aggregateByDept(reportState.month);
+  destroyChart('dept');
+  if (depts.length === 0) { panel.innerHTML = '<div class="text-sm text-slate-500 text-center py-4">데이터가 없어요.</div>'; return; }
+
+  const labels = depts.map(d => d.dept);
+  const amountData = depts.map(d => d.amount);
+  const memberCounts = depts.map(d => d.count);
+  const burnRate = depts.map(d => d.count > 0 ? Math.round(d.amount / (d.count * LIMIT) * 100) : 0);
+  const colors = depts.map((_, i) => DEPT_COLORS[i % DEPT_COLORS.length]);
+  const label = reportState.month === '누적' ? '부서별 누적 사용액' : `${reportState.month} 부서별 사용액`;
+  const barW = Math.max(depts.length * 56, 300);
+
+  panel.innerHTML = `<div class="text-[11px] text-slate-400 mb-3 font-medium">${label}</div>
+    <div style="overflow-x:auto;scrollbar-width:thin;scrollbar-color:#252a3a transparent;">
+      <div style="position:relative;height:220px;min-width:${barW}px;"><canvas id="chartDept"></canvas></div>
+    </div>`;
+
+  const ctx = $('chartDept').getContext('2d');
+  charts.dept = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map((l, i) => `${l}(${memberCounts[i]})`),
+      datasets: [
+        {
+          label: '총 사용액',
+          data: amountData,
+          backgroundColor: colors.map(c => c + 'cc'),
+          borderColor: colors,
+          borderWidth: 1,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+        },
+        {
+          label: '소진율',
+          data: burnRate,
+          backgroundColor: colors.map(c => c + '44'),
+          borderColor: colors.map(c => c + '99'),
+          borderWidth: 1,
+          borderRadius: 3,
+          borderSkipped: false,
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true, position: 'top', align: 'end',
+          labels: { boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 10 } }
+        },
+        tooltip: {
+          callbacks: {
+            title: (tips) => {
+              const i = tips[0].dataIndex;
+              return `${labels[i]}  (${memberCounts[i]}명)`;
+            },
+            label: (tip) => {
+              if (tip.datasetIndex === 0) return `총 사용액: ${formatMoney(tip.raw)}원`;
+              return `소진율: ${tip.raw}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true, position: 'left', grid: { color: '#252a3a' },
+          ticks: { callback: v => v >= 10000 ? (v / 10000).toFixed(0) + '만' : formatMoney(v) }
+        },
+        y1: {
+          beginAtZero: true, position: 'right', max: 100,
+          grid: { drawOnChartArea: false },
+          ticks: { callback: v => v + '%' }
+        },
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } }
+      },
+      onClick: (_, els) => {
+        if (els.length > 0) {
+          showReportDetail({ dept: labels[els[0].index] });
+        }
+      }
+    }
+  });
+}
+
+function renderRatioPanel() {
+  const panel = $('panelRatio');
+  const sel = reportState.month;
+  let edu = 0, book = 0;
+
+  if (sel === '누적') {
+    const users = adminStats.allUserList || [];
+    users.forEach(u => { edu += u.eduUsed || 0; book += u.bookUsed || 0; });
+  } else {
+    const monthMap = aggregateByMonth();
+    const data = monthMap.get(sel);
+    if (data) { edu = data.edu; book = data.book; }
+  }
+
+  const total = edu + book;
+  const eduPct = total > 0 ? ((edu / total) * 100).toFixed(1) : 0;
+  const bookPct = total > 0 ? ((book / total) * 100).toFixed(1) : 0;
+
+  panel.innerHTML = `
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-surface-2 border border-border rounded-xl p-3 text-center report-clickable" onclick="showReportDetail({reqType:'교육'})">
+        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">교육</div>
+        <div class="font-mono text-sm font-bold text-[#a78bfa]">${formatMoney(edu)}원</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">${eduPct}%</div>
+      </div>
+      <div class="bg-surface-2 border border-border rounded-xl p-3 text-center report-clickable" onclick="showReportDetail({reqType:'도서'})">
+        <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">도서</div>
+        <div class="font-mono text-sm font-bold text-edu">${formatMoney(book)}원</div>
+        <div class="text-[10px] text-slate-500 mt-0.5">${bookPct}%</div>
+      </div>
+    </div>`;
+}
+
+function renderReportPanels() {
+  if (reportState.panels.amount) renderAmountPanel();
+  if (reportState.panels.dept) renderDeptPanel();
+  if (reportState.panels.ratio) renderRatioPanel();
+
+}
+
+function showReportDetail(filter) {
+  // 같은 타입의 기존 태그 교체
+  if (filter.month) {
+    activeTags = activeTags.filter(t => t.type !== 'month');
+    activeTags.push({ type: 'month', value: filter.month });
+  }
+  if (filter.dept) {
+    activeTags = activeTags.filter(t => t.type !== 'dept');
+    activeTags.push({ type: 'dept', value: filter.dept });
+  }
+  if (filter.reqType) {
+    activeTags = activeTags.filter(t => t.type !== 'reqType');
+    activeTags.push({ type: 'reqType', value: filter.reqType });
+  }
+  renderTags();
+  applyFilters();
+  $('resultArea').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+window.showReportDetail = showReportDetail;
+
+function initReportToggles() {
+  document.querySelectorAll('.report-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panelKey = btn.dataset.panel;
+      btn.classList.toggle('active');
+      reportState.panels[panelKey] = btn.classList.contains('active');
+      const panelEl = $('panel' + panelKey.charAt(0).toUpperCase() + panelKey.slice(1));
+      if (reportState.panels[panelKey]) {
+        panelEl.classList.add('active');
+        renderReportPanels();
+      } else {
+        panelEl.classList.remove('active');
+      }
+    });
+  });
+}
+
+function initReport() {
+  initReportToggles();
+  renderReportPanels();
 }
 
 /* ========== 시작 ========== */

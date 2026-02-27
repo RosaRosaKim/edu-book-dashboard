@@ -4,13 +4,16 @@ const SHEET_NAME = {
   DATA: "교육 신청서",
   BOOK: "도서 신청서",
   ADMIN: "웹페이지관리",
-  MANAGER: "관리자",
-  AI: "AI자동분류"
+  MANAGER: "관리자"
 };
 
 const DATA_COL = {
   KNOX_ID: 9, NAME: 10, TITLE: 11, COST: 16, VENDOR: 17, STATUS: 19
 };
+const BOOK_COL = {
+  KNOX_ID: 9, NAME: 10, TITLE: 11, COST: 12, STATUS: 16
+};
+function colFor(row) { return row._reqType === '도서' ? BOOK_COL : DATA_COL; }
 
 const ADMIN_COL = {
   KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, AUTH_CODE: 4, AUTH_TIME: 5, DEPT: 6, NAME: 8
@@ -26,7 +29,6 @@ const doGet = (e) => {
   const bookSheet = ss.getSheetByName(SHEET_NAME.BOOK);
   const adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   const managerSheet = ss.getSheetByName(SHEET_NAME.MANAGER);
-  const aiSheet = ss.getSheetByName(SHEET_NAME.AI);
 
   if (!adminSheet || !managerSheet) return createResponse({ error: "필수 시트 부재" });
 
@@ -79,11 +81,12 @@ const doGet = (e) => {
     let used = 0;
     const details = [];
     allApplyData.forEach(row => {
-      if (String(row[DATA_COL.KNOX_ID]) === targetKnoxId && row[DATA_COL.STATUS] === "완료") {
-        const cost = Number(row[DATA_COL.COST]) || 0;
+      const c = colFor(row);
+      if (String(row[c.KNOX_ID]) === targetKnoxId && row[c.STATUS] === "완료") {
+        const cost = Number(row[c.COST]) || 0;
         used += cost;
-        const type = row._reqType || (row[DATA_COL.VENDOR] ? "교육" : "");
-        details.push(`  ${type ? "[" + type + "] " : ""}${row[DATA_COL.TITLE]} (${cost.toLocaleString()}원)`);
+        const type = row._reqType;
+        details.push(`  ${type ? "[" + type + "] " : ""}${row[c.TITLE]} (${cost.toLocaleString()}원)`);
       }
     });
 
@@ -130,13 +133,14 @@ const doGet = (e) => {
     }
 
     // 1. 일반 사용자 본인 내역
-    const myRows = allApplyData.filter(row => String(row[DATA_COL.KNOX_ID]) === String(currentKnoxId));
+    const myRows = allApplyData.filter(row => String(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
     let myUsed = 0;
     const myHistory = myRows.map(row => {
-      const cost = Number(row[DATA_COL.COST]) || 0;
-      if (row[DATA_COL.STATUS] === "완료") myUsed += cost;
-      const displayTitle = `[${row._reqType}] ${row[DATA_COL.TITLE]}`;
-      return { date: row[0], courseName: displayTitle, cost, status: row[DATA_COL.STATUS], period: row._reqType === "교육" ? (row[12] || '') : '' };
+      const c = colFor(row);
+      const cost = Number(row[c.COST]) || 0;
+      if (row[c.STATUS] === "완료") myUsed += cost;
+      const displayTitle = `[${row._reqType}] ${row[c.TITLE]}`;
+      return { date: row[0], courseName: displayTitle, cost, status: row[c.STATUS], period: row._reqType === "교육" ? (row[12] || '') : '' };
     });
 
     // 2. 관리자 통계
@@ -146,29 +150,10 @@ const doGet = (e) => {
         totalConfirmed: 0,
         totalPending: 0,
         totalMemberCount: adminSheet.getLastRow() - 1,
-        categories: [],
         vendors: {},
         allUserList: [],
         allRecords: []
       };
-
-      // --- [핵심 수정] AI자동분류 시트 데이터 3컬럼 매핑 ---
-      if (aiSheet) {
-        const aiData = aiSheet.getDataRange().getValues();
-        aiData.shift(); // 헤더(1행) 제거
-        stats.categories = aiData.map(row => {
-          // A컬럼(분류명)이 비어있지 않은 데이터만 필터링하여 매핑
-          if (row[0]) {
-            return {
-              name: row[0],                        // A컬럼: 분류명
-              frequency: Number(row[1]) || 0,      // B컬럼: 빈도 (숫자로 변환)
-              amount: Number(row[2]) || 0          // C컬럼: 금액 (숫자로 변환)
-            };
-          }
-          return null;
-        }).filter(item => item !== null); // 빈 행 제거
-      }
-      // ---------------------------------------------------
 
       // 전체 유저 맵 세팅 (미사용자 색출 목적)
       const userMap = new Map();
@@ -180,10 +165,11 @@ const doGet = (e) => {
 
       // 신청서 데이터 순회 및 집계
       allApplyData.forEach(row => {
-        const sId = String(row[DATA_COL.KNOX_ID]);
-        const cost = Number(row[DATA_COL.COST]) || 0;
-        const status = String(row[DATA_COL.STATUS]);
-        const vendor = row[DATA_COL.VENDOR] || "기타";
+        const c = colFor(row);
+        const sId = String(row[c.KNOX_ID]);
+        const cost = Number(row[c.COST]) || 0;
+        const status = String(row[c.STATUS]);
+        const vendor = row._reqType === "교육" ? (row[DATA_COL.VENDOR] || "기타") : "도서";
         const reqType = row._reqType;
 
         if (status === "완료") {
@@ -196,6 +182,11 @@ const doGet = (e) => {
         if (userMap.has(sId)) {
           const u = userMap.get(sId);
 
+          // 웹페이지관리에 이름이 없으면 신청서에서 보충
+          if (u.name === '미확인' && row[c.NAME]) {
+            u.name = String(row[c.NAME]);
+          }
+
           if (status === "완료") {
             u.used += cost;
             if (reqType === "교육") u.eduUsed += cost;
@@ -207,15 +198,22 @@ const doGet = (e) => {
         }
       });
 
-      // 전체 개별 레코드 (관리자 상세 조회용)
-      stats.allRecords = allApplyData.map(row => ({
-        knoxId: String(row[DATA_COL.KNOX_ID]),
-        name: row[DATA_COL.NAME] || '',
-        courseName: `[${row._reqType}] ${row[DATA_COL.TITLE]}`,
-        cost: Number(row[DATA_COL.COST]) || 0,
-        status: row[DATA_COL.STATUS] || '',
-        period: row._reqType === "교육" ? (row[12] || '') : ''
-      }));
+      // 전체 개별 레코드 (관리자 상세 조회용) — 이름은 웹페이지관리(마스터) 우선
+      stats.allRecords = allApplyData.map(row => {
+        const c = colFor(row);
+        const knoxId = String(row[c.KNOX_ID]);
+        const masterName = userMap.has(knoxId) ? userMap.get(knoxId).name : '';
+        return {
+          knoxId,
+          name: masterName || row[c.NAME] || '',
+          courseName: `[${row._reqType}] ${row[c.TITLE]}`,
+          cost: Number(row[c.COST]) || 0,
+          status: row[c.STATUS] || '',
+          period: row._reqType === "교육" ? (row[12] || '') : '',
+          date: row[0] ? new Date(row[0]).toISOString() : '',
+          reqType: row._reqType
+        };
+      });
 
       // 검색/필터용 플래그 부착
       stats.allUserList = Array.from(userMap.values()).map(u => ({
@@ -231,7 +229,7 @@ const doGet = (e) => {
     adminSheet.getRange(adminRowIdx + 1, ADMIN_COL.LAST_LOGIN + 1).setValue(new Date());
 
     return createResponse({
-      userInfo: { name: myRows.length > 0 ? myRows[0][DATA_COL.NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed },
+      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y" },
       myHistory: myHistory,
       adminStats: adminStats
     });
@@ -279,18 +277,20 @@ const onSpreadsheetChange = (e) => {
   // 3. 누적 사용액 계산을 위해 '교육 + 도서' 전체 데이터를 하나의 배열로 병합
   const eduData = dataSheet.getDataRange().getValues();
   const bookData = bookSheet.getDataRange().getValues();
-  // 헤더(첫 줄)를 제외하고 두 데이터를 합침
-  const allDataForBudget = [...eduData.slice(1), ...bookData.slice(1)];
+  const eduRows = eduData.slice(1); eduRows.forEach(r => { r._reqType = '교육'; });
+  const bookRows = bookData.slice(1); bookRows.forEach(r => { r._reqType = '도서'; });
+  const allDataForBudget = [...eduRows, ...bookRows];
 
   // 4. 방금 데이터가 추가된 '현재 활성화된 시트'만 스캔하여 발송 대상 찾기
+  const activeCol = activeSheetName === SHEET_NAME.BOOK ? BOOK_COL : DATA_COL;
   const currentSheetData = activeSheet.getDataRange().getValues();
 
   currentSheetData.forEach((row, index) => {
     if (index === 0) return; // 헤더 제외
 
     const docId = String(row[DOC_ID_COL]).trim();
-    const status = row[DATA_COL.STATUS];
-    const knoxId = String(row[DATA_COL.KNOX_ID]);
+    const status = row[activeCol.STATUS];
+    const knoxId = String(row[activeCol.KNOX_ID]);
     const isAgreed = adminMap.get(knoxId);
 
     // [발송 조건] 완료 상태 + 수신 동의 + 발송 이력에 없는 문서번호
@@ -299,13 +299,14 @@ const onSpreadsheetChange = (e) => {
       // 사용자 누적액 통합 계산 (교육 + 도서 병합본에서 검색)
       let totalUsed = 0;
       allDataForBudget.forEach(r => {
-        if (String(r[DATA_COL.KNOX_ID]) === knoxId && r[DATA_COL.STATUS] === "완료") {
-          totalUsed += (Number(r[DATA_COL.COST]) || 0);
+        const c = colFor(r);
+        if (String(r[c.KNOX_ID]) === knoxId && r[c.STATUS] === "완료") {
+          totalUsed += (Number(r[c.COST]) || 0);
         }
       });
 
       // 동적으로 [교육비 결재 완료] 또는 [도서비 결재 완료] 출력
-      const content = `[${reqType} 결재 완료]\n- 문서번호: ${docId}\n- 과정/도서명: ${row[DATA_COL.TITLE]}\n- 금액: ${Number(row[DATA_COL.COST]).toLocaleString()}원\n- 총 사용: ${totalUsed.toLocaleString()}원\n- 잔액: ${(LIMIT_BUDGET - totalUsed).toLocaleString()}원`;
+      const content = `[${reqType} 결재 완료]\n- 문서번호: ${docId}\n- 과정/도서명: ${row[activeCol.TITLE]}\n- 금액: ${Number(row[activeCol.COST]).toLocaleString()}원\n- 총 사용: ${totalUsed.toLocaleString()}원\n- 잔액: ${(LIMIT_BUDGET - totalUsed).toLocaleString()}원`;
 
       // 5. Flow 발송 및 이력 기록
       if (sendFlowGAS(knoxId, content)) {

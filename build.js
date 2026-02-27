@@ -158,7 +158,6 @@ async function build() {
 
   const adminPass = validate('admin-dashboard.html', adminOutput, [
     ['cdn.tailwindcss.com', adminOutput.includes('cdn.tailwindcss.com')],
-    ['chart.js CDN', adminOutput.includes('chart.js')],
     ['tailwind.config', adminOutput.includes('tailwind.config')],
     ['onclick="loadDashboard()"', adminOutput.includes('loadDashboard()')],
     ['onclick="logout()"', adminOutput.includes('logout()')],
