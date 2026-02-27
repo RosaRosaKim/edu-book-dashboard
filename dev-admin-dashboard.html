@@ -138,6 +138,17 @@ tailwind.config = {
           <div class="text-[11px] text-[#6e7f7b]">전사 교육비 통합 관제</div>
         </div>
       </div>
+      <div class="flex items-center gap-2 flex-1 max-w-xs mx-3">
+        <!-- 스켈레톤 -->
+        <div id="searchSkeleton" class="skeleton w-full h-8 rounded-lg"></div>
+        <!-- 실제 검색바 -->
+        <div id="searchReal" class="relative flex-1 hidden">
+          <input type="text" id="searchInput" placeholder="이름으로 검색..."
+            class="w-full px-3 py-1.5 pl-8 bg-surface-2 border border-border rounded-lg text-xs text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
+            oninput="doSearchDebounced()" onkeydown="if(event.key==='Enter'){clearTimeout(_searchTimer);doSearch()}">
+          <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6e7f7b]/60 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+      </div>
       <div class="flex items-center gap-3 flex-wrap">
         <span id="userGreeting" class="text-xs text-[#6e7f7b]"></span>
         <a id="userDashLink" href="dev-edu-book-dashboard.html" class="text-xs text-[#47635f] border border-[#ccebe2] rounded-lg px-3 py-1.5 hover:bg-[#e2f5ef] hover:text-[#47635f] transition">일반 대시보드</a>
@@ -224,14 +235,8 @@ tailwind.config = {
         <div id="panelRatio" class="report-panel active"></div>
       </section>
 
-      <!-- 검색 + 퀵필터 -->
+      <!-- 퀵필터 -->
       <section class="pt-4 border-t border-border space-y-4">
-        <div class="flex gap-2">
-          <input type="text" id="searchInput" placeholder="이름으로 검색..."
-            class="flex-1 px-4 py-3 bg-surface-2 border border-border rounded-xl text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
-            onkeydown="if(event.key==='Enter') doSearch()">
-          <button onclick="doSearch()" class="bg-accent text-white px-6 rounded-xl text-sm font-semibold hover:brightness-110 transition">검색</button>
-        </div>
         <!-- 잔여금액 듀얼 슬라이더 -->
         <div class="bg-surface-2 border border-border rounded-xl px-4 py-3">
           <div class="flex items-center justify-between mb-3">
@@ -400,6 +405,8 @@ async function loadDashboard() {
 
   $('loadingState').classList.remove('hidden');
   $('danceOverlay').classList.remove('hidden');
+  $('searchSkeleton').classList.remove('hidden');
+  $('searchReal').classList.add('hidden');
   $('dashContent').classList.add('hidden');
   $('errorState').classList.add('hidden');
   $('accessDenied').classList.add('hidden');
@@ -422,6 +429,7 @@ async function loadDashboard() {
     if (!userInfo.isAdmin) {
       $('loadingState').classList.add('hidden');
       $('danceOverlay').classList.add('hidden');
+      $('searchSkeleton').classList.add('hidden');
       $('accessDenied').classList.remove('hidden');
       return;
     }
@@ -436,10 +444,14 @@ async function loadDashboard() {
 
     $('loadingState').classList.add('hidden');
     $('danceOverlay').classList.add('hidden');
+    $('searchSkeleton').classList.add('hidden');
+    $('searchReal').classList.remove('hidden');
     $('dashContent').classList.remove('hidden');
   } catch (e) {
     $('loadingState').classList.add('hidden');
     $('danceOverlay').classList.add('hidden');
+    $('searchSkeleton').classList.add('hidden');
+    $('searchReal').classList.remove('hidden');
     $('errorState').classList.remove('hidden');
     $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어요.';
   }
@@ -618,10 +630,18 @@ function applyFilters() {
   renderTable(filtered);
 }
 
-/* ========== 검색 ========== */
+/* ========== 검색 (디바운스 300ms) ========== */
+window._searchTimer = null;
 function doSearch() {
+  if (!adminStats) return;
   const query = $('searchInput').value.trim();
-  if (!query) return;
+
+  $('userDetail').classList.add('hidden');
+
+  if (!query) {
+    $('resultArea').classList.add('hidden');
+    return;
+  }
 
   const users = adminStats.allUserList || [];
   const q = query.toLowerCase();
@@ -630,18 +650,22 @@ function doSearch() {
     (u.name && u.name.includes(query))
   );
 
-  $('userDetail').classList.add('hidden');
-  activeTags = activeTags.filter(t => t.type !== 'user');
-
   if (matched.length > 0) {
-    addTag('user', query);
     renderTable(matched);
   } else {
-    $('resultArea').classList.add('hidden');
-    showToast('검색 결과가 없어요.', true);
+    $('resultArea').classList.remove('hidden');
+    $('resultBody').innerHTML = '';
+    $('noResults').classList.remove('hidden');
+    $('resultCount').textContent = '';
+    $('resultSummary').innerHTML = '';
   }
 }
 window.doSearch = doSearch;
+
+window.doSearchDebounced = function() {
+  clearTimeout(window._searchTimer);
+  window._searchTimer = setTimeout(doSearch, 300);
+};
 
 /* ========== 듀얼 슬라이더 ========== */
 function onDualRange() {
