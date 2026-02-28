@@ -1,5 +1,5 @@
 node_modules/
-edu-book-dashboard.html
+dist/
 .idea/
 *.iml
 .DS_Store

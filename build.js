@@ -1,8 +1,13 @@
 const fs = require('fs');
+const path = require('path');
 const cheerio = require('cheerio');
 const CleanCSS = require('clean-css');
 const { minify: minifyHTML } = require('html-minifier-terser');
 const JavaScriptObfuscator = require('javascript-obfuscator');
+
+const SRC_DIR = 'html';
+const DIST_DIR = 'dist';
+const IMG_DIR = 'img';
 
 async function buildFile(inputFile, outputFile) {
   console.log(`\n========== Building ${inputFile} ==========`);
@@ -115,9 +120,11 @@ async function buildFile(inputFile, outputFile) {
     minifyCSS: false,
   });
 
-  // ── Replace dev links with prod links ──
+  // ── Replace dev paths with prod paths ──
   output = output.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
   output = output.replace(/dev-admin-dashboard\.html/g, 'admin-dashboard.html');
+  // 이미지 경로: html/ 소스의 ../img/ → dist/ 기준 img/
+  output = output.replace(/\.\.\/img\//g, 'img/');
 
   fs.writeFileSync(outputFile, output, 'utf-8');
 
@@ -137,9 +144,53 @@ function validate(label, output, checks) {
   return allPass;
 }
 
+/**
+ * 모듈 HTML 파일 빌드 (미니파이만)
+ */
+async function buildModule(inputFile, outputFile) {
+  console.log(`\n--- Module: ${path.basename(inputFile)} ---`);
+  let html = fs.readFileSync(inputFile, 'utf-8');
+
+  html = await minifyHTML(html, {
+    collapseWhitespace: true,
+    removeComments: true,
+    removeRedundantAttributes: true,
+    removeEmptyAttributes: true,
+    minifyJS: true,
+    minifyCSS: true,
+  });
+
+  fs.writeFileSync(outputFile, html, 'utf-8');
+  const sizeKB = (Buffer.byteLength(html, 'utf-8') / 1024).toFixed(1);
+  console.log(`  ${path.basename(outputFile)} (${sizeKB} KB)`);
+}
+
+/**
+ * 디렉토리 재귀 복사
+ */
+function copyDirSync(src, dest) {
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src)) {
+    const srcPath = path.join(src, entry);
+    const destPath = path.join(dest, entry);
+    if (fs.statSync(srcPath).isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 async function build() {
-  // 1. Build user dashboard
-  const userOutput = await buildFile('dev-edu-book-dashboard.html', 'edu-book-dashboard.html');
+  // 0. dist 디렉토리 준비
+  if (fs.existsSync(DIST_DIR)) fs.rmSync(DIST_DIR, { recursive: true });
+  fs.mkdirSync(DIST_DIR, { recursive: true });
+
+  // 1. 메인 페이지 빌드
+  const userOutput = await buildFile(
+    path.join(SRC_DIR, 'dev-edu-book-dashboard.html'),
+    path.join(DIST_DIR, 'edu-book-dashboard.html')
+  );
 
   const userPass = validate('edu-book-dashboard.html', userOutput, [
     ['cdn.tailwindcss.com', userOutput.includes('cdn.tailwindcss.com')],
@@ -153,8 +204,11 @@ async function build() {
     ['onclick="logout()"', userOutput.includes('logout()')],
   ]);
 
-  // 2. Build admin dashboard
-  const adminOutput = await buildFile('dev-admin-dashboard.html', 'admin-dashboard.html');
+  // 2. 관리자 페이지 빌드
+  const adminOutput = await buildFile(
+    path.join(SRC_DIR, 'dev-admin-dashboard.html'),
+    path.join(DIST_DIR, 'admin-dashboard.html')
+  );
 
   const adminPass = validate('admin-dashboard.html', adminOutput, [
     ['cdn.tailwindcss.com', adminOutput.includes('cdn.tailwindcss.com')],
@@ -164,6 +218,24 @@ async function build() {
     ['doSearch', adminOutput.includes('doSearch')],
     ['resetRange', adminOutput.includes('resetRange')],
   ]);
+
+  // 3. 모듈 HTML 빌드
+  console.log('\n========== Building modules ==========');
+  const modules = ['edu-bizplay.html', 'card-babka.html'];
+  for (const mod of modules) {
+    const src = path.join(SRC_DIR, mod);
+    if (fs.existsSync(src)) {
+      await buildModule(src, path.join(DIST_DIR, mod));
+    }
+  }
+
+  // 4. 이미지 복사
+  if (fs.existsSync(IMG_DIR)) {
+    console.log(`\n========== Copying ${IMG_DIR}/ ==========`);
+    copyDirSync(IMG_DIR, path.join(DIST_DIR, IMG_DIR));
+    const imgCount = fs.readdirSync(IMG_DIR).length;
+    console.log(`  ${imgCount} files → ${DIST_DIR}/${IMG_DIR}/`);
+  }
 
   if (userPass && adminPass) {
     console.log('\nAll checks passed!');

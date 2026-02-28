@@ -1,0 +1,844 @@
+<!-- 밥카 스켈레톤 로딩 -->
+<div id="cardSkeleton">
+  <div class="mb-6">
+    <div class="bg-surface border border-border rounded-2xl p-5">
+      <div class="flex justify-between items-end mb-4">
+        <div>
+          <div class="skeleton w-14 h-2.5 mb-2"></div>
+          <div class="skeleton w-36 h-8 mb-2"></div>
+          <div class="skeleton w-28 h-3"></div>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+          <div class="skeleton w-14 h-2.5"></div>
+          <div class="skeleton w-24 h-5"></div>
+          <div class="skeleton w-28 h-3"></div>
+        </div>
+      </div>
+      <div class="skeleton w-40 h-3 mb-3"></div>
+      <div class="skeleton w-full h-3 rounded-full mb-3"></div>
+      <div class="flex gap-4">
+        <div class="skeleton w-16 h-3"></div>
+        <div class="skeleton w-20 h-3"></div>
+      </div>
+    </div>
+  </div>
+  <div class="mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between">
+        <div><div class="skeleton w-20 h-4 mb-2"></div><div class="skeleton w-36 h-3"></div></div>
+        <div class="skeleton w-12 h-7 rounded-full shrink-0"></div>
+      </div>
+      <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between">
+        <div><div class="skeleton w-20 h-4 mb-2"></div><div class="skeleton w-36 h-3"></div></div>
+        <div class="skeleton w-12 h-7 rounded-full shrink-0"></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="skeleton w-16 h-3 mb-3"></div>
+    <div class="bg-surface border border-border rounded-2xl p-4 space-y-3">
+      <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+      <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+      <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 밥카 실제 컨텐츠 (로딩 완료 후 표시) -->
+<div id="cardContent" class="hidden">
+
+<!-- 밥카 잔액 요약 -->
+<section class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex justify-between items-end flex-wrap gap-3 mb-4">
+      <div>
+        <div class="text-[10px] text-[#6e7f7b] mb-1">사용 금액</div>
+        <div class="font-mono text-3xl font-semibold" id="cardUsedAmount">0원</div>
+        <div class="text-xs text-[#6e7f7b] mt-1" id="cardUsedSub"></div>
+      </div>
+      <div class="text-right">
+        <div class="text-[10px] text-[#6e7f7b]">남은 잔액</div>
+        <div class="font-mono text-lg font-semibold text-[#47635f]" id="cardRemainAmount">0원</div>
+        <div class="text-xs text-[#6e7f7b] mt-0.5" id="cardBudgetLabel">다음 초기화까지 <span class="font-mono" id="cardResetDays">-</span>일</div>
+      </div>
+    </div>
+    <!-- 기간 표시 -->
+    <div class="flex items-center gap-2 mb-3 text-xs text-[#6e7f7b]">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v9.75"/></svg>
+      <span id="cardPeriodLabel"></span>
+      <span class="text-[10px] text-[#6e7f7b]/60" id="cardBizDaysLabel"></span>
+    </div>
+    <!-- 프로그레스 바 -->
+    <div class="h-3 bg-surface-2 rounded-full overflow-visible relative mb-3">
+      <div id="cardBarUsed" class="h-full rounded-full bg-gradient-to-r from-[#d97706] to-[#fbbf24] transition-all duration-700" style="width:0%"></div>
+    </div>
+    <div class="flex gap-4 flex-wrap">
+      <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+        <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-[#d97706] to-[#fbbf24] inline-block"></span> 사용
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+        <span class="w-2.5 h-2.5 rounded-sm bg-surface-2 inline-block"></span> 잔액
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 밥카 알람 설정 (2컬럼) -->
+<section class="mb-6 relative">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <!-- 좌측: 결재 알림 (기존 16일 트리거) -->
+    <div class="bg-surface border border-border rounded-2xl p-5">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-sm font-semibold mb-0.5">결재 알림</div>
+          <div class="text-[11px] text-[#6e7f7b] leading-snug">매월 16일 결재 요청 알림</div>
+        </div>
+        <button id="cardAlarmToggle" onclick="toggleCardAlarm()" class="relative w-12 h-7 rounded-full toggle-track cursor-pointer border-0 outline-none shrink-0"
+          style="background:var(--card-toggle-bg, #ccebe2);">
+          <span class="toggle-thumb absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow" style="transform:var(--card-toggle-x, translateX(0))"></span>
+        </button>
+      </div>
+    </div>
+    <!-- 우측: 평일 잔액 알림 -->
+    <div class="bg-surface border border-border rounded-2xl p-5">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-sm font-semibold mb-0.5">잔액 알림</div>
+          <div class="text-[11px] text-[#6e7f7b] leading-snug">평일 10~11시에 Flow로 잔액 알림</div>
+        </div>
+        <button id="cardDailyToggle" onclick="toggleCardDailyAlarm()" class="relative w-12 h-7 rounded-full toggle-track cursor-pointer border-0 outline-none shrink-0"
+          style="background:var(--card-daily-toggle-bg, #ccebe2);">
+          <span class="toggle-thumb absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow" style="transform:var(--card-daily-toggle-x, translateX(0))"></span>
+        </button>
+      </div>
+      <!-- PW 입력 영역 (토글 ON 시 표시) -->
+      <div id="cardDailyPwArea" class="hidden mt-3 pt-3 border-t border-border/60">
+        <div class="flex gap-2">
+          <input id="cardDailyPwInput" type="password" placeholder="Bizplay 비밀번호"
+            class="flex-1 min-w-0 px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg outline-none focus:border-[#059669] transition">
+          <button id="cardDailyPwSave" onclick="saveCardDailyPw()"
+            class="px-4 py-2 text-sm font-semibold bg-accent text-white rounded-lg hover:brightness-110 transition whitespace-nowrap">저장</button>
+        </div>
+        <div class="text-[10px] text-[#6e7f7b]/70 mt-2">비밀번호는 암호화하여 저장돼.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 밥카 사용 내역 -->
+<section>
+  <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">사용 내역</div>
+  <div id="cardMonthTags" class="flex gap-2 flex-wrap mb-3"></div>
+  <div id="cardStatsWrap" class="hidden"></div>
+  <div id="cardRecordsWrap" class="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto record-table-wrap">
+      <table class="w-full" id="cardRecordsTable">
+        <thead>
+          <tr class="bg-surface-2 border-b border-border">
+            <th class="px-2 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">No</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">날짜</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">사용처</th>
+            <th class="px-4 py-3 text-right text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">금액</th>
+          </tr>
+        </thead>
+        <tbody id="cardRecordsBody"></tbody>
+      </table>
+    </div>
+    <div id="cardRecordsCards" class="record-card p-3 space-y-3"></div>
+    <div id="cardNoRecords" class="hidden text-center py-10 text-[#6e7f7b] text-sm">아직 사용 내역이 없어.</div>
+  </div>
+</section>
+
+<!-- 밥카 Bizplay 결재 바로가기 -->
+<section class="mt-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">밥카 결재</div>
+    <div class="grid grid-cols-2 gap-3">
+      <button id="cardBtnTemp" onclick="openCardApproval('temp')"
+        class="bg-surface-2 border border-border text-[#47635f] rounded-xl p-4 hover:brightness-95 transition text-center">
+        <svg class="w-5 h-5 mx-auto mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+        </svg>
+        <div class="text-sm font-semibold">임시저장</div>
+        <div class="text-[10px] opacity-60 mt-1 leading-tight">나중에 Bizplay에서 확인</div>
+      </button>
+      <button id="cardBtnApprove" onclick="openCardApproval('approve')"
+        class="bg-accent text-white rounded-xl p-4 hover:brightness-110 transition text-center">
+        <svg class="w-5 h-5 mx-auto mb-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+        </svg>
+        <div class="text-sm font-semibold">결재요청</div>
+        <div class="text-[10px] opacity-75 mt-1 leading-tight">바로 결재선으로 상신</div>
+      </button>
+    </div>
+  </div>
+</section>
+
+</div><!-- /cardContent -->
+
+<script>
+/* ═══════════════ 밥카 모듈 ═══════════════ */
+(function() {
+  const $ = id => document.getElementById(id);
+
+  /* ─── 상태 ─── */
+  let cardRecords = [];       // 현재 표시 중인 월의 레코드
+  let cardCurrentRecords = []; // 현재 기간(이번 달) 레코드 — 상단 요약용
+  let cardAlarmOn = false;
+  let cardDailyAlarmOn = false;
+  let cardFetchState = 'idle'; // 'idle' | 'loading' | 'loaded' | 'no-session' | 'sso-fail' | 'error'
+  let cardFilteredRecords = []; // renderCardRecords에서 표시 중인 필터된 레코드
+  let cardViewMode = 'records'; // 'records' | 'stats'
+  let cardStatsCache = null;    // 6개월 통계 캐시
+  let cardIsRefreshing = false; // 탭 전환 재조회 중 (전체 스켈레톤 방지)
+
+  /* ─── 기간 계산: 매월 15일~다음달 14일 ─── */
+  function getCardPeriod(now) {
+    now = now || new Date();
+    let start, end;
+    if (now.getDate() >= 15) {
+      start = new Date(now.getFullYear(), now.getMonth(), 15);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 14);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+      end = new Date(now.getFullYear(), now.getMonth(), 14);
+    }
+    return { start, end };
+  }
+
+  /* ─── 공휴일 API (holidays.hyunbin.page) ─── */
+  const holidayCache = {}; // { 2026: Set(['2026-02-16', ...]) }
+
+  async function loadHolidays(year) {
+    if (holidayCache[year]) return holidayCache[year];
+    try {
+      const resp = await fetch(`https://holidays.hyunbin.page/${year}.json`);
+      if (!resp.ok) throw new Error(resp.status);
+      const data = await resp.json();
+      holidayCache[year] = new Set(Object.keys(data));
+
+      // 근로자의 날(5/1)은 공휴일은 아니지만 회사 휴일
+      const mayDay = `${year}-05-01`;
+      holidayCache[year].add(mayDay);
+
+      return holidayCache[year];
+    } catch (e) {
+      console.warn('[card] 공휴일 로드 실패:', year, e.message);
+      holidayCache[year] = new Set();
+      return holidayCache[year];
+    }
+  }
+
+  function isHoliday(date, holidays) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return holidays.has(`${yyyy}-${mm}-${dd}`);
+  }
+
+  function getBusinessDays(startDate, endDate, holidays) {
+    let count = 0;
+    const d = new Date(startDate);
+    while (d <= endDate) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6 && !isHoliday(d, holidays)) count++;
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  async function getCardBudget(period) {
+    // 기간이 연도를 걸칠 수 있으므로 양쪽 연도 로드
+    const years = new Set([period.start.getFullYear(), period.end.getFullYear()]);
+    const sets = await Promise.all([...years].map(y => loadHolidays(y)));
+    const merged = new Set();
+    sets.forEach(s => s.forEach(d => merged.add(d)));
+
+    const bizDays = getBusinessDays(period.start, period.end, merged);
+    return { bizDays, budget: bizDays * 10000 };
+  }
+
+  /* ─── 뷰 탭 (현재월 / 6개월 통계) ─── */
+
+  /** 현재 기간 시작월 라벨 */
+  function getCurrentMonthLabel() {
+    const d = new Date();
+    let y = d.getFullYear(), m;
+    if (d.getDate() >= 15) {
+      m = d.getMonth() + 1;
+    } else {
+      m = d.getMonth();
+      if (m === 0) { m = 12; y--; }
+    }
+    return String(y).slice(-2) + '년 ' + String(m).padStart(2, '0') + '월';
+  }
+
+  function renderViewTabs() {
+    const wrap = $('cardMonthTags');
+    if (!wrap) return;
+
+    const tabs = [
+      { key: 'records', label: getCurrentMonthLabel() },
+      { key: 'stats', label: 'TOP 5' }
+    ];
+
+    wrap.innerHTML = tabs.map(t => {
+      const isActive = t.key === cardViewMode;
+      const cls = isActive
+        ? 'bg-accent text-white'
+        : 'bg-surface-2 text-[#6e7f7b] hover:brightness-95';
+      return `<button class="px-3 py-1.5 text-xs font-semibold rounded-full border border-border/60 transition cursor-pointer ${cls}" data-view="${t.key}">${t.label}</button>`;
+    }).join('');
+
+    wrap.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        if (view === cardViewMode) return;
+        cardViewMode = view;
+
+        if (view === 'records') {
+          cardRecords = cardCurrentRecords;
+          cardIsRefreshing = false;
+          renderCardDashboard();
+        } else {
+          fetchStats();
+        }
+      });
+    });
+  }
+
+  /** 6개월 통계 조회 */
+  async function fetchStats() {
+    if (cardStatsCache) {
+      renderCardDashboard();
+      return;
+    }
+
+    cardIsRefreshing = true;
+    renderCardDashboard();
+
+    // 현재 기간 시작일에서 5개월 전 ~ 현재 기간 종료일
+    const period = getCardPeriod();
+    const sixStart = new Date(period.start);
+    sixStart.setMonth(sixStart.getMonth() - 5);
+    const fmt = d => d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    const fromDt = fmt(sixStart);
+    const toDt = fmt(period.end);
+
+    const token = localStorage.getItem('edu_token');
+    try {
+      let url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token)
+        + '&fromDt=' + fromDt + '&toDt=' + toDt;
+      const data = await window.gasFetch(url);
+      if (data.status === 'success') {
+        cardStatsCache = data.records || [];
+      }
+    } catch (e) {
+      console.error('[card] 통계 조회 예외:', e);
+    }
+
+    cardIsRefreshing = false;
+    renderCardDashboard();
+  }
+
+  /** TOP5 통계 렌더링 */
+  function renderStatsView() {
+    const wrap = $('cardStatsWrap');
+    if (!wrap) return;
+
+    if (cardIsRefreshing) {
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl p-8 text-center"><svg class="w-5 h-5 mx-auto spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg></div>';
+      return;
+    }
+
+    const records = cardStatsCache || [];
+    if (records.length === 0) {
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl py-10 text-center text-[#6e7f7b] text-sm">통계 데이터가 없어.</div>';
+      return;
+    }
+
+    // 교통비 제외, 사용처별 집계
+    const transportKeywords = ['티머니 버스', '티머니 지하철'];
+    const merchantMap = {};
+    records.forEach(r => {
+      const merchant = (r.merchant || '').trim();
+      if (!merchant) return;
+      if (transportKeywords.some(k => merchant.includes(k))) return;
+      if (!merchantMap[merchant]) merchantMap[merchant] = { amount: 0, count: 0 };
+      merchantMap[merchant].amount += Number(r.cost) || 0;
+      merchantMap[merchant].count++;
+    });
+
+    const sorted = Object.entries(merchantMap)
+      .map(([name, d]) => ({ name, ...d }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    if (sorted.length === 0) {
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl py-10 text-center text-[#6e7f7b] text-sm">통계 데이터가 없어.</div>';
+      return;
+    }
+
+    const maxAmt = sorted[0].amount;
+    const barColors = ['#2d8a7e', '#47a89a', '#6ec4b8', '#96d9d0', '#b8ece6'];
+
+    let html = '<div class="bg-surface border border-border rounded-2xl p-5">';
+    html += '<div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">최근 6개월간 기록</div>';
+    html += '<div class="space-y-4">';
+
+    sorted.forEach((item, i) => {
+      const pct = maxAmt > 0 ? Math.max((item.amount / maxAmt) * 100, 4) : 0;
+      html += `
+        <div>
+          <div class="flex items-center gap-2.5 mb-1.5">
+            <span class="text-xs font-bold w-4 shrink-0" style="color:${barColors[i]}">${i + 1}</span>
+            <span class="text-sm font-medium truncate flex-1">${escapeHtml(item.name)}</span>
+            <span class="text-[11px] font-mono text-[#6e7f7b] shrink-0">${formatMoney(item.amount)}원 · ${item.count}회</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="w-4 shrink-0"></span>
+            <div class="flex-1 h-2.5 bg-surface-2 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-700" style="width:${pct}%;background:${barColors[i]}"></div>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    html += '</div></div>';
+    wrap.innerHTML = html;
+  }
+
+  /* ─── 스켈레톤 토글 ─── */
+  function updateCardVisibility() {
+    const skeleton = $('cardSkeleton');
+    const content = $('cardContent');
+    if (!skeleton || !content) return;
+    // 월 변경 재조회 시에는 전체 스켈레톤 대신 컨텐츠 유지
+    const isInitialLoading = (cardFetchState === 'idle' || cardFetchState === 'loading') && !cardIsRefreshing;
+    skeleton.classList.toggle('hidden', !isInitialLoading);
+    content.classList.toggle('hidden', isInitialLoading);
+  }
+
+  /* ─── 렌더링 ─── */
+  function formatMoney(n) { return Number(n).toLocaleString('ko-KR'); }
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  async function renderCardDashboard() {
+    updateCardVisibility();
+    renderViewTabs();
+
+    // ── 상단 요약: 항상 현재 기간 기준 ──
+    const currentPeriod = getCardPeriod();
+    const { bizDays, budget } = await getCardBudget(currentPeriod);
+
+    const fmtFull = d => d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+    $('cardPeriodLabel').textContent = fmtFull(currentPeriod.start) + ' ~ ' + fmtFull(currentPeriod.end);
+    $('cardBizDaysLabel').textContent = '(영업일 ' + bizDays + '일)';
+
+    const now = new Date();
+    let nextReset;
+    if (now.getDate() >= 15) {
+      nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 15);
+    } else {
+      nextReset = new Date(now.getFullYear(), now.getMonth(), 15);
+    }
+    $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
+
+    const transportKeywords = ['티머니 버스', '티머니 지하철'];
+    const currentValid = cardCurrentRecords.filter(r => {
+      if (r.purpose && r.purpose.trim()) return false;
+      const merchant = (r.merchant || '').trim();
+      return !transportKeywords.some(k => merchant.includes(k));
+    });
+    let usedSum = 0;
+    currentValid.forEach(r => { usedSum += Number(r.cost) || 0; });
+    const remain = budget - usedSum;
+    const usedPct = budget > 0 ? Math.min((usedSum / budget) * 100, 100) : 0;
+
+    $('cardUsedAmount').textContent = formatMoney(usedSum) + '원';
+    $('cardUsedSub').textContent = '';
+    $('cardRemainAmount').textContent = formatMoney(remain) + '원';
+    $('cardRemainAmount').style.color = remain < 0 ? '#dc2626' : '';
+    requestAnimationFrame(() => { $('cardBarUsed').style.width = usedPct + '%'; });
+
+    setCardToggleState(cardAlarmOn);
+    setCardDailyToggleState(cardDailyAlarmOn);
+
+    // ── 하단: 뷰 모드별 분기 ──
+    const recordsWrap = $('cardRecordsWrap');
+    const statsWrap = $('cardStatsWrap');
+
+    if (cardViewMode === 'stats') {
+      recordsWrap.classList.add('hidden');
+      statsWrap.classList.remove('hidden');
+      renderStatsView();
+    } else {
+      statsWrap.classList.add('hidden');
+      recordsWrap.classList.remove('hidden');
+      const displayRecords = cardRecords.filter(r => {
+        if (r.purpose && r.purpose.trim()) return false;
+        const merchant = (r.merchant || '').trim();
+        return !transportKeywords.some(k => merchant.includes(k));
+      });
+      renderCardRecords(displayRecords);
+    }
+  }
+
+  function renderCardRecords(filteredRecords) {
+    cardFilteredRecords = filteredRecords || [];
+    const body = $('cardRecordsBody');
+    const cards = $('cardRecordsCards');
+    body.innerHTML = '';
+    cards.innerHTML = '';
+
+    if (!filteredRecords || filteredRecords.length === 0) {
+      $('cardRecordsTable').parentElement.style.display = 'none';
+      cards.style.display = 'none';
+      $('cardNoRecords').classList.remove('hidden');
+      const noRec = $('cardNoRecords');
+      if (cardFetchState === 'no-session' || cardFetchState === 'sso-fail') {
+        noRec.innerHTML = '<div class="mb-2">' +
+          (cardFetchState === 'sso-fail' ? 'Bizplay 세션이 만료됐어.' : 'Bizplay 로그인 후 사용내역을 조회할 수 있어.') +
+          '</div><button onclick="window._cardBizLogin()" class="px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:brightness-110 transition">' +
+          'Bizplay 로그인</button>';
+      } else if (cardFetchState === 'error') {
+        noRec.textContent = '사용내역 조회에 실패했어. 다시 시도해줘.';
+      } else {
+        noRec.textContent = '아직 사용 내역이 없어.';
+      }
+      return;
+    }
+
+    $('cardRecordsTable').parentElement.style.display = '';
+    $('cardNoRecords').classList.add('hidden');
+
+    filteredRecords.forEach((r, i) => {
+      const amt = Number(r.cost) || 0;
+      const merchant = r.merchant || '-';
+      const date = r.date || '';
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-border/80';
+      tr.innerHTML = `
+        <td class="px-2 py-3 text-sm text-[#6e7f7b] font-mono">${i + 1}</td>
+        <td class="px-4 py-3 text-sm text-[#6e7f7b] whitespace-nowrap">${escapeHtml(date)}</td>
+        <td class="px-4 py-3 text-sm">${escapeHtml(merchant)}</td>
+        <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
+      `;
+      body.appendChild(tr);
+
+      const card = document.createElement('div');
+      card.className = 'bg-surface-2 border border-border/60 rounded-xl p-4';
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold">${escapeHtml(merchant)}</span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-[#6e7f7b]">
+          <span>${escapeHtml(date)}</span>
+          <span class="font-mono font-medium text-[#47635f]">${formatMoney(amt)}원</span>
+        </div>
+      `;
+      cards.appendChild(card);
+    });
+  }
+
+  /* ─── 알람 토글 ─── */
+  function setCardToggleState(on) {
+    const el = $('cardAlarmToggle');
+    if (!el) return;
+    el.style.setProperty('--card-toggle-bg', on ? '#059669' : '#ccebe2');
+    el.style.setProperty('--card-toggle-x', on ? 'translateX(20px)' : 'translateX(0)');
+    el.dataset.on = on ? '1' : '0';
+  }
+
+  function setCardToggleLoading(loading) {
+    const el = $('cardAlarmToggle');
+    if (!el) return;
+    const thumb = el.querySelector('.toggle-thumb');
+    el.dataset.loading = loading ? '1' : '0';
+    el.style.opacity = loading ? '0.7' : '1';
+    if (loading) {
+      thumb.innerHTML = '<svg class="w-3.5 h-3.5 spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+      thumb.style.display = 'flex';
+      thumb.style.alignItems = 'center';
+      thumb.style.justifyContent = 'center';
+    } else {
+      thumb.innerHTML = '';
+      thumb.style.display = '';
+    }
+  }
+
+
+  window.toggleCardAlarm = async function() {
+    const el = $('cardAlarmToggle');
+    if (el.dataset.loading === '1') return;
+    const isOn = el.dataset.on === '1';
+    const newVal = !isOn;
+    const token = localStorage.getItem('edu_token');
+
+    setCardToggleState(newVal);
+    setCardToggleLoading(true);
+
+    try {
+      const data = await window.gasFetch(window.API_URL + '?action=updateCardAlarm&token=' + encodeURIComponent(token) + '&isAgreed=' + newVal);
+      if (data.status !== 'success') {
+        setCardToggleState(isOn);
+        window.showToast('알람 설정 변경에 실패했어.', 'sad', $('cardAlarmToggle'));
+      } else {
+        cardAlarmOn = newVal;
+        window.showToast(newVal ? '밥카 결재 알림이 켜졌어!' : '밥카 결재 알림이 꺼졌어.', 'smail', $('cardAlarmToggle'));
+      }
+    } catch (e) {
+      setCardToggleState(isOn);
+      window.showToast('서버 연결에 실패했어.', 'sad', $('cardAlarmToggle'));
+    } finally {
+      setCardToggleLoading(false);
+    }
+  };
+
+  /* ─── 잔액 알림 토글 ─── */
+  function setCardDailyToggleState(on) {
+    const el = $('cardDailyToggle');
+    if (!el) return;
+    el.style.setProperty('--card-daily-toggle-bg', on ? '#059669' : '#ccebe2');
+    el.style.setProperty('--card-daily-toggle-x', on ? 'translateX(20px)' : 'translateX(0)');
+    el.dataset.on = on ? '1' : '0';
+    // PW 입력 영역: ON이고 아직 저장 안 된 상태일 때만 표시
+    // 이미 ON 확정 상태면 숨김 (서버에 PW 이미 저장됨)
+    const pwArea = $('cardDailyPwArea');
+    if (pwArea) pwArea.classList.toggle('hidden', !on || cardDailyAlarmOn);
+  }
+
+  function setCardDailyToggleLoading(loading) {
+    const el = $('cardDailyToggle');
+    if (!el) return;
+    const thumb = el.querySelector('.toggle-thumb');
+    el.dataset.loading = loading ? '1' : '0';
+    el.style.opacity = loading ? '0.7' : '1';
+    if (loading) {
+      thumb.innerHTML = '<svg class="w-3.5 h-3.5 spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+      thumb.style.display = 'flex';
+      thumb.style.alignItems = 'center';
+      thumb.style.justifyContent = 'center';
+    } else {
+      thumb.innerHTML = '';
+      thumb.style.display = '';
+    }
+  }
+
+  window.toggleCardDailyAlarm = async function() {
+    const el = $('cardDailyToggle');
+    if (el.dataset.loading === '1') return;
+    const isOn = el.dataset.on === '1';
+    const newVal = !isOn;
+
+    if (newVal) {
+      // ON → PW 입력 영역 표시
+      setCardDailyToggleState(true);
+      const pwArea = $('cardDailyPwArea');
+      if (pwArea) {
+        pwArea.classList.remove('hidden');
+        const pwInput = $('cardDailyPwInput');
+        if (pwInput) { pwInput.value = ''; pwInput.focus(); }
+      }
+    } else {
+      // OFF → 서버에 PW 삭제 요청
+      setCardDailyToggleLoading(true);
+      try {
+        const token = localStorage.getItem('edu_token');
+        const data = await window.gasFetch(window.API_URL + '?action=saveCardDailyAlarm&token=' + encodeURIComponent(token) + '&pw=');
+        if (data.status === 'success') {
+          cardDailyAlarmOn = false;
+          setCardDailyToggleState(false);
+          window.showToast('잔액 알림이 꺼졌어.', 'smail', $('cardDailyToggle'));
+        } else {
+          setCardDailyToggleState(true);
+          window.showToast('설정 변경에 실패했어.', 'sad', $('cardDailyToggle'));
+        }
+      } catch (e) {
+        setCardDailyToggleState(true);
+        window.showToast('서버 연결에 실패했어.', 'sad', $('cardDailyToggle'));
+      } finally {
+        setCardDailyToggleLoading(false);
+      }
+    }
+  };
+
+  window.saveCardDailyPw = async function() {
+    const pwInput = $('cardDailyPwInput');
+    const pw = (pwInput && pwInput.value || '').trim();
+    if (!pw) {
+      window.showToast('비밀번호를 입력해줘.', 'sad', $('cardDailyPwSave'));
+      return;
+    }
+
+    const saveBtn = $('cardDailyPwSave');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+    setCardDailyToggleLoading(true);
+
+    try {
+      const token = localStorage.getItem('edu_token');
+      const data = await window.gasFetch(window.API_URL + '?action=saveCardDailyAlarm&token=' + encodeURIComponent(token) + '&pw=' + encodeURIComponent(pw));
+      if (data.status === 'success') {
+        cardDailyAlarmOn = true;
+        setCardDailyToggleState(true);
+        const pwArea = $('cardDailyPwArea');
+        if (pwArea) pwArea.classList.add('hidden');
+        window.showToast('잔액 알림이 켜졌어!', 'smail', $('cardDailyPwSave'));
+      } else {
+        window.showToast('저장에 실패했어.', 'sad', $('cardDailyPwSave'));
+      }
+    } catch (e) {
+      window.showToast('서버 연결에 실패했어.', 'sad', $('cardDailyPwSave'));
+    } finally {
+      setCardDailyToggleLoading(false);
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+      if (pwInput) pwInput.value = '';
+    }
+  };
+
+  /* ─── 결재 올리기 ─── */
+  let cardApprovalLoading = false;
+  window.openCardApproval = async function(mode) {
+    mode = mode || 'temp';
+    const isTemp = (mode === 'temp');
+    const modeLabel = isTemp ? '임시저장' : '결재요청';
+
+    // 1. Bizplay 세션 확인
+    const session = localStorage.getItem('bizplay_session');
+    if (!session) {
+      if (window.openBizLoginOverlay) window.openBizLoginOverlay();
+      return;
+    }
+
+    // 2. 해당 월 전체 레코드 수집
+    const btnId = isTemp ? 'cardBtnTemp' : 'cardBtnApprove';
+    const anchorBtn = $(btnId);
+    if (cardFilteredRecords.length === 0) {
+      window.showToast('결재할 내역이 없어.', 'sad', anchorBtn);
+      return;
+    }
+
+    const selectedRecords = cardFilteredRecords.map(r => ({
+      cardNo: r.cardNo, txSeq: r.txSeq, seq: r.seq, apvNo: r.apvNo
+    }));
+
+    // 3. 확인 메시지
+    const confirmMsg = isTemp
+      ? selectedRecords.length + '건을 임시저장할까?'
+      : selectedRecords.length + '건을 결재요청할까?';
+    const ok = await window.showConfirm(confirmMsg, anchorBtn);
+    if (!ok) return;
+
+    // 4. 로딩 상태
+    if (cardApprovalLoading) return;
+    cardApprovalLoading = true;
+    const btn = $(btnId);
+    let btnOrigHtml = '';
+    if (btn) {
+      btnOrigHtml = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-5 h-5 mx-auto mb-1.5 spinner" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg><div class="text-sm font-semibold">' + modeLabel + ' 중...</div>';
+      btn.disabled = true;
+    }
+
+    try {
+      const token = localStorage.getItem('edu_token');
+      const url = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
+        + '&mode=' + mode
+        + '&selectedRecords=' + encodeURIComponent(JSON.stringify(selectedRecords));
+      console.log('[card] ' + modeLabel + ' 시작, 건수:', selectedRecords.length);
+      const data = await window.gasFetch(url);
+      console.log('[card] 결재 응답:', JSON.stringify(data).substring(0, 2000));
+      if (data.debug) console.log('[card] 결재 debug:', JSON.stringify(data.debug).substring(0, 3000));
+
+      if (data.status === 'success') {
+        window.showToast(selectedRecords.length + '건 ' + modeLabel + ' 완료!', 'smail', anchorBtn);
+      } else if (data.error === 'SESSION_EXPIRED' || data.error === 'NO_SESSION') {
+        window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
+      } else {
+        window.showToast(data.message || modeLabel + '에 실패했어.', 'sad', anchorBtn);
+      }
+    } catch (e) {
+      console.error('[card] ' + modeLabel + ' 예외:', e);
+      window.showToast('서버 연결에 실패했어.', 'sad', anchorBtn);
+    } finally {
+      cardApprovalLoading = false;
+      if (btn) {
+        btn.innerHTML = btnOrigHtml;
+        btn.disabled = false;
+      }
+    }
+  };
+
+  /* ─── 카드 사용내역 API 조회 (현재 기간) ─── */
+  async function fetchCardRecords(force) {
+    if (!force && (cardFetchState === 'loaded' || cardFetchState === 'loading')) return;
+
+    const token = localStorage.getItem('edu_token');
+    const session = localStorage.getItem('bizplay_session');
+    if (!token || !session) {
+      cardFetchState = 'no-session';
+      renderCardDashboard();
+      return;
+    }
+
+    cardFetchState = 'loading';
+    renderCardDashboard();
+
+    try {
+      console.log('[card] 사용내역 조회 시작...');
+      const url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token);
+      const data = await window.gasFetch(url);
+      console.log('[card] 응답:', JSON.stringify(data).substring(0, 500));
+
+      if (data.status === 'success') {
+        console.log('[card] 조회 성공, records:', data.records?.length);
+        cardRecords = data.records || [];
+        cardCurrentRecords = cardRecords;
+        cardFetchState = 'loaded';
+      } else if (data.error === 'SESSION_EXPIRED') {
+        console.log('[card] 세션 만료:', data.message);
+        cardFetchState = 'sso-fail';
+      } else if (data.error === 'NO_SESSION') {
+        console.log('[card] 세션 없음:', data.error, data.message);
+        cardFetchState = 'no-session';
+      } else if (data.error === 'WEBANK_SSO_FAIL') {
+        console.log('[card] SSO 실패:', data.message);
+        if (data.debug) console.log('[card] SSO debug:', JSON.stringify(data.debug));
+        cardFetchState = 'sso-fail';
+      } else {
+        console.log('[card] 알 수 없는 응답 → error 처리:', data);
+        cardFetchState = 'error';
+      }
+    } catch (e) {
+      console.error('[card] 사용내역 조회 예외:', e);
+      cardFetchState = 'error';
+    }
+
+    renderCardDashboard();
+  }
+
+  /* ─── Bizplay 재로그인 → 자동 재시도 ─── */
+  window._cardBizLogin = function() {
+    if (window.openBizLoginOverlay) {
+      window.openBizLoginOverlay(function() {
+        // 로그인 성공 콜백 → 카드 내역 강제 재조회
+        fetchCardRecords(true);
+      });
+    }
+  };
+
+  /* ─── 외부 인터페이스 ─── */
+  window.initCardModule = function(data) {
+    cardAlarmOn = !!(data.userInfo && data.userInfo.isCardAlarmAgreed);
+    cardDailyAlarmOn = !!(data.userInfo && data.userInfo.isCardDailyAlarmOn);
+    renderCardDashboard();
+    fetchCardRecords();
+  };
+
+  window.fetchCardRecords = fetchCardRecords;
+
+  // 초기 렌더링 (예산 프레임만 표시)
+  renderCardDashboard();
+})();
+</script>

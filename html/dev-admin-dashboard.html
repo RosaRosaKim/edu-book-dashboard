@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>교육비 관리자 대시보드</title>
-<link rel="icon" type="image/x-icon" href="img/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
-<link rel="icon" type="image/png" sizes="48x48" href="img/favicon-48.png">
+<link rel="icon" type="image/x-icon" href="../img/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="../img/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -33,6 +33,7 @@ tailwind.config = {
 }
 </script>
 <style>
+  html { scrollbar-gutter: stable; }
   body { background: #fff7ee; }
   body::before {
     content: ''; position: fixed; inset: 0;
@@ -88,13 +89,14 @@ tailwind.config = {
   .rejected-row td { color: rgba(220,38,38,.5); }
   .rejected-row .course-name { text-decoration: line-through; }
 
-  /* 헤더 아이콘 전환 */
-  .header-icon-wrap { position:relative; width:36px; height:36px; overflow:visible; border-radius:12px; }
+  /* 헤더 아이콘 전환 — 고정 크기 박스 */
+  .header-icon-wrap { position:relative; width:36px; height:36px; overflow:visible; border-radius:12px; flex-shrink:0; contain:layout size; }
   .header-icon-wrap img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
   .header-icon-wrap img.icon-hidden { opacity:0; pointer-events:none; }
   .header-icon-wrap img.icon-visible { opacity:1; }
-  #headerSmail.icon-visible { transform:scale(1.3); transform-origin:center; }
+  #headerSmail.icon-visible { transform:scale(1.3); }
   #headerDance.icon-visible { transform:scale(3.5); }
+  #headerLoading.icon-visible { transform:scale(1.75); }
 
   canvas { max-width: 100%; }
 
@@ -111,6 +113,17 @@ tailwind.config = {
   .report-panel.active { display:block; }
   .report-clickable { cursor:pointer; transition:all .2s; }
   .report-clickable:hover { filter:brightness(1.15); transform:translateY(-1px); }
+
+  /* 접기/펼치기 */
+  .report-collapsible { max-height:1200px; overflow:hidden; opacity:1; transition:max-height .4s ease, opacity .3s ease; }
+  .report-collapsible.collapsed { max-height:0; opacity:0; }
+  .report-header { border-radius:10px; padding:6px 10px; margin:-6px -10px; transition:background .2s; }
+  .report-header:hover { background:rgba(45,138,126,.06); }
+  .report-collapse-arrow { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:6px; background:rgba(45,138,126,.1); font-size:10px; transition:transform .3s ease, background .2s; }
+  .report-header:hover .report-collapse-arrow { background:rgba(45,138,126,.2); }
+  .report-collapse-arrow.collapsed { transform:rotate(-90deg); }
+  .report-toggle-hint { font-size:11px; color:#6e7f7b; opacity:.6; transition:opacity .2s; }
+  .report-header:hover .report-toggle-hint { opacity:1; }
 
   .dual-range { position: relative; height: 8px; }
   .dual-range .track { position: absolute; inset: 0; border-radius: 9999px; background: linear-gradient(to right,#dc2626,#d97706,#059669); }
@@ -129,7 +142,7 @@ tailwind.config = {
       <svg class="w-8 h-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
     </div>
     <div class="text-lg font-bold text-[#47635f] mb-2">관리자 전용 페이지입니다</div>
-    <div class="text-sm text-[#6e7f7b] mb-6">일반 대시보드의 관리자 버튼을 통해 접근해 주세요.</div>
+    <div class="text-sm text-[#6e7f7b] mb-6">일반 대시보드의 관리자 버튼을 통해 접근해줘.</div>
     <a href="dev-edu-book-dashboard.html" class="px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">일반 대시보드로 이동</a>
   </div>
 </div>
@@ -141,8 +154,9 @@ tailwind.config = {
     <div class="max-w-4xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
         <div class="header-icon-wrap shrink-0">
-          <img id="headerSmail" src="img/preview-full-256.png" alt="QuickLogin" class="icon-visible object-cover">
-          <img id="headerDance" src="img/dance1.gif" alt="dancing" class="icon-hidden">
+          <img id="headerSmail" src="../img/preview-full-256.png" alt="QuickLogin" class="icon-visible object-cover">
+          <img id="headerDance" src="../img/dance1.gif" alt="dancing" class="icon-hidden">
+          <img id="headerLoading" src="../img/dance2.gif" alt="loading" class="icon-hidden">
         </div>
         <div>
           <div class="text-[15px] font-bold leading-tight">관리자 대시보드</div>
@@ -168,8 +182,6 @@ tailwind.config = {
     </div>
   </header>
 
-  <!-- dance2.gif 오버레이 (transform 영향 밖) -->
-  <div id="danceOverlay" class="fixed inset-0 z-30 flex items-start justify-center pt-[30vh] pointer-events-none"><img src="img/dance2.gif" alt="loading" class="w-28 h-28 drop-shadow-lg"></div>
 
   <main class="max-w-4xl mx-auto px-5 py-7">
     <!-- 스켈레톤 로딩 -->
@@ -189,8 +201,8 @@ tailwind.config = {
       <div class="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center mb-4">
         <svg class="w-8 h-8 text-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <div class="text-lg font-bold text-[#47635f] mb-2">관리자 권한이 없습니다</div>
-      <div class="text-sm text-[#6e7f7b] mb-6">이 페이지는 관리자만 접근할 수 있어요.</div>
+      <div class="text-lg font-bold text-[#47635f] mb-2">관리자 권한이 없어</div>
+      <div class="text-sm text-[#6e7f7b] mb-6">이 페이지는 관리자만 접근할 수 있어.</div>
       <a href="dev-edu-book-dashboard.html" class="px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">일반 대시보드로 이동</a>
     </div>
 
@@ -227,23 +239,26 @@ tailwind.config = {
           <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
             <span class="w-2.5 h-2.5 rounded-sm bg-accent inline-block"></span> 진행중 <span id="burnPendPct" class="font-mono">0%</span>
           </div>
-          <div class="text-[11px] text-[#6e7f7b] ml-auto font-mono">
-            총 예산: <span id="burnTotal" class="text-[#47635f]">0</span>
-          </div>
         </div>
       </section>
 
       <!-- 월간 리포트 -->
       <section id="reportSection" class="bg-surface border border-border rounded-2xl p-6 space-y-4">
-        <div class="flex items-center justify-between flex-wrap gap-3">
-          <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px]">월간 리포트</div>
+        <div class="report-header flex items-center justify-between flex-wrap gap-3 cursor-pointer select-none" onclick="toggleReportSection()">
+          <div class="flex items-center gap-2 text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px]">
+            <span id="reportArrow" class="report-collapse-arrow">▼</span>
+            <span>월간 리포트</span>
+          </div>
+          <span id="reportToggleHint" class="report-toggle-hint">접기</span>
         </div>
-        <!-- 패널1: 확정 금액/건수 -->
-        <div id="panelAmount" class="report-panel active"></div>
-        <!-- 패널2: 부서별 사용액 -->
-        <div id="panelDept" class="report-panel active"></div>
-        <!-- 패널3: 교육 vs 도서 -->
-        <div id="panelRatio" class="report-panel active"></div>
+        <div id="reportChartBody" class="report-collapsible">
+          <!-- 패널1: 확정 금액/건수 -->
+          <div id="panelAmount" class="report-panel active"></div>
+          <!-- 패널2: 부서별 사용액 -->
+          <div id="panelDept" class="report-panel active"></div>
+          <!-- 패널3: 교육 vs 도서 -->
+          <div id="panelRatio" class="report-panel active"></div>
+        </div>
       </section>
 
       <!-- 퀵필터 -->
@@ -295,7 +310,7 @@ tailwind.config = {
                 <tbody id="resultBody" class="divide-y divide-border/50"></tbody>
               </table>
             </div>
-            <div id="noResults" class="hidden text-center py-10 text-[#6e7f7b] text-sm">검색 결과가 없어요.</div>
+            <div id="noResults" class="hidden text-center py-10 text-[#6e7f7b] text-sm">검색 결과가 없어.</div>
           </div>
         </div>
 
@@ -333,7 +348,7 @@ tailwind.config = {
                 <tbody id="detailBody" class="divide-y divide-border/50"></tbody>
               </table>
             </div>
-            <div id="detailEmpty" class="hidden text-center py-8 text-[#6e7f7b] text-sm">신청 내역이 없어요.</div>
+            <div id="detailEmpty" class="hidden text-center py-8 text-[#6e7f7b] text-sm">신청 내역이 없어.</div>
           </div>
         </div>
       </section>
@@ -341,8 +356,8 @@ tailwind.config = {
 
     <!-- 에러 -->
     <div id="errorState" class="hidden flex flex-col items-center justify-center py-20 text-center">
-      <img src="img/working.gif" alt="error" class="w-24 h-24 mb-4">
-      <div class="text-sm text-[#6e7f7b] mb-2" id="errorMsg">데이터를 불러올 수 없어요.</div>
+      <img src="../img/working.gif" alt="error" class="w-24 h-24 mb-4">
+      <div class="text-sm text-[#6e7f7b] mb-2" id="errorMsg">데이터를 불러올 수 없어.</div>
       <button onclick="loadDashboard()" class="mt-3 px-5 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition">다시 시도</button>
     </div>
   </main>
@@ -415,7 +430,7 @@ async function loadDashboard() {
   if (!token) { location.href = 'dev-edu-book-dashboard.html'; return; }
 
   $('loadingState').classList.remove('hidden');
-  $('danceOverlay').classList.remove('hidden');
+  showLoading();
   $('searchSkeleton').classList.remove('hidden');
   $('searchReal').classList.add('hidden');
   $('dashContent').classList.add('hidden');
@@ -439,7 +454,7 @@ async function loadDashboard() {
     // 관리자 권한 체크
     if (!userInfo.isAdmin) {
       $('loadingState').classList.add('hidden');
-      $('danceOverlay').classList.add('hidden');
+      hideLoading();
       $('searchSkeleton').classList.add('hidden');
       $('accessDenied').classList.remove('hidden');
       return;
@@ -454,18 +469,18 @@ async function loadDashboard() {
     initReport();
 
     $('loadingState').classList.add('hidden');
-    $('danceOverlay').classList.add('hidden');
+    hideLoading();
     $('searchSkeleton').classList.add('hidden');
     $('searchReal').classList.remove('hidden');
     $('dashContent').classList.remove('hidden');
     initIdleWatcher();
   } catch (e) {
     $('loadingState').classList.add('hidden');
-    $('danceOverlay').classList.add('hidden');
+    hideLoading();
     $('searchSkeleton').classList.add('hidden');
     $('searchReal').classList.remove('hidden');
     $('errorState').classList.remove('hidden');
-    $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어요.';
+    $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어.';
   }
 }
 window.loadDashboard = loadDashboard;
@@ -504,7 +519,6 @@ function renderBurnGauge() {
 
   $('burnConfPct').textContent = confPct.toFixed(1) + '%';
   $('burnPendPct').textContent = pendPct.toFixed(1) + '%';
-  $('burnTotal').textContent = formatMoney(total) + '원';
 }
 
 /* ========== 태그 시스템 ========== */
@@ -654,6 +668,8 @@ function doSearch() {
     $('resultArea').classList.add('hidden');
     return;
   }
+
+  collapseReportSection(true);
 
   const users = adminStats.allUserList || [];
   const q = query.toLowerCase();
@@ -839,12 +855,12 @@ window.sendBalanceFlow = async function(knoxId) {
       `${API_URL}?action=sendBalanceInfo&token=${encodeURIComponent(token)}&targetKnoxId=${encodeURIComponent(knoxId)}`
     );
     if (data.status === 'success') {
-      showToast('잔액 정보가 발송되었어요.');
+      showToast('잔액 정보가 발송됐어!');
     } else {
-      showToast(data.message || '발송에 실패했어요.', true);
+      showToast(data.message || '발송에 실패했어.', true);
     }
   } catch (e) {
-    showToast('서버 연결에 실패했어요.', true);
+    showToast('서버 연결에 실패했어.', true);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '발송'; }
   }
@@ -884,7 +900,7 @@ function showToast(msg, isError) {
 }
 
 /* ========== 월간 리포트 ========== */
-const reportState = { month: '누적', panels: { amount: true, dept: true, ratio: true }, detail: { type: null, month: null, dept: null, reqType: null } };
+const reportState = { month: '누적', panels: { amount: true, dept: true, ratio: true }, detail: { type: null, month: null, dept: null, reqType: null }, collapsed: false };
 const MONTH_COLORS = ['#2d8a7e','#059669','#0d9488','#047857','#b98e72','#d9b79b','#d97706','#b45309','#e6b9b2','#6e7f7b','#a16207','#dc2626'];
 
 /* --- Chart.js 라이트 테마 기본값 --- */
@@ -1148,7 +1164,7 @@ function renderDeptPanel() {
   const panel = $('panelDept');
   const depts = aggregateByDept(reportState.month);
   destroyChart('dept');
-  if (depts.length === 0) { panel.innerHTML = '<div class="text-sm text-[#6e7f7b] text-center py-4">데이터가 없어요.</div>'; return; }
+  if (depts.length === 0) { panel.innerHTML = '<div class="text-sm text-[#6e7f7b] text-center py-4">데이터가 없어.</div>'; return; }
 
   const labels = depts.map(d => d.dept);
   const amountData = depts.map(d => d.amount);
@@ -1293,6 +1309,33 @@ function showReportDetail(filter) {
 }
 window.showReportDetail = showReportDetail;
 
+/* --- 접기/펼치기 --- */
+function toggleReportSection() {
+  if (reportState.collapsed) expandReportSection();
+  else collapseReportSection(false);
+}
+function collapseReportSection(andScroll) {
+  if (reportState.collapsed) { if (andScroll) scrollToResults(); return; }
+  reportState.collapsed = true;
+  $('reportChartBody').classList.add('collapsed');
+  $('reportArrow').classList.add('collapsed');
+  $('reportToggleHint').textContent = '펼치기';
+  if (andScroll) setTimeout(scrollToResults, 350);
+}
+function expandReportSection() {
+  if (!reportState.collapsed) return;
+  reportState.collapsed = false;
+  $('reportChartBody').classList.remove('collapsed');
+  $('reportArrow').classList.remove('collapsed');
+  $('reportToggleHint').textContent = '접기';
+  setTimeout(() => renderReportPanels(), 420);
+}
+function scrollToResults() {
+  const el = $('resultArea');
+  if (el && !el.classList.contains('hidden')) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.toggleReportSection = toggleReportSection;
+
 function initReportToggles() {
   document.querySelectorAll('.report-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1316,40 +1359,41 @@ function initReport() {
 }
 
 /* ========== 시작 ========== */
-/* ═══════════════ 헤더 아이콘 idle 전환 ═══════════════ */
+/* ═══════════════ 헤더 아이콘 상태 관리 ═══════════════ */
 let idleTimer = null;
-let isDancing = false;
-const IDLE_MS = 5000;
+let iconState = 'smail';
+let isLoading = false;
+const IDLE_MS = 10000;
 
-function showDance() {
-  if (isDancing) return;
-  isDancing = true;
-  const wrap = $('headerSmail')?.parentElement;
+function setHeaderIcon(state) {
   const smail = $('headerSmail');
   const dance = $('headerDance');
-  if (!smail || !dance) return;
-  smail.classList.remove('icon-visible');
-  smail.classList.add('icon-hidden');
-  dance.classList.remove('icon-hidden');
-  dance.classList.add('icon-visible');
-  if (wrap) wrap.classList.add('dancing');
-}
-
-function showSmail() {
-  if (!isDancing) return;
-  isDancing = false;
-  const wrap = $('headerSmail')?.parentElement;
-  const smail = $('headerSmail');
-  const dance = $('headerDance');
-  if (!smail || !dance) return;
-  dance.classList.remove('icon-visible');
-  dance.classList.add('icon-hidden');
-  smail.classList.remove('icon-hidden');
-  smail.classList.add('icon-visible');
+  const loading = $('headerLoading');
+  const wrap = smail?.parentElement;
+  if (!smail || !dance || !loading) return;
+  iconState = state;
+  smail.classList.remove('icon-visible'); smail.classList.add('icon-hidden');
+  dance.classList.remove('icon-visible'); dance.classList.add('icon-hidden');
+  loading.classList.remove('icon-visible'); loading.classList.add('icon-hidden');
   if (wrap) wrap.classList.remove('dancing');
+  if (state === 'loading') {
+    loading.classList.remove('icon-hidden'); loading.classList.add('icon-visible');
+  } else if (state === 'dance') {
+    dance.classList.remove('icon-hidden'); dance.classList.add('icon-visible');
+    if (wrap) wrap.classList.add('dancing');
+  } else {
+    smail.classList.remove('icon-hidden'); smail.classList.add('icon-visible');
+  }
 }
+
+function showLoading() { isLoading = true; clearTimeout(idleTimer); setHeaderIcon('loading'); }
+function hideLoading() { isLoading = false; resetIdleTimer(); }
+
+function showDance() { if (!isLoading) setHeaderIcon('dance'); }
+function showSmail() { if (!isLoading) setHeaderIcon('smail'); }
 
 function resetIdleTimer() {
+  if (isLoading) return;
   showSmail();
   clearTimeout(idleTimer);
   idleTimer = setTimeout(showDance, IDLE_MS);

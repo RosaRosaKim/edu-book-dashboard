@@ -1,0 +1,474 @@
+<!-- Bizplay 로그인 오버레이 -->
+<div id="bizLoginOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="closeBizLoginOverlay()"></div>
+  <div class="relative bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="text-sm font-bold text-[#47635f]">Bizplay 로그인</div>
+      <button onclick="closeBizLoginOverlay()" class="text-[#6e7f7b] hover:text-danger transition">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="space-y-2">
+      <input id="bizId" type="email" name="bizplay-email" autocomplete="username" placeholder="bizplay@emro.co.kr"
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+      <input id="bizPwd" type="password" name="bizplay-password" autocomplete="current-password" placeholder="비밀번호"
+        onkeydown="if(event.key==='Enter')bizplayLogin()"
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+    </div>
+    <div class="flex items-center justify-between">
+      <label class="flex items-center gap-1.5 text-xs text-[#6e7f7b] cursor-pointer select-none">
+        <input id="bizRemember" type="checkbox" class="accent-accent"> 로그인 상태 유지
+      </label>
+    </div>
+    <button onclick="bizplayLogin()" id="bizLoginBtn"
+      class="w-full py-2.5 rounded-lg bg-[#47635f] text-white text-sm font-semibold hover:brightness-110 transition">로그인</button>
+    <div id="bizLoginResult" class="hidden text-xs text-center"></div>
+  </div>
+</div>
+
+<!-- 교육 신청서 작성 (Bizplay 로그인 후 표시) -->
+<section id="bizDraftSection" class="mt-4 hidden">
+  <div class="bg-surface border border-border rounded-2xl p-5 space-y-4">
+    <button onclick="cancelDraft()" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-2">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      돌아가기
+    </button>
+    <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px]">교육 신청서 작성</div>
+
+    <!-- 자동입력 (읽기전용) -->
+    <div class="grid grid-cols-3 gap-2 hidden">
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">부서</label>
+        <input id="draftDept" type="text" readonly
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface-2 text-[#6e7f7b]">
+      </div>
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">사번</label>
+        <input id="draftEmpNo" type="text" readonly
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface-2 text-[#6e7f7b]">
+      </div>
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">이름</label>
+        <input id="draftName" type="text" readonly
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface-2 text-[#6e7f7b]">
+      </div>
+    </div>
+
+    <!-- 교육과정명 -->
+    <div>
+      <label class="text-[10px] text-[#6e7f7b] block mb-1">교육과정명 <span class="text-danger">*</span></label>
+      <input id="draftCourse" type="text" placeholder="교육과정명 입력"
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+    </div>
+
+    <!-- 교육기간 -->
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">교육 시작일 <span class="text-danger">*</span></label>
+        <input id="draftStartDate" type="date"
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+      </div>
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">교육 종료일 <span class="text-danger">*</span></label>
+        <input id="draftEndDate" type="date"
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+      </div>
+    </div>
+
+    <!-- 교육기관 -->
+    <div>
+      <label class="text-[10px] text-[#6e7f7b] block mb-1">교육기관 <span class="text-danger">*</span></label>
+      <input id="draftInstitution" type="text" placeholder="교육기관 입력"
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+    </div>
+
+    <!-- 교육구분 (세그먼트) -->
+    <div>
+      <label class="text-[10px] text-[#6e7f7b] block mb-1">교육구분 <span class="text-danger">*</span></label>
+      <div class="seg-group flex rounded-lg border border-border bg-surface-2 p-0.5 mt-1">
+        <label class="seg-item flex-1">
+          <input type="radio" name="draftEduType" value="온라인" checked class="sr-only">
+          <span class="seg-label">온라인</span>
+        </label>
+        <label class="seg-item flex-1">
+          <input type="radio" name="draftEduType" value="오프라인" class="sr-only">
+          <span class="seg-label">오프라인</span>
+        </label>
+        <label class="seg-item flex-1">
+          <input type="radio" name="draftEduType" value="구독(ex. chatGPT, 스픽 등)" class="sr-only">
+          <span class="seg-label">구독</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 교육 목적 및 내용 -->
+    <div>
+      <label class="text-[10px] text-[#6e7f7b] block mb-1">교육 목적 및 내용 <span class="text-danger">*</span></label>
+      <textarea id="draftPurpose" rows="3" placeholder="교육 목적 및 내용을 입력해줘"
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition resize-y"></textarea>
+    </div>
+
+    <!-- 금액 + 잔액 -->
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">금액 (원) <span class="text-danger">*</span></label>
+        <input id="draftCost" type="text" inputmode="numeric" placeholder="0"
+          oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value) this.value=Number(this.value).toLocaleString('ko-KR'); checkBudget()"
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition font-mono">
+      </div>
+      <div>
+        <label class="text-[10px] text-[#6e7f7b] block mb-1">현재 잔액</label>
+        <div id="draftRemainDisplay"
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-surface-2 font-mono text-[#47635f] font-medium">0원</div>
+      </div>
+    </div>
+    <div id="draftOverBudget" class="hidden text-xs text-danger -mt-2">잔액을 초과해서 신청할 수 없어.</div>
+
+    <!-- 비용 청구 방식 (세그먼트) -->
+    <div>
+      <label class="text-[10px] text-[#6e7f7b] block mb-1">비용 청구 방식 <span class="text-danger">*</span></label>
+      <div class="seg-group flex rounded-lg border border-border bg-surface-2 p-0.5 mt-1" style="max-width:200px;">
+        <label class="seg-item flex-1">
+          <input type="radio" name="draftBilling" value="1회" checked class="sr-only">
+          <span class="seg-label">1회</span>
+        </label>
+        <label class="seg-item flex-1">
+          <input type="radio" name="draftBilling" value="월별" class="sr-only">
+          <span class="seg-label">월별</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 비고 -->
+    <div>
+      <label class="text-[10px] text-[#6e7f7b] block mb-1">비고</label>
+      <input id="draftRemark" type="text" placeholder="비고 (선택)"
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+    </div>
+
+    <!-- 임시저장 + 결재요청 -->
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="submitBizDraft('1')" id="draftSaveBtn"
+        class="py-2.5 rounded-lg bg-[#6e7f7b] text-white text-sm font-semibold hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">임시저장</button>
+      <button onclick="submitBizDraft('2')" id="draftSubmitBtn"
+        class="py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">결재요청</button>
+    </div>
+    <div id="draftResult" class="hidden text-xs text-center"></div>
+  </div>
+</section>
+
+<script>
+/* ═══════════════ Bizplay 모듈 ═══════════════
+ * 부모(dev-edu-book-dashboard.html)에서 제공하는 전역:
+ *   $ (id→element), API_URL, TOKEN_KEY, gasFetch, setBtnLoading, showToast,
+ *   records (신청 내역 배열)
+ */
+(() => {
+'use strict';
+
+let bizSession = null;
+
+/* ─── 로그인 ─── */
+async function bizplayLogin() {
+  const bizId = $('bizId').value.trim();
+  const bizPwd = $('bizPwd').value;
+  if (!bizId || !bizPwd) { showBizResult('아이디와 비밀번호를 입력해줘.', false); return; }
+
+  const btn = $('bizLoginBtn');
+  btn.disabled = true;
+  btn.textContent = '로그인 중...';
+  btn.classList.add('btn-loading');
+
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const url = `${API_URL}?action=bizplayLogin&token=${encodeURIComponent(token)}&bizUserId=${encodeURIComponent(bizId)}&bizPwd=${encodeURIComponent(bizPwd)}`;
+    const data = await gasFetch(url);
+
+    if (data.debug) console.log('[bizplay] SSO debug:', data.debug);
+
+    if (data.status === 'success') {
+      localStorage.setItem('bizplay_id', bizId);
+      // 로그인 상태 유지
+      if ($('bizRemember').checked) {
+        localStorage.setItem('bizplay_cred', btoa(unescape(encodeURIComponent(bizId + '\n' + bizPwd))));
+      } else {
+        localStorage.removeItem('bizplay_cred');
+      }
+      if (data.ssoComplete && data.session) {
+        bizSession = data.session;
+        localStorage.setItem('bizplay_session', JSON.stringify(bizSession));
+        closeBizLoginOverlay();
+        if (_bizLoginCallback) { _bizLoginCallback(); _bizLoginCallback = null; }
+        showDraftForm();
+      } else {
+        bizSession = { userId: bizId, userName: data.userName, deptCd: '', deptNm: '', deptShort: '' };
+        localStorage.setItem('bizplay_session', JSON.stringify(bizSession));
+        showBizResult(`${data.userName}님 로그인 성공 (SSO 연동 실패 — 신청서 작성 불가, 콘솔 확인)`, false);
+      }
+    } else {
+      showBizResult(data.message || data.error || '로그인 실패', false);
+      // 자동 로그인 실패 시 저장된 자격증명 삭제
+      localStorage.removeItem('bizplay_cred');
+    }
+  } catch (err) {
+    showBizResult('네트워크 오류', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '로그인';
+    btn.classList.remove('btn-loading');
+  }
+}
+window.bizplayLogin = bizplayLogin;
+
+/* ─── 로그아웃 ─── */
+function bizplayLogout() {
+  bizSession = null;
+  localStorage.removeItem('bizplay_session');
+  localStorage.removeItem('bizplay_cred');
+  $('bizDraftSection').classList.add('hidden');
+  $('bizLoginResult').classList.add('hidden');
+  $('bizPwd').value = '';
+  $('bizRemember').checked = false;
+
+  toggleBizHeaderBtn(false);
+  if (window.resetWizard) window.resetWizard();
+}
+window.bizplayLogout = bizplayLogout;
+
+/* ─── 오버레이 열기/닫기 ─── */
+let _bizLoginCallback = null;
+function openBizLoginOverlay(onSuccess) {
+  _bizLoginCallback = typeof onSuccess === 'function' ? onSuccess : null;
+  $('bizLoginOverlay').classList.remove('hidden');
+  $('bizLoginResult').classList.add('hidden');
+  $('bizId').focus();
+}
+window.openBizLoginOverlay = openBizLoginOverlay;
+
+function closeBizLoginOverlay() {
+  $('bizLoginOverlay').classList.add('hidden');
+}
+window.closeBizLoginOverlay = closeBizLoginOverlay;
+
+/* ─── 헤더 버튼 토글 (로그인/로그아웃) ─── */
+function toggleBizHeaderBtn(loggedIn) {
+  const loginBtn = $('bizLoginBtn_header');
+  const logoutBtn = $('bizLogoutBtn');
+  if (loginBtn) loginBtn.classList.toggle('hidden', loggedIn);
+  if (logoutBtn) logoutBtn.classList.toggle('hidden', !loggedIn);
+}
+window.toggleBizHeaderBtn = toggleBizHeaderBtn;
+
+/* ─── 폼에서 위자드로 돌아가기 ─── */
+function cancelDraft() {
+  $('bizDraftSection').classList.add('hidden');
+  if (window.resetWizard) window.resetWizard();
+}
+window.cancelDraft = cancelDraft;
+
+function showBizResult(msg, success) {
+  const el = $('bizLoginResult');
+  el.classList.remove('hidden', 'text-edu', 'text-danger');
+  el.classList.add(success ? 'text-edu' : 'text-danger');
+  el.textContent = msg;
+}
+
+/* ─── 신청 폼 표시 (로그인 후 hidden 필드만 세팅, 폼은 숨김 유지) ─── */
+function showDraftForm() {
+  if (!bizSession) return;
+  $('draftDept').value = bizSession.deptShort || bizSession.deptNm || '';
+  $('draftEmpNo').value = (bizSession.userId || '').split('@')[0];
+  $('draftName').value = bizSession.userName || '';
+
+  toggleBizHeaderBtn(true);
+}
+
+
+/* ─── 위자드에서 기록 선택 시 폼 채움 ─── */
+function selectRecord(idx) {
+  if (!records[idx]) return;
+  const r = records[idx];
+
+  // 교육과정명 (접두어 제거)
+  let name = r.courseName || '';
+  name = name.replace(/^\[(교육|도서)\]\s*/, '');
+  $('draftCourse').value = name;
+
+  // 금액
+  const cost = Number(r.cost) || 0;
+  $('draftCost').value = cost ? cost.toLocaleString('ko-KR') : '';
+
+  // 날짜: 오늘 ~ +30일
+  const today = new Date();
+  const end = new Date(today);
+  end.setDate(end.getDate() + 30);
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  $('draftStartDate').value = fmt(today);
+  $('draftEndDate').value = fmt(end);
+
+  // 교육기관
+  if (r.institution) $('draftInstitution').value = r.institution;
+
+  // 교육구분 (라디오)
+  if (r.eduType) {
+    document.querySelectorAll('input[name="draftEduType"]').forEach(radio => {
+      if (radio.value === r.eduType || r.eduType.includes(radio.value)) radio.checked = true;
+    });
+  }
+
+  // 교육 목적 및 내용
+  if (r.purpose) $('draftPurpose').value = r.purpose;
+
+  // 비용 청구 방식 (라디오)
+  if (r.billing) {
+    document.querySelectorAll('input[name="draftBilling"]').forEach(radio => {
+      if (radio.value === r.billing) radio.checked = true;
+    });
+  }
+
+  // 비고
+  if (r.remark) $('draftRemark').value = r.remark;
+
+  // 위자드 숨김 → 폼 표시
+  const wiz = $('wizardSection');
+  if (wiz) wiz.classList.add('hidden');
+  $('bizDraftSection').classList.remove('hidden');
+  updateRemainDisplay();
+  checkBudget();
+  $('bizDraftSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => showToast('내역이 폼에 복사됐어!', 'smail', $('bizDraftSection')), 400);
+}
+window.selectRecord = selectRecord;
+
+/* ─── 잔액 표시 & 초과 검증 ─── */
+function updateRemainDisplay() {
+  const el = $('draftRemainDisplay');
+  if (!el) return;
+  const remain = window.remainBudget || 0;
+  el.textContent = remain.toLocaleString('ko-KR') + '원';
+}
+
+function checkBudget() {
+  const costRaw = ($('draftCost').value || '').replace(/,/g, '').trim();
+  const cost = Number(costRaw) || 0;
+  const remain = window.remainBudget || 0;
+  const over = cost > 0 && cost > remain;
+  const warn = $('draftOverBudget');
+  const saveBtn = $('draftSaveBtn');
+  const submitBtn = $('draftSubmitBtn');
+  if (warn) warn.classList.toggle('hidden', !over);
+  if (saveBtn) saveBtn.disabled = over;
+  if (submitBtn) submitBtn.disabled = over;
+}
+window.checkBudget = checkBudget;
+
+/* ─── 임시저장/결재요청 ─── */
+async function submitBizDraft(procGb) {
+  procGb = procGb || '1';
+  const courseName = $('draftCourse').value.trim();
+  const startDate = $('draftStartDate').value;
+  const endDate = $('draftEndDate').value;
+  const institution = $('draftInstitution').value.trim();
+  const purpose = $('draftPurpose').value.trim();
+  const costRaw = $('draftCost').value.replace(/,/g, '').trim();
+  const eduType = document.querySelector('input[name="draftEduType"]:checked')?.value || '온라인';
+  const billing = document.querySelector('input[name="draftBilling"]:checked')?.value || '1회';
+  const remark = $('draftRemark').value.trim();
+
+  // 잔액 초과 검증
+  const costNum = Number(costRaw) || 0;
+  const remain = window.remainBudget || 0;
+  if (costNum > remain) { showDraftResult('잔액을 초과해서 신청할 수 없어.', false); return; }
+
+  if (procGb === '2' && !confirm('결재를 요청하시겠습니까?')) return;
+
+  if (!courseName) { showDraftResult('교육과정명을 입력해줘.', false); return; }
+  if (!startDate || !endDate) { showDraftResult('교육기간을 입력해줘.', false); return; }
+  if (!institution) { showDraftResult('교육기관을 입력해줘.', false); return; }
+  if (!purpose) { showDraftResult('교육 목적 및 내용을 입력해줘.', false); return; }
+  if (!costRaw || costRaw === '0') { showDraftResult('금액을 입력해줘.', false); return; }
+
+  const btn = procGb === '2' ? $('draftSubmitBtn') : $('draftSaveBtn');
+  const loadingLabel = procGb === '2' ? '요청 중...' : '저장 중...';
+  setBtnLoading(btn, true, loadingLabel);
+  hideDraftResult();
+
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const params = new URLSearchParams({
+      action: 'bizplayDraft',
+      token: token,
+      procGb: procGb,
+      courseName: courseName,
+      startDate: startDate,
+      endDate: endDate,
+      institution: institution,
+      eduType: eduType,
+      purpose: purpose,
+      cost: costRaw,
+      billing: billing,
+      remark: remark
+    });
+    const data = await gasFetch(`${API_URL}?${params.toString()}`);
+
+    const successMsg = procGb === '2' ? '결재요청 완료!' : '임시저장 완료!';
+    const toastMsg = procGb === '2' ? 'Bizplay 결재요청 완료!' : 'Bizplay 임시저장 완료!';
+    if (data.status === 'success') {
+      showDraftResult(successMsg, true);
+      showToast(toastMsg, 'smail', $('bizDraftSection'));
+    } else {
+      const failMsg = data.message || data.error || (procGb === '2' ? '결재요청 실패' : '임시저장 실패');
+      showDraftResult(failMsg, false);
+      showToast(failMsg, 'angry', $('bizDraftSection'));
+    }
+  } catch (err) {
+    showDraftResult('네트워크 오류: ' + err.message, false);
+  } finally {
+    const resetLabel = procGb === '2' ? '결재요청' : '임시저장';
+    setBtnLoading(btn, false, resetLabel);
+  }
+}
+window.submitBizDraft = submitBizDraft;
+
+function showDraftResult(msg, success) {
+  const el = $('draftResult');
+  el.classList.remove('hidden', 'text-edu', 'text-danger');
+  el.classList.add(success ? 'text-edu' : 'text-danger');
+  el.textContent = msg;
+}
+function hideDraftResult() {
+  $('draftResult').classList.add('hidden');
+}
+
+/* ─── 초기화: 저장된 자격증명으로 자동 로그인 ─── */
+const savedCred = localStorage.getItem('bizplay_cred');
+if (savedCred) {
+  // 로그인 상태 유지 체크 복원
+  $('bizRemember').checked = true;
+  try {
+    const decoded = decodeURIComponent(escape(atob(savedCred)));
+    const [savedId, savedPwd] = decoded.split('\n');
+    if (savedId && savedPwd) {
+      $('bizId').value = savedId;
+      $('bizPwd').value = savedPwd;
+      // 자동 로그인 (페이지 로드 후 실행)
+      setTimeout(() => bizplayLogin(), 300);
+    }
+  } catch {}
+} else {
+  // 저장된 ID만 복원
+  const saved = localStorage.getItem('bizplay_id');
+  if (saved && $('bizId')) $('bizId').value = saved;
+  try {
+    const raw = localStorage.getItem('bizplay_session');
+    if (raw) {
+      bizSession = JSON.parse(raw);
+      showDraftForm();
+    } else {
+      toggleBizHeaderBtn(false);
+    }
+  } catch {}
+}
+
+})();
+</script>
