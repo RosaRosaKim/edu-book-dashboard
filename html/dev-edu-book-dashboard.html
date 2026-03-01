@@ -245,11 +245,15 @@ tailwind.config = {
       <div class="relative">
         <button onclick="authBizplayLogin()" id="authBizLoginBtn"
           class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
-          로그인
+          🚀 로그인
         </button>
         <img id="authBizGif" src="../img/working.gif" alt="loading" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-14 h-14">
       </div>
       <div id="authBizError" class="text-danger text-xs mt-3 hidden"></div>
+      <!-- 앱 설치 버튼 (로그인 화면) -->
+      <button id="authInstallBtn" onclick="handlePwaInstall()" class="hidden w-full mt-2 h-10 rounded-lg border border-[#47635f]/20 text-[#47635f]/50 text-xs hover:brightness-95 transition flex items-center justify-center gap-1.5">
+        ⬇️ 앱 설치
+      </button>
     </div>
 
     <!-- 시스템 안내 -->
@@ -731,7 +735,36 @@ window.switchTab = function(tabId) {
     if (window.updateRemainDisplay) window.updateRemainDisplay();
     if (window.refreshEduSession) window.refreshEduSession();
   }
+
+  // 뒤로가기 히스토리 관리
+  if (!_navPopState && (_navStack.length === 0 || _navStack[_navStack.length - 1] !== tabId)) {
+    _navStack.push(tabId);
+    history.pushState({ _tab: tabId }, '');
+  }
 };
+
+/* ─── 모바일 뒤로가기 네비게이션 ─── */
+var _navStack = [];
+var _navPopState = false;
+var _navExitTime = 0;
+
+window.addEventListener('popstate', function() {
+  if (_navStack.length > 1) {
+    _navStack.pop();
+    _navPopState = true;
+    window.switchTab(_navStack[_navStack.length - 1]);
+    _navPopState = false;
+  } else {
+    var now = Date.now();
+    if (now - _navExitTime < 2000) {
+      history.back();
+      return;
+    }
+    _navExitTime = now;
+    history.pushState({ _guard: true }, '');
+    if (window.showToast) window.showToast('뒤로가기를 한번 더 누르면 종료돼.', 'sad');
+  }
+});
 
 /* ─── 다크모드 토글 ─── */
 window.toggleDarkMode = function() {
@@ -923,7 +956,7 @@ window.authBizplayLogin = async function() {
     el.textContent = '네트워크 오류: ' + err.message;
     el.classList.remove('hidden');
   } finally {
-    setBtnLoading(btn, false, '로그인');
+    setBtnLoading(btn, false, '🚀 로그인');
     $('authBizGif').classList.add('hidden');
     mascotShow();
   }
@@ -972,11 +1005,9 @@ async function loadDashboard() {
 
     // URL ?tab= 파라미터 또는 localStorage로 진입 시 해당 탭 전환
     const urlTab = new URLSearchParams(location.search).get('tab');
-    const initTab = urlTab || localStorage.getItem('init_tab');
-    if (initTab) {
-      localStorage.removeItem('init_tab');
-      switchTab(initTab);
-    }
+    const initTab = urlTab || localStorage.getItem('init_tab') || 'edu';
+    localStorage.removeItem('init_tab');
+    switchTab(initTab);
   } catch (e) {
     $('loadingState').classList.add('hidden');
     $('errorState').classList.remove('hidden');
@@ -1639,12 +1670,16 @@ if (!isStandalone) {
     deferredPrompt = e;
     const btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.classList.remove('hidden');
+    const authBtn = document.getElementById('authInstallBtn');
+    if (authBtn) authBtn.classList.remove('hidden');
   });
 
   // iOS Safari → 아이콘 표시
   if (isIos) {
     const btn = document.getElementById('pwaInstallBtn');
     if (btn) btn.classList.remove('hidden');
+    const authBtn = document.getElementById('authInstallBtn');
+    if (authBtn) authBtn.classList.remove('hidden');
   }
 }
 
