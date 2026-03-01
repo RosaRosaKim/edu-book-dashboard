@@ -22,6 +22,11 @@ async function buildFile(inputFile, outputFile) {
     html = html.replace(new RegExp(devUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), prodUrl);
   }
 
+  // ── Replace dev paths before obfuscation (so JS string literals are also replaced) ──
+  html = html.replace(/\.\.\/img\//g, 'img/');
+  html = html.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
+  html = html.replace(/dev-admin-dashboard\.html/g, 'admin-dashboard.html');
+
   const $ = cheerio.load(html, { decodeEntities: false });
 
   // ── Process inline <script> blocks ──
@@ -120,11 +125,7 @@ async function buildFile(inputFile, outputFile) {
     minifyCSS: false,
   });
 
-  // ── Replace dev paths with prod paths ──
-  output = output.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
-  output = output.replace(/dev-admin-dashboard\.html/g, 'admin-dashboard.html');
-  // 이미지 경로: html/ 소스의 ../img/ → dist/ 기준 img/
-  output = output.replace(/\.\.\/img\//g, 'img/');
+  // ── (paths already replaced before obfuscation above) ──
 
   fs.writeFileSync(outputFile, output, 'utf-8');
 
@@ -150,6 +151,8 @@ function validate(label, output, checks) {
 async function buildModule(inputFile, outputFile) {
   console.log(`\n--- Module: ${path.basename(inputFile)} ---`);
   let html = fs.readFileSync(inputFile, 'utf-8');
+  // ── Replace image paths before obfuscation ──
+  html = html.replace(/\.\.\/img\//g, 'img/');
   const $ = cheerio.load(html, { decodeEntities: false });
 
   // ── Process inline <script> blocks: console 삭제 + 난독화 ──
