@@ -13,7 +13,8 @@ const SHEET_NAME = {
   BOOK: "도서 신청서",
   ADMIN: "웹페이지관리",
   MANAGER: "관리자",
-  TEMPLATE: "신청 템플릿"
+  TEMPLATE: "신청 템플릿",
+  NOTICE: "공지사항"
 };
 
 const DATA_COL = {
@@ -402,13 +403,27 @@ const doGet = (e) => {
       }
     }
 
-    return createResponse({
+    // 공지사항 로드
+    let notice = null;
+    try {
+      const noticeSheet = ss.getSheetByName(SHEET_NAME.NOTICE);
+      if (noticeSheet && noticeSheet.getLastRow() >= 2) {
+        const row = noticeSheet.getRange(2, 1, 1, 4).getValues()[0];
+        if (row[0] || row[1]) {
+          notice = { title: String(row[0] || ''), content: String(row[1] || ''), id: String(row[2] || ''), image: String(row[3] || '') };
+        }
+      }
+    } catch (nErr) { /* 시트 없으면 무시 */ }
+
+    const resp = {
       userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", isCard16AlarmAgreed: adminRow[8] === "Y", isCardDailyAlarmOn: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()) },
       myHistory: myHistory,
       adminStats: adminStats,
       templates: templates,
       bizplaySession: bizplaySession
-    });
+    };
+    if (notice) resp.notice = notice;
+    return createResponse(resp);
   }
   return createResponse({ error: "INVALID_REQUEST" });
 };
