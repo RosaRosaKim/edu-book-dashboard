@@ -200,6 +200,7 @@ tailwind.config = {
   html.dark .bg-\[\#47635f\] { background-color: #2d8a7e !important; }
   html.dark .border-\[\#ccebe2\] { border-color: rgb(var(--c-border)) !important; }
   html.dark .hover\:bg-\[\#e2f5ef\]:hover { background-color: rgb(var(--c-surface2)) !important; }
+
 </style>
 </head>
 <body class="font-sans text-[#47635f] min-h-screen relative">
@@ -252,8 +253,12 @@ tailwind.config = {
     </div>
 
     <!-- 시스템 안내 -->
-    <div class="mt-6 pt-4 border-t" style="border-color:rgba(204,235,226,0.5); font-size:11px; color:rgba(110,127,123,0.6);">
-      <div class="mt-3 bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
+    <div class="mt-6 border-t" style="border-color:rgba(204,235,226,0.5); font-size:11px; color:rgba(110,127,123,0.6);">
+      <p class="mb-2 leading-relaxed text-center">
+        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라 + 시스템 초기라</span><br>
+        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">느리거나 오류가 있을 수 있어!</span>
+      </p>
+      <div class="bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
     </div>
   </div>
 </div>
@@ -383,6 +388,114 @@ tailwind.config = {
         </div>
       </section>
 
+      <!-- 간편 신청 -->
+      <section id="wizardSection" class="mb-6">
+        <div class="bg-surface border border-border rounded-2xl p-5">
+
+          <!-- 패널 1: 신청 유형 선택 (초기 화면) -->
+          <div id="wizPanel1">
+            <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">간편 신청</div>
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="wizardSelectType('edu')"
+                class="bg-accent text-white rounded-xl p-4 hover:brightness-110 transition text-center">
+                <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg>
+                <div class="text-sm font-semibold">교육신청서</div>
+                <div class="text-[10px] opacity-75 mt-1 leading-tight">템플릿, 이전 기록으로<br>빠르게 신청하자</div>
+              </button>
+              <button disabled
+                class="bg-[#6e7f7b] text-white rounded-xl p-4 opacity-50 cursor-not-allowed text-center">
+                <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
+                <div class="text-sm font-semibold">도서신청서</div>
+                <div class="text-[10px] opacity-75 mt-1 leading-tight">곧 추가될<br>예정이야</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 패널 2: 신청 방법 선택 -->
+          <div id="wizPanel2" class="hidden">
+            <button onclick="wizardGoTo(1)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
+              &larr; 돌아가기
+            </button>
+            <div class="text-sm font-semibold mb-1">교육비 신청</div>
+            <div class="text-xs text-[#6e7f7b] mb-4">어떤 방법으로 신청할까?</div>
+            <div class="space-y-2">
+              <button onclick="wizardSelectMethod('history')"
+                class="w-full text-left bg-white border border-border rounded-xl p-4 hover:border-accent transition group">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                    <svg class="w-4.5 h-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold group-hover:text-accent transition">이전 기록 불러오기</div>
+                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">기존에 신청했던 교육 정보를 가져와서 빠르게 재신청하자</div>
+                  </div>
+                </div>
+              </button>
+              <button onclick="wizardSelectMethod('new')"
+                class="w-full text-left bg-white border border-border rounded-xl p-4 hover:border-accent transition group">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                    <svg class="w-4.5 h-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold group-hover:text-accent transition">신규 작성</div>
+                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">새로운 교육을 처음부터 입력하자</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 패널 3: 교육 내역 선택 -->
+          <div id="wizPanel3" class="hidden">
+            <button onclick="wizardGoTo(2)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
+              &larr; 돌아가기
+            </button>
+            <div class="text-sm font-semibold mb-1">교육 내역 선택</div>
+            <div class="text-xs text-[#6e7f7b] mb-4">선택하면 자동으로 폼이 채워져 (시작일은 오늘로 설정)</div>
+            <div id="wizRecordList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+          </div>
+
+          <!-- 패널 4: 교육 유형 선택 (1회성 vs 월구독) -->
+          <div id="wizPanel4" class="hidden">
+            <button onclick="wizardGoTo(2)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
+              &larr; 돌아가기
+            </button>
+            <div class="text-sm font-semibold mb-1">교육 유형 선택</div>
+            <div class="text-xs text-[#6e7f7b] mb-4">결제 방식에 맞는 유형을 선택해줘</div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <button onclick="wizardSelectPayType('once')"
+                class="bg-white border border-border rounded-xl p-4 hover:border-accent transition text-center group">
+                <div class="text-2xl mb-2">&#x1F4DA;</div>
+                <div class="text-sm font-semibold group-hover:text-accent transition">1회성 교육</div>
+                <div class="text-[10px] text-[#6e7f7b] mt-1 leading-tight">결제를 한 번만 한다면 1회성</div>
+              </button>
+              <button onclick="wizardSelectPayType('subscription')"
+                class="bg-white border border-border rounded-xl p-4 hover:border-accent transition text-center group">
+                <div class="text-2xl mb-2">&#x1F504;</div>
+                <div class="text-sm font-semibold group-hover:text-accent transition">월구독</div>
+                <div class="text-[10px] text-[#6e7f7b] mt-1 leading-tight">결제를 매월 한다면 월구독</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 패널 5: 템플릿 선택 -->
+          <div id="wizPanel5" class="hidden">
+            <button onclick="wizardGoTo(4)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
+              &larr; 돌아가기
+            </button>
+            <div id="wizPanel5Title" class="text-sm font-semibold mb-1">서비스 선택</div>
+            <div class="text-xs text-[#6e7f7b] mb-4">자주 신청하는 서비스를 선택하면 내용이 자동으로 채워져<br>환율에 따라 금액이 변동될 수 있으니 결제 금액을 확인해줘</div>
+            <div id="wizTemplateList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+            <button onclick="wizardSelectTemplate(-1)"
+              class="w-full mt-3 text-center text-sm text-accent font-semibold py-2.5 rounded-xl border border-accent/30 hover:bg-accent/5 transition">
+              직접 입력하기 &rarr;
+            </button>
+          </div>
+
+        </div>
+      </section>
+
       <!-- Flow 알람 설정 -->
       <section class="mb-6 relative">
         <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between gap-4">
@@ -419,121 +532,11 @@ tailwind.config = {
           </div>
           <!-- 모바일: 카드 -->
           <div id="recordsCards" class="record-card p-3 space-y-3"></div>
-          <div id="noRecords" class="hidden text-center py-10 text-[#6e7f7b] text-sm"><img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">신청 내역이 없어.</div>
-        </div>
-      </section>
-
-      <!-- 간편 신청 -->
-      <section id="wizardSection" class="mt-6">
-        <div class="bg-surface border border-border rounded-2xl p-5">
-
-          <!-- 패널 1: 신청 유형 선택 (초기 화면) -->
-          <div id="wizPanel1">
-            <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">간편 신청</div>
-            <div class="grid grid-cols-2 gap-3">
-              <button onclick="wizardSelectType('edu')"
-                class="bg-accent text-white rounded-xl p-4 hover:brightness-110 transition text-center">
-                <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg>
-                <div class="text-sm font-semibold">교육신청서</div>
-                <div class="text-[10px] opacity-75 mt-1 leading-tight">템플릿, 이전 기록으로<br>빠르게 신청하자</div>
-              </button>
-              <button disabled
-                class="bg-[#6e7f7b] text-white rounded-xl p-4 opacity-50 cursor-not-allowed text-center">
-                <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
-                <div class="text-sm font-semibold">도서신청서</div>
-                <div class="text-[10px] opacity-75 mt-1 leading-tight">곧 추가될<br>예정이야</div>
-              </button>
-            </div>
+          <div id="noRecords" class="hidden text-center py-10 text-[#6e7f7b] text-sm">
+            <img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">
+            <div>신청 내역이 없어.</div>
+            <button onclick="document.getElementById('wizardSection').scrollIntoView({behavior:'smooth',block:'start'})" class="mt-3 px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:brightness-110 transition">교육비 신청하러 가기 &rarr;</button>
           </div>
-
-          <!-- 패널 2: 신청 방법 선택 -->
-          <div id="wizPanel2" class="hidden">
-            <button onclick="wizardGoTo(1)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-              돌아가기
-            </button>
-            <div class="text-sm font-semibold mb-1">교육비 신청</div>
-            <div class="text-xs text-[#6e7f7b] mb-4">어떤 방법으로 신청할까요?</div>
-            <div class="space-y-2">
-              <button onclick="wizardSelectMethod('history')"
-                class="w-full text-left bg-white border border-border rounded-xl p-4 hover:border-accent transition group">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                    <svg class="w-4.5 h-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/></svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-semibold group-hover:text-accent transition">이전 기록 불러오기</div>
-                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">기존에 신청했던 교육 정보를 가져와서 빠르게 재신청하자</div>
-                  </div>
-                  <svg class="w-4 h-4 text-[#6e7f7b] shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                </div>
-              </button>
-              <button onclick="wizardSelectMethod('new')"
-                class="w-full text-left bg-white border border-border rounded-xl p-4 hover:border-accent transition group">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                    <svg class="w-4.5 h-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-semibold group-hover:text-accent transition">신규 작성</div>
-                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">새로운 교육을 처음부터 입력하자</div>
-                  </div>
-                  <svg class="w-4 h-4 text-[#6e7f7b] shrink-0 group-hover:text-accent group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <!-- 패널 3: 교육 내역 선택 -->
-          <div id="wizPanel3" class="hidden">
-            <button onclick="wizardGoTo(2)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-              돌아가기
-            </button>
-            <div class="text-sm font-semibold mb-1">교육 내역 선택</div>
-            <div class="text-xs text-[#6e7f7b] mb-4">선택하면 자동으로 폼이 채워져요 (시작일은 오늘로 설정)</div>
-            <div id="wizRecordList" class="space-y-2 max-h-64 overflow-y-auto"></div>
-          </div>
-
-          <!-- 패널 4: 교육 유형 선택 (1회성 vs 월구독) -->
-          <div id="wizPanel4" class="hidden">
-            <button onclick="wizardGoTo(2)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-              돌아가기
-            </button>
-            <div class="text-sm font-semibold mb-1">교육 유형 선택</div>
-            <div class="text-xs text-[#6e7f7b] mb-4">결제 방식에 맞는 유형을 선택해줘</div>
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              <button onclick="wizardSelectPayType('once')"
-                class="bg-white border border-border rounded-xl p-4 hover:border-accent transition text-center group">
-                <div class="text-2xl mb-2">&#x1F4DA;</div>
-                <div class="text-sm font-semibold group-hover:text-accent transition">1회성 교육</div>
-                <div class="text-[10px] text-[#6e7f7b] mt-1 leading-tight">결제를 한 번만 한다면 1회성</div>
-              </button>
-              <button onclick="wizardSelectPayType('subscription')"
-                class="bg-white border border-border rounded-xl p-4 hover:border-accent transition text-center group">
-                <div class="text-2xl mb-2">&#x1F504;</div>
-                <div class="text-sm font-semibold group-hover:text-accent transition">월구독</div>
-                <div class="text-[10px] text-[#6e7f7b] mt-1 leading-tight">결제를 매월 한다면 월구독</div>
-              </button>
-            </div>
-          </div>
-
-          <!-- 패널 5: 템플릿 선택 -->
-          <div id="wizPanel5" class="hidden">
-            <button onclick="wizardGoTo(4)" class="flex items-center gap-1 text-xs text-[#6e7f7b] hover:text-accent transition mb-3">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-              돌아가기
-            </button>
-            <div id="wizPanel5Title" class="text-sm font-semibold mb-1">서비스 선택</div>
-            <div class="text-xs text-[#6e7f7b] mb-4">자주 신청하는 서비스를 선택하면 내용이 자동으로 채워져<br>환율에 따라 금액이 변동될 수 있으니 결제 금액을 확인해줘</div>
-            <div id="wizTemplateList" class="space-y-2 max-h-64 overflow-y-auto"></div>
-            <button onclick="wizardSelectTemplate(-1)"
-              class="w-full mt-3 text-center text-sm text-accent font-semibold py-2.5 rounded-xl border border-accent/30 hover:bg-accent/5 transition">
-              ✍️ 직접 입력하기 &rarr;
-            </button>
-          </div>
-
         </div>
       </section>
 
@@ -666,6 +669,33 @@ tailwind.config = {
       <div class="flex gap-2 justify-end mt-4">
         <button id="apprLineCancel" class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface-2 text-[#6e7f7b] border border-border hover:brightness-95 transition cursor-pointer">취소</button>
         <button id="apprLineSubmit" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">결재요청</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 공지사항 팝업 -->
+<div id="noticeBox" class="fixed inset-0 z-[70]" style="display:none;">
+  <div class="absolute inset-0 bg-black/30" onclick="closeNotice()"></div>
+  <div class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[71] max-w-sm mx-auto">
+    <div id="noticeCard" class="rounded-2xl shadow-xl overflow-hidden border border-accent/20" style="background:linear-gradient(135deg, #f1faf7 0%, #fff7ee 50%, #f5f0ff 100%);">
+      <div id="noticeImage" style="display:none;">
+        <img id="noticeImg" src="" alt="공지 이미지" class="w-full block" />
+      </div>
+      <div class="p-5">
+        <div class="text-[10px] font-bold text-accent uppercase tracking-[1.5px] mb-2">공지사항</div>
+        <div id="noticeTitle" class="text-base font-bold text-[#2d3a37] mb-2"></div>
+        <div id="noticeContent" class="text-sm text-[#4a5a56] leading-relaxed max-h-[40vh] overflow-y-auto whitespace-pre-line"></div>
+        <div class="flex items-center justify-between mt-4">
+          <label class="flex items-center gap-2 cursor-pointer select-none group" onclick="toggleNoticeChk(event)">
+            <span class="relative flex items-center justify-center w-5 h-5 rounded-md border-2 border-[#b5c9c3] bg-white transition-all group-hover:border-accent" id="noticeChkBox">
+              <svg id="noticeChkIcon" class="w-3 h-3 text-white opacity-0 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <input type="checkbox" id="noticeDismissToday" class="sr-only" />
+            <span class="text-xs text-[#6e7f7b]">오늘 하루 안 보기</span>
+          </label>
+          <button onclick="closeNotice()" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">확인</button>
+        </div>
       </div>
     </div>
   </div>
@@ -938,6 +968,7 @@ async function loadDashboard() {
     hideLoading();
     initIdleWatcher();
     initBizplay();
+    showNoticeIfNeeded(data.notice);
 
     // URL ?tab= 파라미터 또는 localStorage로 진입 시 해당 탭 전환
     const urlTab = new URLSearchParams(location.search).get('tab');
@@ -954,6 +985,52 @@ async function loadDashboard() {
   }
 }
 window.loadDashboard = loadDashboard;
+
+/* ═══════════════ 공지사항 팝업 ═══════════════ */
+let _noticeId = null;
+function showNoticeIfNeeded(notice) {
+  if (!notice || !notice.id) return;
+  _noticeId = notice.id;
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const dismissKey = 'notice_dismiss_' + notice.id;
+  if (localStorage.getItem(dismissKey) === today) return;
+
+  $('noticeTitle').textContent = notice.title || '';
+  $('noticeContent').textContent = notice.content || '';
+
+  const card = $('noticeCard');
+  if (notice.image) {
+    $('noticeImg').src = '../img/notice/' + notice.image;
+    $('noticeImage').style.display = '';
+    card.style.background = '#ffffff';
+  } else {
+    $('noticeImage').style.display = 'none';
+    card.style.background = 'linear-gradient(135deg, #f1faf7 0%, #fff7ee 50%, #f5f0ff 100%)';
+  }
+  $('noticeDismissToday').checked = false;
+  $('noticeChkBox').classList.remove('bg-accent','border-accent'); $('noticeChkBox').classList.add('bg-white','border-[#b5c9c3]');
+  $('noticeChkIcon').classList.replace('opacity-100','opacity-0');
+  $('noticeBox').style.display = '';
+}
+
+function toggleNoticeChk(e) {
+  e.preventDefault();
+  const c = $('noticeDismissToday');
+  c.checked = !c.checked;
+  const b = $('noticeChkBox'), i = $('noticeChkIcon');
+  if (c.checked) { b.classList.add('bg-accent','border-accent'); b.classList.remove('bg-white','border-[#b5c9c3]'); i.classList.replace('opacity-0','opacity-100'); }
+  else { b.classList.remove('bg-accent','border-accent'); b.classList.add('bg-white','border-[#b5c9c3]'); i.classList.replace('opacity-100','opacity-0'); }
+}
+
+function closeNotice() {
+  if ($('noticeDismissToday').checked && _noticeId) {
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    localStorage.setItem('notice_dismiss_' + _noticeId, today);
+  }
+  $('noticeBox').style.display = 'none';
+}
+window.toggleNoticeChk = toggleNoticeChk;
+window.closeNotice = closeNotice;
 
 /* ═══════════════ 렌더링 ═══════════════ */
 function renderDashboard() {
