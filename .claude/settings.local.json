@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version:*)",
+      "Bash(npm --version)",
+      "Bash(ls:*)",
+      "Bash(git -C \"C:\\\\Users\\\\skyc5\\\\IdeaProjects\\\\react\\\\edu-book-dashboard\" log --oneline --all)",
+      "Bash(git -C \"C:\\\\Users\\\\skyc5\\\\IdeaProjects\\\\react\\\\edu-book-dashboard\" branch -a)",
+      "Bash(git -C \"C:\\\\Users\\\\skyc5\\\\IdeaProjects\\\\react\\\\edu-book-dashboard\" remote -v)",
+      "Bash(git -C \"C:\\\\Users\\\\skyc5\\\\IdeaProjects\\\\react\\\\edu-book-dashboard\" ls-files:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)",
+      "Bash(node build.js:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:www.dailyenews.co.kr)",
+      "Bash(powershell -Command \"Invoke-WebRequest -Uri ''https://www.dailyenews.co.kr/news/photo/202601/48860_60763_2847.jpg'' -OutFile ''C:\\\\Users\\\\skyc5\\\\IdeaProjects\\\\react\\\\edu-book-dashboard\\\\_temp_logo.jpg''\")",
+      "Bash(del \"C:\\\\Users\\\\skyc5\\\\IdeaProjects\\\\react\\\\edu-book-dashboard\\\\_temp_logo.jpg\")",
+      "Bash(cd:*)",
+      "Bash(npm run:*)",
+      "Bash(find .:*)",
+      "Bash(magick:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:platform.bizplay.co.kr)",
+      "WebSearch",
+      "WebFetch(domain:holidays.hyunbin.page)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(npx clasp:*)",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(do echo:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:approval.appplay.co.kr)",
+      "WebFetch(domain:www.bizplay.co.kr)"
+    ]
+  }
+}
