@@ -3,11 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>if(localStorage.getItem('darkMode')==='true')document.documentElement.classList.add('dark');</script>
 <title>HelpDesk+</title>
 <link rel="icon" type="image/x-icon" href="../img/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="../img/favicon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2d8a7e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="../img/preview-full-256.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
@@ -19,9 +25,9 @@ tailwind.config = {
         mono: ['IBM Plex Mono', 'monospace'],
       },
       colors: {
-        surface: { DEFAULT: '#f1fbf7', 2: '#e2f5ef' },
-        border: '#ccebe2',
-        accent: { DEFAULT: '#2d8a7e', light: 'rgba(45,138,126,.08)' },
+        surface: { DEFAULT: 'rgb(var(--c-surface) / <alpha-value>)', 2: 'rgb(var(--c-surface2) / <alpha-value>)' },
+        border: 'rgb(var(--c-border) / <alpha-value>)',
+        accent: { DEFAULT: '#2d8a7e', light: 'rgb(var(--c-accent) / var(--accent-light-a))' },
         edu: '#059669',
         warn: '#d97706',
         danger: '#dc2626',
@@ -32,13 +38,43 @@ tailwind.config = {
 }
 </script>
 <style>
+  :root {
+    --c-surface: 241 251 247;
+    --c-surface2: 226 245 239;
+    --c-border: 204 235 226;
+    --c-accent: 45 138 126;
+    --accent-light-a: 0.08;
+    --body-bg: #fff7ee;
+    --header-bg: rgba(255,247,238,.93);
+    --card-bg: #ffffff;
+    --grid-line: rgba(45,138,126,.04);
+    --skeleton-a: #e2f5ef;
+    --skeleton-b: #ccebe2;
+    --bubble-bg: #ffffff;
+  }
+  html.dark {
+    --c-surface: 26 35 50;
+    --c-surface2: 34 48 63;
+    --c-border: 48 65 79;
+    --c-accent: 45 138 126;
+    --accent-light-a: 0.14;
+    --body-bg: #0f1419;
+    --header-bg: rgba(15,20,25,.93);
+    --card-bg: #1a2332;
+    --grid-line: rgba(45,138,126,.06);
+    --skeleton-a: #22303f;
+    --skeleton-b: #30414f;
+    --bubble-bg: #1a2332;
+    color-scheme: dark;
+  }
   html { scrollbar-gutter: stable; }
-  body { background: #fff7ee; }
+  body { background: var(--body-bg); }
+  html.dark body { color: #d4e0dc; }
   body::before {
     content: ''; position: fixed; inset: 0;
     background-image:
-      linear-gradient(rgba(45,138,126,.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(45,138,126,.04) 1px, transparent 1px);
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
   .toggle-track { transition: background-color .2s; }
@@ -60,6 +96,8 @@ tailwind.config = {
   .pill-wait { background:rgba(217,119,6,.12); color:#d97706; }  .pill-wait::before { background:#d97706; }
   .pill-reject { background:rgba(220,38,38,.12); color:#dc2626; } .pill-reject::before { background:#dc2626; }
   .pill-pend { background:rgba(185,142,114,.12); color:#b98e72; }  .pill-pend::before { background:#b98e72; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
   /* 스켈레톤 시머 */
   @keyframes shimmer {
@@ -67,7 +105,7 @@ tailwind.config = {
     100% { background-position: 400px 0; }
   }
   .skeleton {
-    background: linear-gradient(90deg, #e2f5ef 25%, #ccebe2 37%, #e2f5ef 63%);
+    background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 37%, var(--skeleton-a) 63%);
     background-size: 800px 100%;
     animation: shimmer 1.6s ease infinite;
     border-radius: 6px;
@@ -104,12 +142,15 @@ tailwind.config = {
     background:#fff; color:#2d8a7e; font-weight:600;
     box-shadow: 0 1px 3px rgba(0,0,0,.08);
   }
+  html.dark .seg-item input:checked + .seg-label {
+    background: var(--card-bg); color:#2d8a7e;
+  }
 
   /* 메시지 박스 말풍선 꼬리 */
   #msgBoxBubble::before {
     content:''; position:absolute; left:-8px; bottom:0;
     width:0; height:0;
-    border-right:8px solid white;
+    border-right:8px solid var(--bubble-bg);
     border-top:8px solid transparent;
   }
   #msgBoxBubble::after {
@@ -122,7 +163,7 @@ tailwind.config = {
   #confirmBubble::before {
     content:''; position:absolute; left:-8px; bottom:0;
     width:0; height:0;
-    border-right:8px solid white;
+    border-right:8px solid var(--bubble-bg);
     border-top:8px solid transparent;
   }
   #confirmBubble::after {
@@ -139,77 +180,80 @@ tailwind.config = {
     .record-table-wrap { display:none !important; }
     .record-card { display:block; }
   }
+
+  /* ─── 다크모드 오버라이드 ─── */
+  html.dark .text-\[\#47635f\] { color: #d4e0dc !important; }
+  html.dark .text-\[\#6e7f7b\] { color: #8b9e99 !important; }
+  html.dark .text-\[\#aab5b2\] { color: #6e7f7b !important; }
+  html.dark .bg-white { background-color: var(--card-bg) !important; }
+  html.dark .bg-\[\#fff7ee\] { background-color: var(--body-bg) !important; }
+  html.dark .bg-\[\#ccc\] { background-color: #30414f !important; }
+  html.dark .border-\[\#ccebe2\] { border-color: rgb(var(--c-border)) !important; }
+  html.dark header[class*="sticky"] { background: var(--header-bg) !important; }
+  html.dark #authScreen { background: var(--body-bg) !important; }
+  html.dark input, html.dark select, html.dark textarea { color-scheme: dark; }
+  html.dark input::placeholder { color: rgba(139,158,153,.6) !important; }
+  html.dark .pill-ok { background: rgba(5,150,105,.2); }
+  html.dark .pill-wait { background: rgba(217,119,6,.2); }
+  html.dark .pill-reject { background: rgba(220,38,38,.2); }
+  html.dark .pill-pend { background: rgba(185,142,114,.2); }
+  html.dark .bg-\[\#47635f\] { background-color: #2d8a7e !important; }
+  html.dark .border-\[\#ccebe2\] { border-color: rgb(var(--c-border)) !important; }
+  html.dark .hover\:bg-\[\#e2f5ef\]:hover { background-color: rgb(var(--c-surface2)) !important; }
 </style>
 </head>
 <body class="font-sans text-[#47635f] min-h-screen relative">
 
 <!-- ====== 인증 화면 ====== -->
-<div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:#fff7ee;">
+<div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:var(--body-bg);">
   <div class="bg-surface border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl fade-in">
     <!-- 브랜딩 -->
     <div class="text-center mb-8">
       <img id="mascotImg" src="../img/preview-full-256.png" alt="QuickLogin" class="w-16 h-16 mx-auto mb-4 object-contain">
-      <h1 class="text-lg font-bold">HelpDesk+</h1>
-      <p class="text-[13px] text-[#6e7f7b] mt-1">교육비 신청, 법인카드 결재를 간편하게</p>
+      <h1 class="text-lg font-bold">HelpDesk+ <span class="text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></h1>
+      <div class="mt-2 inline-flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5">
+        <svg class="w-3.5 h-3.5 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+        <span class="text-[13px] text-accent font-medium">Bizplay 아이디로 로그인하면 돼!</span>
+      </div>
     </div>
 
-    <div id="authStep1">
-      <div class="relative mb-2">
-        <input id="knoxInput" type="text" placeholder="Flow ID"
-          class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
-          onkeydown="if(event.key==='Enter') requestAuth()">
-        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6e7f7b] font-mono pointer-events-none">@emro.co.kr</span>
-      </div>
-      <div class="relative">
-        <button onclick="requestAuth()" id="authReqBtn"
-          class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
-          인증 요청
-        </button>
-        <img id="authReqGif" src="../img/working.gif" alt="loading" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-14 h-14">
-      </div>
-      <div id="authError1" class="text-danger text-xs mt-3 hidden"></div>
-    </div>
-
-    <!-- Step 2: 인증번호 입력 -->
-    <div id="authStep2" class="hidden">
-      <!-- 상태 배너: 발송 안내 + 타이머를 한 줄로 -->
-      <div class="bg-surface-2 border border-border rounded-xl px-4 py-3 mb-5">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <div class="w-1.5 h-1.5 rounded-full bg-warn pulse-dot"></div>
-            <span class="text-[13px] text-warn font-medium">인증번호 발송됨</span>
-          </div>
-          <span id="timerDisplay" class="font-mono text-sm font-bold text-accent">03:00</span>
+    <!-- Bizplay 로그인 -->
+    <div>
+      <div class="space-y-2 mb-3">
+        <div class="relative">
+          <input id="authBizId" type="text" name="bizplay-auth-id" autocomplete="username" placeholder="사번"
+            oninput="this.value=this.value.replace(/@.*$/g,'')"
+            class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6e7f7b] font-mono pointer-events-none">@emro.co.kr</span>
         </div>
-        <p class="text-[11px] text-[#6e7f7b] mt-1.5">Flow 메신저로 발송된 6자리 인증번호를 입력해줘.</p>
+        <input id="authBizPwd" type="password" name="bizplay-auth-password" autocomplete="current-password" placeholder="비밀번호"
+          onkeydown="if(event.key==='Enter') authBizplayLogin()"
+          class="w-full bg-surface-2 border border-border rounded-lg px-3 py-3 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
       </div>
-
-      <!-- 인증번호 입력: 주인공 -->
-      <input id="codeInput" type="text" maxlength="6" placeholder="000000"
-        class="w-full bg-surface-2 border border-border rounded-lg px-3 py-3.5 text-center text-2xl font-mono tracking-[0.4em] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
-        onkeydown="if(event.key==='Enter') verifyCode()">
-
-      <!-- 확인 버튼 -->
+      <div class="mb-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-[#6e7f7b] select-none">비밀번호 저장</span>
+          <button id="authSavePwToggle" type="button" onclick="toggleSavePw()" data-on="1"
+            class="relative w-10 h-[22px] rounded-full toggle-track cursor-pointer border-0 outline-none shrink-0"
+            style="background:#059669;">
+            <span class="toggle-thumb absolute top-[2px] left-[2px] w-[18px] h-[18px] bg-white rounded-full shadow" style="transform:translateX(18px)"></span>
+          </button>
+        </div>
+        <div id="authSavePwWarn" class="hidden text-[11px] text-warn mt-1.5">잔액 알림, 빠른 교육 신청서 작성 등 주요기능을 쓸 수 없어.</div>
+      </div>
       <div class="relative">
-        <button onclick="verifyCode()" id="verifyBtn"
-          class="w-full mt-4 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
-          확인
+        <button onclick="authBizplayLogin()" id="authBizLoginBtn"
+          class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+          로그인
         </button>
-        <img id="verifyGif" src="../img/working.gif" alt="verifying" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-14 h-14">
+        <img id="authBizGif" src="../img/working.gif" alt="loading" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-14 h-14">
       </div>
-
-      <!-- 보조 액션: 텍스트 링크로 가볍게 -->
-      <div class="flex items-center justify-center gap-4 mt-4">
-        <button onclick="backToStep1()" class="text-[#6e7f7b] text-xs hover:text-accent transition">다시 입력</button>
-        <button onclick="resendCode()" id="resendBtn" class="text-accent text-xs font-medium hover:brightness-125 transition hidden">재전송</button>
-      </div>
-
-      <div id="authError2" class="text-danger text-xs mt-3 hidden"></div>
+      <div id="authBizError" class="text-danger text-xs mt-3 hidden"></div>
     </div>
 
-    <!-- 하단 문의 -->
-    <div class="mt-6 pt-4 border-t border-border/50 text-[11px] text-[#6e7f7b]/60 text-center">
-      도움이 필요하면 <span class="text-[#6e7f7b]">인재성장파트 김우정 프로</span>에게!
+    <!-- 시스템 안내 -->
+    <div class="mt-6 pt-4 border-t" style="border-color:rgba(204,235,226,0.5); font-size:11px; color:rgba(110,127,123,0.6);">
+      <div class="mt-3 bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
     </div>
   </div>
 </div>
@@ -217,7 +261,7 @@ tailwind.config = {
 <!-- ====== 대시보드 ====== -->
 <div id="dashboard" class="hidden">
   <!-- Header -->
-  <header class="sticky top-0 z-40 border-b border-border" style="background:rgba(255,247,238,.93);backdrop-filter:blur(16px);">
+  <header class="sticky top-0 z-40 border-b border-border" style="background:var(--header-bg);backdrop-filter:blur(16px);">
     <div class="max-w-2xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
         <div class="header-icon-wrap">
@@ -226,22 +270,30 @@ tailwind.config = {
           <img id="headerLoading" src="../img/dance2.gif" alt="loading" class="icon-hidden">
         </div>
         <div>
-          <div class="text-[15px] font-bold leading-tight">HelpDesk+</div>
+          <div class="text-[15px] font-bold leading-tight">HelpDesk+ <span class="text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></div>
         </div>
       </div>
-      <div class="flex items-center gap-3 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap">
         <span id="userGreeting" class="text-xs text-[#6e7f7b]"></span>
+        <button id="darkModeBtn" onclick="toggleDarkMode()" title="다크모드" class="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-sm hover:bg-surface-2 transition">
+          <span id="darkModeIcon">🌙</span>
+        </button>
+        <button id="pwaInstallBtn" onclick="handlePwaInstall()" title="앱 설치" class="hidden w-8 h-8 flex items-center justify-center rounded-lg border border-border text-sm hover:bg-surface-2 transition">⬇️</button>
         <a id="adminLink" href="dev-admin-dashboard.html" class="hidden text-xs text-[#47635f] border border-[#ccebe2] rounded-lg px-3 py-1.5 hover:bg-[#e2f5ef] hover:text-[#47635f] transition">교육비관리자</a>
-        <button id="bizLoginBtn_header" onclick="openBizLoginOverlay()" class="hidden text-xs text-accent border border-accent/40 rounded-lg px-3 py-1.5 hover:bg-accent/5 transition">Bizplay 로그인</button>
-        <button id="bizLogoutBtn" onclick="bizplayLogout()" class="hidden text-xs text-[#6e7f7b] border border-border rounded-lg px-3 py-1.5 hover:border-warn hover:text-warn transition">Bizplay 로그아웃</button>
         <button onclick="logout()" class="text-xs text-[#6e7f7b] border border-border rounded-lg px-3 py-1.5 hover:border-danger hover:text-danger transition">로그아웃</button>
       </div>
     </div>
-    <div class="max-w-2xl mx-auto px-5 flex">
+    <div class="max-w-2xl mx-auto px-5 flex overflow-x-auto scrollbar-hide">
       <button id="tabBtnEdu" onclick="switchTab('edu')"
-        class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent">교육비</button>
+        class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap">📚 교육비</button>
       <button id="tabBtnCard" onclick="switchTab('card')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent">밥카</button>
+        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💳 밥카</button>
+      <button id="tabBtnDraft" onclick="switchTab('draft')"
+        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">📋 기안문서</button>
+      <button id="tabBtnExpense" onclick="switchTab('expense')"
+        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40">🚧 지출결의</button>
+      <button id="tabBtnTimesheet" onclick="switchTab('timesheet')"
+        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40">🚧 타임시트</button>
     </div>
   </header>
 
@@ -348,7 +400,7 @@ tailwind.config = {
       <!-- 상세 내역 -->
       <section>
         <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">신청 내역</div>
-        <div id="recordsWrap" class="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div id="recordsWrap" class="bg-surface border border-border rounded-2xl overflow-hidden max-h-[60vh] overflow-y-auto">
           <!-- 데스크탑: 테이블 -->
           <div class="overflow-x-auto record-table-wrap">
             <table class="w-full" id="recordsTable">
@@ -359,6 +411,7 @@ tailwind.config = {
                   <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">과정명</th>
                   <th class="px-4 py-3 text-right text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">금액</th>
                   <th class="px-4 py-3 text-center text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">상태</th>
+                  <th class="px-4 py-3 text-center text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">추천</th>
                 </tr>
               </thead>
               <tbody id="recordsBody"></tbody>
@@ -381,13 +434,13 @@ tailwind.config = {
               <button onclick="wizardSelectType('edu')"
                 class="bg-accent text-white rounded-xl p-4 hover:brightness-110 transition text-center">
                 <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg>
-                <div class="text-sm font-semibold">교육비 신청</div>
-                <div class="text-[10px] opacity-75 mt-1 leading-tight">이전 기록으로<br>빠르게 신청하자</div>
+                <div class="text-sm font-semibold">교육신청서</div>
+                <div class="text-[10px] opacity-75 mt-1 leading-tight">템플릿, 이전 기록으로<br>빠르게 신청하자</div>
               </button>
               <button disabled
                 class="bg-[#6e7f7b] text-white rounded-xl p-4 opacity-50 cursor-not-allowed text-center">
                 <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
-                <div class="text-sm font-semibold">도서 신청</div>
+                <div class="text-sm font-semibold">도서신청서</div>
                 <div class="text-[10px] opacity-75 mt-1 leading-tight">곧 추가될<br>예정이야</div>
               </button>
             </div>
@@ -477,7 +530,7 @@ tailwind.config = {
             <div id="wizTemplateList" class="space-y-2 max-h-64 overflow-y-auto"></div>
             <button onclick="wizardSelectTemplate(-1)"
               class="w-full mt-3 text-center text-sm text-accent font-semibold py-2.5 rounded-xl border border-accent/30 hover:bg-accent/5 transition">
-              직접 입력하기 &rarr;
+              ✍️ 직접 입력하기 &rarr;
             </button>
           </div>
 
@@ -489,6 +542,77 @@ tailwind.config = {
       <div id="tabPanelCard" class="hidden">
         <div id="cardContainer"></div>
       </div><!-- /tabPanelCard -->
+
+      <!-- ─── 기안문서 ─── -->
+      <div id="tabPanelDraft" class="hidden">
+        <div class="fade-in">
+          <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+            <div id="draftsCards" class="p-3 space-y-3"></div>
+            <div id="draftsLoading" class="hidden p-3 space-y-3">
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-1/2 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/4 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-1/2 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-28 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
+            </div>
+            <div id="noDrafts" class="hidden text-center py-10 text-[#6e7f7b] text-sm">
+              <img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">기안문서가 없어.
+            </div>
+          </div>
+        </div>
+      </div><!-- /tabPanelDraft -->
+
+      <!-- ─── 지출결의 (Coming Soon) ─── -->
+      <div id="tabPanelExpense" class="hidden">
+        <div class="fade-in space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-surface border border-border rounded-2xl p-5 text-center opacity-75">
+              <div class="text-3xl mb-2">🍜</div>
+              <div class="text-sm font-semibold mb-1">야근식대</div>
+              <div class="text-xs text-[#6e7f7b] mb-3">야근 시 식대 청구</div>
+              <span class="pill pill-pend text-[10px]">준비 중</span>
+            </div>
+            <div class="bg-surface border border-border rounded-2xl p-5 text-center opacity-75">
+              <div class="text-3xl mb-2">📚</div>
+              <div class="text-sm font-semibold mb-1">교육비</div>
+              <div class="text-xs text-[#6e7f7b] mb-3">원안문서 자동 연동</div>
+              <span class="pill pill-pend text-[10px]">준비 중</span>
+            </div>
+            <div class="bg-surface border border-border rounded-2xl p-5 text-center opacity-75">
+              <div class="text-3xl mb-2">🏢</div>
+              <div class="text-sm font-semibold mb-1">휴일근무수당</div>
+              <div class="text-xs text-[#6e7f7b] mb-3">타임시트에서 휴일근무정보를 자동으로 가져올거야</div>
+              <span class="pill pill-pend text-[10px]">준비 중</span>
+            </div>
+          </div>
+          <div class="text-center text-xs text-[#6e7f7b] py-4">곧 추가될 기능이야</div>
+        </div>
+      </div><!-- /tabPanelExpense -->
+
+      <!-- ─── 타임시트 (Coming Soon) ─── -->
+      <div id="tabPanelTimesheet" class="hidden">
+        <div class="fade-in space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-surface border border-border rounded-2xl p-5 opacity-75">
+              <div class="text-3xl mb-2">🔥</div>
+              <div class="text-sm font-semibold mb-1">진심모드</div>
+              <div class="text-xs text-[#6e7f7b] mb-3">꼼꼼하게 하루하루 기록</div>
+              <span class="pill pill-pend text-[10px]">준비 중</span>
+            </div>
+            <div class="bg-surface border border-border rounded-2xl p-5 opacity-75">
+              <div class="text-3xl mb-2">🦥</div>
+              <div class="text-sm font-semibold mb-1">대충모드</div>
+              <div class="text-xs text-[#6e7f7b] mb-3">그냥 대충 복사해서 사용</div>
+              <span class="pill pill-pend text-[10px]">준비 중</span>
+            </div>
+          </div>
+          <div class="text-center text-xs text-[#6e7f7b] py-4">곧 추가될 기능이야</div>
+        </div>
+      </div><!-- /tabPanelTimesheet -->
+
     </div>
 
     <!-- Bizplay (탭 공통, 외부 로드) -->
@@ -507,8 +631,11 @@ tailwind.config = {
 <div id="msgBox" class="fixed z-50 pointer-events-none transition-all duration-300 opacity-0 scale-90" style="display:none;">
   <div class="pointer-events-auto flex items-end gap-0">
     <img id="msgBoxImg" src="../img/smail.png" alt="" class="w-16 h-16 object-contain shrink-0 self-end translate-y-1">
-    <div id="msgBoxBubble" class="relative bg-white border-2 border-accent rounded-2xl rounded-bl-none px-4 py-2.5 shadow-xl max-w-[260px] mb-8">
+    <div id="msgBoxBubble" class="relative border-2 border-accent rounded-2xl rounded-bl-none px-4 py-2.5 shadow-xl max-w-[260px] mb-8" style="background:var(--bubble-bg)">
       <div id="msgBoxText" class="text-sm text-[#47635f] font-medium leading-snug"></div>
+      <div id="msgBoxDismiss" class="hidden flex justify-end mt-2">
+        <button onclick="dismissToast()" class="px-4 py-1.5 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">응</button>
+      </div>
     </div>
   </div>
 </div>
@@ -518,8 +645,8 @@ tailwind.config = {
   <div class="absolute inset-0 bg-black/30" id="confirmOverlay"></div>
   <div id="confirmInner" class="fixed z-[61] flex items-end gap-0">
     <img id="confirmImg" src="../img/smail.png" alt="" class="w-16 h-16 object-contain shrink-0 self-end translate-y-1">
-    <div id="confirmBubble" class="relative bg-white border-2 border-accent rounded-2xl rounded-bl-none px-5 py-4 shadow-xl max-w-[280px] mb-8"
-      style="--bubble-color:#2d8a7e;">
+    <div id="confirmBubble" class="relative border-2 border-accent rounded-2xl rounded-bl-none px-5 py-4 shadow-xl max-w-[280px] mb-8"
+      style="background:var(--bubble-bg);--bubble-color:#2d8a7e;">
       <div id="confirmText" class="text-sm text-[#47635f] font-medium leading-snug mb-4"></div>
       <div class="flex gap-2 justify-end">
         <button id="confirmNo" class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface-2 text-[#6e7f7b] border border-border hover:brightness-95 transition cursor-pointer">아니</button>
@@ -529,24 +656,64 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- 결재라인 확인 팝업 -->
+<div id="apprLineBox" class="fixed inset-0 z-[60]" style="display:none;">
+  <div class="absolute inset-0 bg-black/30" id="apprLineOverlay"></div>
+  <div class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[61] max-w-sm mx-auto">
+    <div class="bg-white border-2 border-accent rounded-2xl p-5 shadow-xl" style="background:var(--bubble-bg);">
+      <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">결재라인 확인</div>
+      <div id="apprLineContent" class="space-y-0 max-h-[50vh] overflow-y-auto"></div>
+      <div class="flex gap-2 justify-end mt-4">
+        <button id="apprLineCancel" class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface-2 text-[#6e7f7b] border border-border hover:brightness-95 transition cursor-pointer">취소</button>
+        <button id="apprLineSubmit" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">결재요청</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ─── 탭 전환 ─── */
 window.switchTab = function(tabId) {
-  const isEdu = tabId === 'edu';
-  document.getElementById('tabPanelEdu').classList.toggle('hidden', !isEdu);
-  document.getElementById('tabPanelCard').classList.toggle('hidden', isEdu);
-  document.getElementById('bizplayContainer').classList.toggle('hidden', !isEdu);
-  document.getElementById('tabBtnEdu').className = isEdu
-    ? 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent'
-    : 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent';
-  document.getElementById('tabBtnCard').className = isEdu
-    ? 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent'
-    : 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent';
-  // 밥카 탭 전환 시 미완료 상태면 재조회
-  if (!isEdu && window.fetchCardRecords) window.fetchCardRecords();
-  // 교육비 탭 복귀 시 잔액 표시 갱신
-  if (isEdu && window.updateRemainDisplay) window.updateRemainDisplay();
+  const tabs = ['edu', 'card', 'draft', 'expense', 'timesheet'];
+  const comingSoon = ['expense', 'timesheet'];
+  const activeClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';
+  const inactiveClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap';
+  const activeGrayClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-[#aab5b2] text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
+  const inactiveGrayClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
+
+  tabs.forEach(t => {
+    const panel = document.getElementById('tabPanel' + t.charAt(0).toUpperCase() + t.slice(1));
+    const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (panel) panel.classList.toggle('hidden', t !== tabId);
+    if (!btn) return;
+    const isGray = comingSoon.includes(t);
+    if (t === tabId) btn.className = isGray ? activeGrayClass : activeClass;
+    else btn.className = isGray ? inactiveGrayClass : inactiveClass;
+  });
+
+  // bizplayContainer는 edu 탭에서만 표시
+  document.getElementById('bizplayContainer').classList.toggle('hidden', tabId !== 'edu');
+
+  // 탭별 데이터 refresh
+  if (tabId === 'card' && window.fetchCardRecords) window.fetchCardRecords();
+  if (tabId === 'draft' && window.fetchDraftList) window.fetchDraftList();
+  if (tabId === 'edu') {
+    if (window.updateRemainDisplay) window.updateRemainDisplay();
+    if (window.refreshEduSession) window.refreshEduSession();
+  }
 };
+
+/* ─── 다크모드 토글 ─── */
+window.toggleDarkMode = function() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('darkMode', isDark);
+  syncDarkToggleUI(isDark);
+};
+function syncDarkToggleUI(isDark) {
+  const icon = document.getElementById('darkModeIcon');
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+}
+syncDarkToggleUI(localStorage.getItem('darkMode') === 'true');
 
 (() => {
 'use strict';
@@ -554,31 +721,7 @@ window.switchTab = function(tabId) {
 /* ─── 상수 ─── */
 const API_URL = 'https://script.google.com/macros/s/AKfycby8_T37FXsohyVrIKStEIaV2DYenigsBb8WQ4OPI1FTroQRPCFZKOo5g7cdG9BfGqCO/exec';
 const LIMIT = 500000;
-const TOKEN_KEY = 'edu_token';
-const AUTH_SESSION_KEY = 'edu_auth_session';
-
-/* ─── 상태 ─── */
-let timerInterval = null;
-let timerSec = 180;
-let currentKnoxId = '';
-
-/* ─── 인증 세션 헬퍼 (Flow 앱 재진입 대응) ─── */
-function saveAuthSession(knoxId) {
-  const data = { knoxId, expiresAt: Date.now() + 180000 };
-  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(data));
-}
-function loadAuthSession() {
-  try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (Date.now() > data.expiresAt) { clearAuthSession(); return null; }
-    return data;
-  } catch { clearAuthSession(); return null; }
-}
-function clearAuthSession() {
-  localStorage.removeItem(AUTH_SESSION_KEY);
-}
+const TOKEN_KEY = 'token';
 let userInfo = null;
 let records = [];
 let remainBudget = 0;
@@ -650,7 +793,7 @@ function init() {
     localStorage.setItem(TOKEN_KEY, urlToken);
   }
   // tab 파라미터가 있으면 저장 후 URL 정리
-  if (urlTab) localStorage.setItem('edu_init_tab', urlTab);
+  if (urlTab) localStorage.setItem('init_tab', urlTab);
   if (urlToken || urlTab) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
@@ -660,28 +803,32 @@ function init() {
     showDashboard();
     loadDashboard();
   } else {
-    // Flow 앱 재진입: 인증 세션이 살아있으면 Step2 복원
-    const session = loadAuthSession();
-    if (session) {
-      currentKnoxId = session.knoxId;
-      showAuth();
-      $('authStep1').classList.add('hidden');
-      $('authStep2').classList.remove('hidden');
-      $('resendBtn').classList.add('hidden');
-      $('verifyBtn').disabled = false;
-      const remainSec = Math.max(Math.floor((session.expiresAt - Date.now()) / 1000), 0);
-      if (remainSec > 0) {
-        startTimer(remainSec);
-      } else {
-        updateTimerDisplay();
-        $('verifyBtn').disabled = true;
-        $('resendBtn').classList.remove('hidden');
-      }
-    } else {
-      showAuth();
+    showAuth();
+    // 저장된 ID 프리필
+    const savedId = localStorage.getItem('bizplay_id');
+    if (savedId) $('authBizId').value = savedId;
+    // 저장된 자격증명이 있으면 비밀번호도 프리필
+    const savedCred = localStorage.getItem('bizplay_cred');
+    if (savedCred) {
+      try {
+        const decoded = decodeURIComponent(escape(atob(savedCred)));
+        const [, savedPwd] = decoded.split('\n');
+        if (savedPwd) $('authBizPwd').value = savedPwd;
+      } catch {}
     }
   }
 }
+
+/* ─── 비밀번호 저장 토글 ─── */
+window.toggleSavePw = function() {
+  const el = $('authSavePwToggle');
+  const isOn = el.dataset.on === '1';
+  const newVal = !isOn;
+  el.dataset.on = newVal ? '1' : '0';
+  el.style.background = newVal ? '#059669' : '#ccebe2';
+  el.querySelector('.toggle-thumb').style.transform = newVal ? 'translateX(18px)' : 'translateX(0)';
+  $('authSavePwWarn').classList.toggle('hidden', newVal);
+};
 
 /* ═══════════════ 인증 흐름 ═══════════════ */
 function showAuth() {
@@ -694,141 +841,63 @@ function showDashboard() {
   $('dashboard').classList.remove('hidden');
 }
 
-/* Step1 → Step2 */
-window.requestAuth = async function() {
-  const knoxId = $('knoxInput').value.trim();
-  if (!knoxId) { showAuthError(1, 'FlowID를 입력해줘.'); return; }
-
-  const btn = $('authReqBtn');
-  setBtnLoading(btn, true, '요청 중...');
-  hideAuthError(1);
-  mascotHide();
-  $('authReqGif').classList.remove('hidden');
-
-  try {
-    const fullKnoxId = knoxId;
-    const data = await gasFetch(`${API_URL}?action=sendCode&knoxId=${encodeURIComponent(fullKnoxId)}`);
-
-    if (data.status === 'success') {
-      currentKnoxId = fullKnoxId;
-      saveAuthSession(fullKnoxId);
-      $('authStep1').classList.add('hidden');
-      $('authStep2').classList.remove('hidden');
-      $('resendBtn').classList.add('hidden');
-      $('verifyBtn').disabled = false;
-      startTimer();
-    } else {
-      showAuthError(1, data.error || data.message || '인증 요청에 실패했어.');
-    }
-  } catch (e) {
-    console.error('인증 요청 오류:', e);
-    showAuthError(1, '서버 연결에 실패했어. 잠시 후 다시 시도해봐.');
-  } finally {
-    setBtnLoading(btn, false, '인증 요청');
-    $('authReqGif').classList.add('hidden');
-    mascotShow();
+/* ═══════════════ Bizplay 로그인 ═══════════════ */
+window.authBizplayLogin = async function() {
+  const rawId = $('authBizId').value.trim();
+  const bizPwd = $('authBizPwd').value;
+  if (!rawId || !bizPwd) {
+    const el = $('authBizError');
+    el.textContent = '아이디와 비밀번호를 입력해줘.';
+    el.classList.remove('hidden');
+    return;
   }
-};
 
-/* 인증번호 재전송 */
-window.resendCode = async function() {
-  const btn = $('resendBtn');
-  setBtnLoading(btn, true, '재전송 중...');
-  hideAuthError(2);
+  const bizId = rawId.replace(/@.*$/, '') + '@emro.co.kr';
+  const savePw = $('authSavePwToggle').dataset.on === '1';
 
-  try {
-    const data = await gasFetch(`${API_URL}?action=sendCode&knoxId=${encodeURIComponent(currentKnoxId)}`);
-
-    if (data.status === 'success') {
-      saveAuthSession(currentKnoxId);
-      btn.classList.add('hidden');
-      $('verifyBtn').disabled = false;
-      $('codeInput').value = '';
-      startTimer();
-      showToast('인증번호가 재전송됐어.', 'smail');
-    } else {
-      showAuthError(2, data.error || data.message || '재전송에 실패했어.');
-    }
-  } catch (e) {
-    showAuthError(2, '서버 연결에 실패했어.');
-  } finally {
-    setBtnLoading(btn, false, '인증번호 재전송');
-  }
-};
-
-/* 인증번호 확인 */
-window.verifyCode = async function() {
-  const code = $('codeInput').value.trim();
-  if (code.length !== 6) { showAuthError(2, '6자리 인증번호를 입력해줘.'); return; }
-
-  const btn = $('verifyBtn');
-  setBtnLoading(btn, true, '확인 중...');
-  hideAuthError(2);
+  const btn = $('authBizLoginBtn');
+  setBtnLoading(btn, true, '로그인 중...');
+  $('authBizError').classList.add('hidden');
   mascotHide();
-  $('verifyGif').classList.remove('hidden');
+  $('authBizGif').classList.remove('hidden');
 
   try {
-    const data = await gasFetch(`${API_URL}?action=verify&knoxId=${encodeURIComponent(currentKnoxId)}&authCode=${encodeURIComponent(code)}`);
+    const url = `${API_URL}?action=bizplayAuth&bizUserId=${encodeURIComponent(bizId)}&bizPwd=${encodeURIComponent(bizPwd)}&savePw=${savePw}`;
+    const data = await gasFetch(url);
+
+    if (data.debug) console.log('[bizplayAuth] debug:', data.debug);
 
     if (data.status === 'success' && data.token) {
-      clearInterval(timerInterval);
-      clearAuthSession();
+      // 토큰 + 인증 방식 저장
       localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem('auth_method', 'bizplay');
+      localStorage.setItem('bizplay_id', rawId);
+
+      // Bizplay 세션 저장
+      if (data.session) {
+        localStorage.setItem('bizplay_session', JSON.stringify(data.session));
+      }
+
+      // 항상 자격증명 저장 (로그인 상태 유지 기본 ON)
+      localStorage.setItem('bizplay_cred', btoa(unescape(encodeURIComponent(bizId + '\n' + bizPwd))));
+
       showDashboard();
       loadDashboard();
     } else {
-      showAuthError(2, data.error || data.message || '인증번호가 다르네요.');
+      const el = $('authBizError');
+      el.textContent = data.message || data.error || '로그인 실패';
+      el.classList.remove('hidden');
     }
-  } catch (e) {
-    showAuthError(2, '서버 연결에 실패했어. 잠시 후 다시 시도해봐.');
+  } catch (err) {
+    const el = $('authBizError');
+    el.textContent = '네트워크 오류: ' + err.message;
+    el.classList.remove('hidden');
   } finally {
-    setBtnLoading(btn, false, '확인');
-    $('verifyGif').classList.add('hidden');
+    setBtnLoading(btn, false, '로그인');
+    $('authBizGif').classList.add('hidden');
     mascotShow();
   }
 };
-
-/* 3분 타이머 */
-function startTimer(resumeSec) {
-  timerSec = resumeSec || 180;
-  clearInterval(timerInterval);
-  updateTimerDisplay();
-  timerInterval = setInterval(() => {
-    timerSec--;
-    if (timerSec <= 0) {
-      clearInterval(timerInterval);
-      $('verifyBtn').disabled = true;
-      $('resendBtn').classList.remove('hidden');
-    }
-    updateTimerDisplay();
-  }, 1000);
-}
-
-function updateTimerDisplay() {
-  const m = Math.floor(timerSec / 60);
-  const s = timerSec % 60;
-  const display = $('timerDisplay');
-  display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  if (timerSec <= 30) display.classList.add('text-danger');
-  else display.classList.remove('text-danger');
-}
-
-window.backToStep1 = function() {
-  clearInterval(timerInterval);
-  $('authStep2').classList.add('hidden');
-  $('authStep1').classList.remove('hidden');
-  $('codeInput').value = '';
-  hideAuthError(2);
-};
-
-function showAuthError(step, msg) {
-  const el = $(`authError${step}`);
-  el.textContent = msg;
-  el.classList.remove('hidden');
-}
-function hideAuthError(step) {
-  $(`authError${step}`).classList.add('hidden');
-}
 
 /* ═══════════════ 대시보드 로드 ═══════════════ */
 async function loadDashboard() {
@@ -855,6 +924,12 @@ async function loadDashboard() {
     userInfo = data.userInfo || {};
     records = data.myHistory || [];
     templates = data.templates || [];
+
+    // 서버에서 Bizplay 자동 세션 복원된 경우 localStorage에 저장
+    if (data.bizplaySession) {
+      localStorage.setItem('bizplay_session', JSON.stringify(data.bizplaySession));
+    }
+
     renderDashboard();
     initCard(data);
 
@@ -864,10 +939,11 @@ async function loadDashboard() {
     initIdleWatcher();
     initBizplay();
 
-    // URL tab 파라미터로 진입 시 해당 탭 전환
-    const initTab = localStorage.getItem('edu_init_tab');
+    // URL ?tab= 파라미터 또는 localStorage로 진입 시 해당 탭 전환
+    const urlTab = new URLSearchParams(location.search).get('tab');
+    const initTab = urlTab || localStorage.getItem('init_tab');
     if (initTab) {
-      localStorage.removeItem('edu_init_tab');
+      localStorage.removeItem('init_tab');
       switchTab(initTab);
     }
   } catch (e) {
@@ -954,6 +1030,9 @@ function renderRecords() {
       <td class="px-4 py-3 text-sm">${escapeHtml(title)}</td>
       <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
       <td class="px-4 py-3 text-center"><span class="pill ${pillClass}">${escapeHtml(status || '-')}</span></td>
+      <td class="px-4 py-3 text-center">
+        <button onclick="showRecommendInfo(this)" title="동료에게 추천" class="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent/10 transition text-base leading-none">🤝</button>
+      </td>
     `;
     body.appendChild(tr);
 
@@ -963,7 +1042,8 @@ function renderRecords() {
     card.innerHTML = `
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-semibold flex-1">${escapeHtml(title)}</span>
-        <span class="pill ${pillClass} ml-2">${escapeHtml(status || '-')}</span>
+        <button onclick="event.stopPropagation();showRecommendInfo(this)" title="동료에게 추천" class="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent/10 transition text-sm leading-none ml-1">🤝</button>
+        <span class="pill ${pillClass} ml-1">${escapeHtml(status || '-')}</span>
       </div>
       <div class="flex items-center justify-between text-xs text-[#6e7f7b]">
         <span>${escapeHtml(r.period || '')}</span>
@@ -1044,6 +1124,8 @@ window.toggleAlarm = async function() {
 /* ═══════════════ 로그아웃 ═══════════════ */
 window.logout = function() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('auth_method');
+  localStorage.removeItem('bizplay_session');
   location.reload();
 };
 
@@ -1062,7 +1144,7 @@ function escapeHtml(str) {
 /* ─── Bizplay 모듈 로드 ─── */
 async function loadBizplayModule() {
   try {
-    const resp = await fetch('edu-bizplay.html');
+    const resp = await fetch('edu-bizplay.html?v=' + Date.now());
     if (!resp.ok) return;
     const html = await resp.text();
     const container = $('bizplayContainer');
@@ -1090,15 +1172,17 @@ let msgBoxTimer = null;
  * anchorEl: 이벤트 근처 엘리먼트 (없으면 화면 하단 중앙)
  * 하위호환: showToast(msg, true) → mood='sad'
  */
-function showToast(msg, mood, anchorEl) {
+function showToast(msg, mood, anchorEl, opts) {
   // 하위호환: 2번째 인자가 boolean이면 변환
   if (typeof mood === 'boolean') { mood = mood ? 'sad' : 'smail'; }
   if (!mood) mood = 'smail';
+  opts = opts || {};
 
   const box = $('msgBox');
   const img = $('msgBoxImg');
   const text = $('msgBoxText');
   const bubble = $('msgBoxBubble');
+  const dismissBtn = $('msgBoxDismiss');
 
   // 이미지 & 색상
   const config = {
@@ -1110,7 +1194,17 @@ function showToast(msg, mood, anchorEl) {
   img.src = c.src;
   bubble.style.borderColor = c.border;
   bubble.style.setProperty('--bubble-color', c.border);
-  text.textContent = msg;
+  if (opts.html) text.innerHTML = msg;
+  else text.textContent = msg;
+
+  // "응" 버튼 표시 여부
+  if (opts.dismiss) {
+    dismissBtn.classList.remove('hidden');
+    dismissBtn.classList.add('flex');
+  } else {
+    dismissBtn.classList.add('hidden');
+    dismissBtn.classList.remove('flex');
+  }
 
   // 위치: anchorEl 근처 또는 화면 하단 중앙
   box.style.display = '';
@@ -1136,13 +1230,33 @@ function showToast(msg, mood, anchorEl) {
   }
 
   clearTimeout(msgBoxTimer);
-  msgBoxTimer = setTimeout(() => {
-    box.classList.remove('opacity-100', 'scale-100');
-    box.classList.add('opacity-0', 'scale-90');
-    setTimeout(() => { box.style.display = 'none'; }, 300);
-  }, 2800);
+  if (!opts.dismiss) {
+    msgBoxTimer = setTimeout(() => {
+      box.classList.remove('opacity-100', 'scale-100');
+      box.classList.add('opacity-0', 'scale-90');
+      setTimeout(() => { box.style.display = 'none'; }, 300);
+    }, 2800);
+  }
 }
 window.showToast = showToast;
+
+function dismissToast() {
+  const box = $('msgBox');
+  box.classList.remove('opacity-100', 'scale-100');
+  box.classList.add('opacity-0', 'scale-90');
+  setTimeout(() => { box.style.display = 'none'; }, 300);
+}
+window.dismissToast = dismissToast;
+
+function showRecommendInfo(anchorEl) {
+  showToast(
+    '<div class="font-semibold mb-1.5">동료에게 교육 추천</div>' +
+    '<div class="text-xs leading-relaxed opacity-80">선택한 동료에게 <br>교육신청서가 <span class="font-semibold text-accent">임시저장</span>으로 자동 생성돼.</div>' +
+    '<div class="mt-2"><span class="inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 bg-accent/10 text-accent">곧 추가될 기능이야</span></div>',
+    'smail', anchorEl, { dismiss: true, html: true }
+  );
+}
+window.showRecommendInfo = showRecommendInfo;
 
 /**
  * showConfirm(msg, anchorEl) → Promise<boolean>
@@ -1210,7 +1324,7 @@ window.wizardSelectType = function(type) {
   if (type === 'edu') {
     const sessionRaw = localStorage.getItem('bizplay_session');
     if (!sessionRaw) {
-      if (window.openBizLoginOverlay) openBizLoginOverlay();
+      showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad');
       return;
     }
     wizardGoTo(2);
@@ -1345,7 +1459,7 @@ function renderTemplateCards() {
 /* ─── 밥카 모듈 로드 ─── */
 async function loadCardModule() {
   try {
-    const resp = await fetch('card-babka.html');
+    const resp = await fetch('card-babka.html?v=' + Date.now());
     if (!resp.ok) return;
     const html = await resp.text();
     const container = $('cardContainer');
@@ -1406,6 +1520,8 @@ function setHeaderIcon(state) {
 
 function showLoading() { isLoading = true; clearTimeout(idleTimer); setHeaderIcon('loading'); }
 function hideLoading() { isLoading = false; resetIdleTimer(); }
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
 
 function showDance() { if (!isLoading) setHeaderIcon('dance'); }
 function showSmail() { if (!isLoading) setHeaderIcon('smail'); }
@@ -1428,6 +1544,50 @@ function initIdleWatcher() {
 document.addEventListener('DOMContentLoaded', init);
 
 })();
+</script>
+
+<!-- PWA Service Worker + Install Prompt -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+let deferredPrompt = null;
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+if (!isStandalone) {
+  // Android/Windows: beforeinstallprompt → 아이콘 표시
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.classList.remove('hidden');
+  });
+
+  // iOS Safari → 아이콘 표시
+  if (isIos) {
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.classList.remove('hidden');
+  }
+}
+
+// 📲 클릭 핸들러: Android → 바로 설치, iOS → 가이드 토스트
+window.handlePwaInstall = function() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  } else if (isIos && !isStandalone) {
+    window.showToast(
+      '<div class="font-semibold mb-1.5">홈 화면에 추가하기</div>' +
+      '<div class="space-y-1.5 text-xs leading-relaxed opacity-80">' +
+        '<div><span class="font-semibold text-accent">1.</span> Safari 하단 <strong>공유 버튼</strong> 탭</div>' +
+        '<div><span class="font-semibold text-accent">2.</span> <strong>"홈 화면에 추가"</strong> 선택</div>' +
+        '<div><span class="font-semibold text-accent">3.</span> <strong>"추가"</strong> 탭</div>' +
+      '</div>',
+      'smail', document.getElementById('pwaInstallBtn'), { dismiss: true, html: true }
+    );
+  }
+};
 </script>
 </body>
 </html>

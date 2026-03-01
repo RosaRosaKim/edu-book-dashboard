@@ -25,7 +25,7 @@ const BOOK_COL = {
 function colFor(row) { return row._reqType === '도서' ? BOOK_COL : DATA_COL; }
 
 const ADMIN_COL = {
-  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, AUTH_CODE: 4, AUTH_TIME: 5, DEPT: 6, NAME: 8
+  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, DEPT: 4, NAME: 5
 };
 
 /**
@@ -42,35 +42,6 @@ const doGet = (e) => {
   if (!adminSheet || !managerSheet) return createResponse({ error: "필수 시트 부재" });
 
   const adminData = adminSheet.getDataRange().getValues();
-
-  // [기능 1] 인증번호 발송
-  if (action === "sendCode" && knoxId) {
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.KNOX_ID] === knoxId);
-    if (rowIndex === -1) return createResponse({ status: "error", message: "등록되지 않은 사번입니다." });
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    adminSheet.getRange(rowIndex + 1, ADMIN_COL.AUTH_CODE + 1).setValue(code);
-    adminSheet.getRange(rowIndex + 1, ADMIN_COL.AUTH_TIME + 1).setValue(new Date());
-
-    sendFlowGAS(knoxId, `[Bizplay 도우미]\n인증번호: [${code}]\n3분 이내에 입력해주세요.`);
-    return createResponse({ status: "success" });
-  }
-
-  // [기능 2] 인증번호 검증
-  if (action === "verify" && knoxId && authCode) {
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.KNOX_ID] === knoxId);
-    if (rowIndex === -1) return createResponse({ error: "NOT_FOUND" });
-
-    const row = adminData[rowIndex];
-    const diff = (new Date() - new Date(row[ADMIN_COL.AUTH_TIME])) / 1000 / 60;
-
-    if (String(row[ADMIN_COL.AUTH_CODE]) === authCode && diff <= 3) {
-      const uuid = row[ADMIN_COL.UUID] || Utilities.getUuid();
-      adminSheet.getRange(rowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
-      return createResponse({ status: "success", token: uuid });
-    }
-    return createResponse({ error: "INVALID_OR_EXPIRED" });
-  }
 
   // [기능 4] 관리자 → 사용자에게 잔액 정보 Flow 발송
   if (action === "sendBalanceInfo" && token && e.parameter.targetKnoxId) {
@@ -118,8 +89,74 @@ const doGet = (e) => {
     if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
 
     const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
-    adminSheet.getRange(rowIndex + 1, 9).setValue(newVal); // I열 = 9
+    adminSheet.getRange(rowIndex + 1, 7).setValue(newVal);  // G열: 밥카알람 (기존 호환)
+    adminSheet.getRange(rowIndex + 1, 9).setValue(newVal);  // I열: 16일 결재 알람
     return createResponse({ status: "success" });
+  }
+
+  // [기능 12] Bizplay 직접 인증 (로그인 화면에서 Bizplay로 로그인)
+  if (action === "bizplayAuth") {
+    const bizUserId = e.parameter.bizUserId;
+    const bizPwd = e.parameter.bizPwd;
+    if (!bizUserId || !bizPwd) return createResponse({ error: "MISSING_PARAMS" });
+
+    // knoxId = @ 앞부분
+    const knoxId = bizUserId.split('@')[0];
+    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.KNOX_ID] === knoxId);
+    if (rowIndex === -1) return createResponse({ status: "error", message: "등록되지 않은 사번이야." });
+
+    try {
+      var result = _bizplayLoginCore(bizUserId, bizPwd);
+      if (result.error) return createResponse({ status: 'fail', message: result.error });
+
+      // UUID 토큰 발급/조회 (기존 verify 로직과 동일)
+      const row = adminData[rowIndex];
+      const uuid = row[ADMIN_COL.UUID] || Utilities.getUuid();
+      adminSheet.getRange(rowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
+
+      // Bizplay 세션 ScriptProperties에 저장 (기존 handleBizplayLogin과 동일)
+      var sessionData = {
+        bizplayCookies: result.bizplayCookies,
+        approvalCookies: result.approvalCookies || '',
+        webankCookies: result.webankCookies || '',
+        userId: bizUserId,
+        userName: result.userName,
+        deptCd: result.deptCd || '',
+        deptNm: result.deptNm || '',
+        deptShort: result.deptShort || '',
+        useInttId: result.useInttId || '',
+        loginTime: new Date().toISOString()
+      };
+      PropertiesService.getScriptProperties().setProperty(
+        'bizplay_' + knoxId,
+        JSON.stringify(sessionData)
+      );
+
+      // 비밀번호 저장 (잔액알림 등에 활용)
+      const savePw = e.parameter.savePw;
+      if (savePw === 'true') {
+        adminSheet.getRange(rowIndex + 1, 8).setValue(_encryptPw(bizPwd)); // H열: Bizplay PW
+      } else {
+        adminSheet.getRange(rowIndex + 1, 8).setValue(''); // H열 클리어 (자동로그인 해제)
+      }
+
+      return createResponse({
+        status: 'success',
+        token: uuid,
+        userName: result.userName,
+        ssoComplete: result.ssoComplete,
+        session: {
+          userId: bizUserId,
+          userName: result.userName,
+          deptCd: result.deptCd || '',
+          deptNm: result.deptNm || '',
+          deptShort: result.deptShort || ''
+        },
+        debug: result.debug
+      });
+    } catch (err) {
+      return createResponse({ error: 'BIZPLAY_ERROR', message: err.message });
+    }
   }
 
   // [기능 6] Bizplay 로그인 프록시 (SSO 전체 흐름)
@@ -127,6 +164,27 @@ const doGet = (e) => {
     const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
     if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
     return handleBizplayLogin(adminRow, e);
+  }
+
+  // [기능 6.5] Bizplay 교육비 탭 SSO (탭 전환 시 weAuth)
+  if (action === "bizplayEduInit" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBizplayEduInit(adminRow, e);
+  }
+
+  // [기능 7a] Bizplay 결재라인 조회
+  if (action === "bizplayApprLine" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBizplayApprLine(adminRow, e);
+  }
+
+  // [기능 7b] Bizplay 기안문서 목록 조회
+  if (action === "bizplayDraftList" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBizplayDraftList(adminRow, e);
   }
 
   // [기능 7] Bizplay 임시저장 (교육 신청서)
@@ -295,11 +353,61 @@ const doGet = (e) => {
       }));
     }
 
+    // Bizplay PW 저장 여부 확인 (SSO는 각 모듈에서 필요 시 수행)
+    let bizplaySession = null;
+    const encPw = adminRow[7]; // H열: 암호화된 Bizplay PW
+    if (encPw && String(encPw).trim()) {
+      const propKey = 'bizplay_' + currentKnoxId;
+      const existingRaw = PropertiesService.getScriptProperties().getProperty(propKey);
+      const existing = existingRaw ? JSON.parse(existingRaw) : null;
+
+      // 기본 로그인만 수행 (SSO 없음 — 각 모듈이 탭 클릭 시 자체 SSO)
+      const needLogin = !existing || !existing.bizplayCookies ||
+        (new Date() - new Date(existing.loginTime || 0)) > 3600000;
+      if (needLogin) {
+        try {
+          const bizUserId = currentKnoxId + '@emro.co.kr';
+          const bizPwd = _decryptPw(String(encPw));
+          const loginPayload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+            USER_ID: bizUserId, PWD: bizPwd,
+            CAPTCHA_VALUE: '', LNK_ID: '', LNK_INTT: '', LOGIN_SAVE: 'N',
+            USER_OS: 'win10.0', USER_BR: 'Chrome', USER_BR_VER: '145.0.0.0',
+            TMPR_CD2: '', TMPR_CD3: '', LNGG_DSNC: 'DF', '_LODING_BAR_YN_': 'Y'
+          }));
+          const loginResp = UrlFetchApp.fetch('https://www.bizplay.co.kr/login_proc_01.jct', {
+            method: 'post',
+            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            headers: { 'User-Agent': BROWSER_UA },
+            payload: loginPayload,
+            followRedirects: false,
+            muteHttpExceptions: true
+          });
+          const body = JSON.parse(loginResp.getContentText());
+          if (body.RSLT_CD === '0000') {
+            const sessionData = {
+              bizplayCookies: extractCookies(loginResp),
+              userId: bizUserId,
+              userName: body.USER_NM,
+              useInttId: body.USE_INTT_ID || '',
+              loginTime: new Date().toISOString()
+            };
+            PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(sessionData));
+            bizplaySession = { userId: bizUserId, userName: body.USER_NM };
+          }
+        } catch (bizErr) {
+          console.log('[auto-bizplay] 자동 로그인 실패: ' + bizErr.message);
+        }
+      } else if (existing) {
+        bizplaySession = { userId: existing.userId, userName: existing.userName };
+      }
+    }
+
     return createResponse({
-      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[8] === "Y", isCardDailyAlarmOn: !!(adminRow[9] && String(adminRow[9]).trim()) },
+      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", isCard16AlarmAgreed: adminRow[8] === "Y", isCardDailyAlarmOn: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()) },
       myHistory: myHistory,
       adminStats: adminStats,
-      templates: templates
+      templates: templates,
+      bizplaySession: bizplaySession
     });
   }
   return createResponse({ error: "INVALID_REQUEST" });

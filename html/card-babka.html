@@ -111,16 +111,7 @@
           <span class="toggle-thumb absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow" style="transform:var(--card-daily-toggle-x, translateX(0))"></span>
         </button>
       </div>
-      <!-- PW 입력 영역 (토글 ON 시 표시) -->
-      <div id="cardDailyPwArea" class="hidden mt-3 pt-3 border-t border-border/60">
-        <div class="flex gap-2">
-          <input id="cardDailyPwInput" type="password" placeholder="Bizplay 비밀번호"
-            class="flex-1 min-w-0 px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg outline-none focus:border-[#059669] transition">
-          <button id="cardDailyPwSave" onclick="saveCardDailyPw()"
-            class="px-4 py-2 text-sm font-semibold bg-accent text-white rounded-lg hover:brightness-110 transition whitespace-nowrap">저장</button>
-        </div>
-        <div class="text-[10px] text-[#6e7f7b]/70 mt-2">비밀번호는 암호화하여 저장돼.</div>
-      </div>
+      <div id="cardDailyNoPw" class="hidden mt-2 text-[11px] text-warn">로그인 시 비밀번호 저장을 체크해줘.</div>
     </div>
   </div>
 </section>
@@ -186,6 +177,7 @@
   let cardCurrentRecords = []; // 현재 기간(이번 달) 레코드 — 상단 요약용
   let cardAlarmOn = false;
   let cardDailyAlarmOn = false;
+  let hasBizplayPw = false;
   let cardFetchState = 'idle'; // 'idle' | 'loading' | 'loaded' | 'no-session' | 'sso-fail' | 'error'
   let cardFilteredRecords = []; // renderCardRecords에서 표시 중인 필터된 레코드
   let cardViewMode = 'records'; // 'records' | 'stats'
@@ -325,7 +317,7 @@
     const fromDt = fmt(sixStart);
     const toDt = fmt(period.end);
 
-    const token = localStorage.getItem('edu_token');
+    const token = localStorage.getItem('token');
     try {
       let url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token)
         + '&fromDt=' + fromDt + '&toDt=' + toDt;
@@ -445,8 +437,8 @@
     $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
 
     const transportKeywords = ['티머니 버스', '티머니 지하철'];
+    if (cardCurrentRecords.length > 0) console.log('[card] 첫 레코드 purpose:', JSON.stringify(cardCurrentRecords.slice(0, 3).map(r => ({ merchant: r.merchant, purpose: r.purpose, cost: r.cost }))));
     const currentValid = cardCurrentRecords.filter(r => {
-      if (r.purpose && r.purpose.trim()) return false;
       const merchant = (r.merchant || '').trim();
       return !transportKeywords.some(k => merchant.includes(k));
     });
@@ -476,7 +468,6 @@
       statsWrap.classList.add('hidden');
       recordsWrap.classList.remove('hidden');
       const displayRecords = cardRecords.filter(r => {
-        if (r.purpose && r.purpose.trim()) return false;
         const merchant = (r.merchant || '').trim();
         return !transportKeywords.some(k => merchant.includes(k));
       });
@@ -546,7 +537,7 @@
   function setCardToggleState(on) {
     const el = $('cardAlarmToggle');
     if (!el) return;
-    el.style.setProperty('--card-toggle-bg', on ? '#059669' : '#ccebe2');
+    el.style.setProperty('--card-toggle-bg', on ? '#059669' : 'rgb(var(--c-border))');
     el.style.setProperty('--card-toggle-x', on ? 'translateX(20px)' : 'translateX(0)');
     el.dataset.on = on ? '1' : '0';
   }
@@ -574,7 +565,7 @@
     if (el.dataset.loading === '1') return;
     const isOn = el.dataset.on === '1';
     const newVal = !isOn;
-    const token = localStorage.getItem('edu_token');
+    const token = localStorage.getItem('token');
 
     setCardToggleState(newVal);
     setCardToggleLoading(true);
@@ -600,13 +591,11 @@
   function setCardDailyToggleState(on) {
     const el = $('cardDailyToggle');
     if (!el) return;
-    el.style.setProperty('--card-daily-toggle-bg', on ? '#059669' : '#ccebe2');
+    el.style.setProperty('--card-daily-toggle-bg', on ? '#059669' : 'rgb(var(--c-border))');
     el.style.setProperty('--card-daily-toggle-x', on ? 'translateX(20px)' : 'translateX(0)');
     el.dataset.on = on ? '1' : '0';
-    // PW 입력 영역: ON이고 아직 저장 안 된 상태일 때만 표시
-    // 이미 ON 확정 상태면 숨김 (서버에 PW 이미 저장됨)
-    const pwArea = $('cardDailyPwArea');
-    if (pwArea) pwArea.classList.toggle('hidden', !on || cardDailyAlarmOn);
+    const noPwMsg = $('cardDailyNoPw');
+    if (noPwMsg) noPwMsg.classList.add('hidden');
   }
 
   function setCardDailyToggleLoading(loading) {
@@ -632,68 +621,28 @@
     const isOn = el.dataset.on === '1';
     const newVal = !isOn;
 
-    if (newVal) {
-      // ON → PW 입력 영역 표시
-      setCardDailyToggleState(true);
-      const pwArea = $('cardDailyPwArea');
-      if (pwArea) {
-        pwArea.classList.remove('hidden');
-        const pwInput = $('cardDailyPwInput');
-        if (pwInput) { pwInput.value = ''; pwInput.focus(); }
-      }
-    } else {
-      // OFF → 서버에 PW 삭제 요청
-      setCardDailyToggleLoading(true);
-      try {
-        const token = localStorage.getItem('edu_token');
-        const data = await window.gasFetch(window.API_URL + '?action=saveCardDailyAlarm&token=' + encodeURIComponent(token) + '&pw=');
-        if (data.status === 'success') {
-          cardDailyAlarmOn = false;
-          setCardDailyToggleState(false);
-          window.showToast('잔액 알림이 꺼졌어.', 'smail', $('cardDailyToggle'));
-        } else {
-          setCardDailyToggleState(true);
-          window.showToast('설정 변경에 실패했어.', 'sad', $('cardDailyToggle'));
-        }
-      } catch (e) {
-        setCardDailyToggleState(true);
-        window.showToast('서버 연결에 실패했어.', 'sad', $('cardDailyToggle'));
-      } finally {
-        setCardDailyToggleLoading(false);
-      }
-    }
-  };
-
-  window.saveCardDailyPw = async function() {
-    const pwInput = $('cardDailyPwInput');
-    const pw = (pwInput && pwInput.value || '').trim();
-    if (!pw) {
-      window.showToast('비밀번호를 입력해줘.', 'sad', $('cardDailyPwSave'));
-      return;
-    }
-
-    const saveBtn = $('cardDailyPwSave');
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+    setCardDailyToggleState(newVal);
     setCardDailyToggleLoading(true);
 
     try {
-      const token = localStorage.getItem('edu_token');
-      const data = await window.gasFetch(window.API_URL + '?action=saveCardDailyAlarm&token=' + encodeURIComponent(token) + '&pw=' + encodeURIComponent(pw));
+      const token = localStorage.getItem('token');
+      const data = await window.gasFetch(window.API_URL + '?action=saveCardDailyAlarm&token=' + encodeURIComponent(token) + '&isAgreed=' + newVal);
       if (data.status === 'success') {
-        cardDailyAlarmOn = true;
-        setCardDailyToggleState(true);
-        const pwArea = $('cardDailyPwArea');
-        if (pwArea) pwArea.classList.add('hidden');
-        window.showToast('잔액 알림이 켜졌어!', 'smail', $('cardDailyPwSave'));
+        cardDailyAlarmOn = newVal;
+        window.showToast(newVal ? '잔액 알림이 켜졌어!' : '잔액 알림이 꺼졌어.', 'smail', $('cardDailyToggle'));
+        // PW가 없으면 경고
+        const noPwMsg = $('cardDailyNoPw');
+        if (newVal && !hasBizplayPw && noPwMsg) noPwMsg.classList.remove('hidden');
+        else if (noPwMsg) noPwMsg.classList.add('hidden');
       } else {
-        window.showToast('저장에 실패했어.', 'sad', $('cardDailyPwSave'));
+        setCardDailyToggleState(isOn);
+        window.showToast('설정 변경에 실패했어.', 'sad', $('cardDailyToggle'));
       }
     } catch (e) {
-      window.showToast('서버 연결에 실패했어.', 'sad', $('cardDailyPwSave'));
+      setCardDailyToggleState(isOn);
+      window.showToast('서버 연결에 실패했어.', 'sad', $('cardDailyToggle'));
     } finally {
       setCardDailyToggleLoading(false);
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
-      if (pwInput) pwInput.value = '';
     }
   };
 
@@ -702,12 +651,11 @@
   window.openCardApproval = async function(mode) {
     mode = mode || 'temp';
     const isTemp = (mode === 'temp');
-    const modeLabel = isTemp ? '임시저장' : '결재요청';
 
     // 1. Bizplay 세션 확인
     const session = localStorage.getItem('bizplay_session');
     if (!session) {
-      if (window.openBizLoginOverlay) window.openBizLoginOverlay();
+      window.showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad');
       return;
     }
 
@@ -723,50 +671,98 @@
       cardNo: r.cardNo, txSeq: r.txSeq, seq: r.seq, apvNo: r.apvNo
     }));
 
-    // 3. 확인 메시지
-    const confirmMsg = isTemp
-      ? selectedRecords.length + '건을 임시저장할까?'
-      : selectedRecords.length + '건을 결재요청할까?';
-    const ok = await window.showConfirm(confirmMsg, anchorBtn);
-    if (!ok) return;
+    // 3. 확인 메시지 (임시저장만 — 결재요청은 결재라인 팝업이 확인 역할)
+    if (isTemp) {
+      const ok = await window.showConfirm(selectedRecords.length + '건을 임시저장할까?', anchorBtn);
+      if (!ok) return;
+    }
 
     // 4. 로딩 상태
     if (cardApprovalLoading) return;
     cardApprovalLoading = true;
     const btn = $(btnId);
-    let btnOrigHtml = '';
-    if (btn) {
-      btnOrigHtml = btn.innerHTML;
-      btn.innerHTML = '<svg class="w-5 h-5 mx-auto mb-1.5 spinner" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg><div class="text-sm font-semibold">' + modeLabel + ' 중...</div>';
+    const btnOrigHtml = btn ? btn.innerHTML : '';
+    const setLoading = (label) => {
+      if (!btn) return;
+      btn.innerHTML = '<svg class="w-5 h-5 mx-auto mb-1.5 spinner" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg><div class="text-sm font-semibold">' + label + '</div>';
       btn.disabled = true;
-    }
+    };
+    const resetBtn = () => {
+      if (!btn) return;
+      btn.innerHTML = btnOrigHtml;
+      btn.disabled = false;
+    };
 
     try {
-      const token = localStorage.getItem('edu_token');
+      const token = localStorage.getItem('token');
+      const selParam = '&selectedRecords=' + encodeURIComponent(JSON.stringify(selectedRecords));
+
+      // === 결재요청: 결재라인 먼저 조회 → 팝업 → 전체 플로우 실행 ===
+      if (!isTemp) {
+        setLoading('결재라인 조회 중...');
+        const urlApprLine = window.API_URL + '?action=bizplayApprLine&token=' + encodeURIComponent(token) + '&paperSeqNo=101';
+        console.log('[card] 결재라인 조회 시작');
+        const apprLineData = await window.gasFetch(urlApprLine);
+        console.log('[card] 결재라인 응답:', JSON.stringify(apprLineData).substring(0, 2000));
+        if (apprLineData.debug) console.log('[card] apprLine debug:', JSON.stringify(apprLineData.debug));
+
+        if (apprLineData.status !== 'success' || !apprLineData.apprLine || apprLineData.apprLine.length === 0) {
+          if (apprLineData.error === 'SESSION_EXPIRED' || apprLineData.error === 'NO_SESSION') {
+            window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
+          } else {
+            window.showToast('결재라인 정보가 없습니다.', 'sad', anchorBtn);
+          }
+          return;
+        }
+
+        // 결재라인 팝업 표시
+        resetBtn();
+        const confirmed = await window.showApprLinePopup(apprLineData.apprLine);
+        if (!confirmed) return;
+
+        // 확인 후 전체 플로우 실행 (webank 세션 유지를 위해 한번에)
+        setLoading('결재 제출 중...');
+        const urlApprove = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
+          + '&mode=approve' + selParam;
+        console.log('[card] 결재 제출 시작, 건수:', selectedRecords.length);
+        const data = await window.gasFetch(urlApprove);
+        console.log('[card] 결재 응답:', JSON.stringify(data).substring(0, 2000));
+        if (data.debug) console.log('[card] debug:', JSON.stringify(data.debug).substring(0, 3000));
+
+        if (data.status === 'success') {
+          window.showToast(selectedRecords.length + '건 결재요청 완료!', 'smail', anchorBtn);
+          const goCheck = await window.showConfirm('결재요청했어! 확인해볼까?');
+          if (goCheck && window.switchTab) window.switchTab('draft');
+        } else if (data.error === 'SESSION_EXPIRED' || data.error === 'NO_SESSION') {
+          window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
+        } else {
+          window.showToast(data.message || '결재요청에 실패했어.', 'sad', anchorBtn);
+        }
+        return;
+      }
+
+      // === 임시저장: 기존 플로우 ===
+      setLoading('임시저장 중...');
       const url = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
-        + '&mode=' + mode
-        + '&selectedRecords=' + encodeURIComponent(JSON.stringify(selectedRecords));
-      console.log('[card] ' + modeLabel + ' 시작, 건수:', selectedRecords.length);
+        + '&mode=temp' + selParam;
+      console.log('[card] 임시저장 시작, 건수:', selectedRecords.length);
       const data = await window.gasFetch(url);
       console.log('[card] 결재 응답:', JSON.stringify(data).substring(0, 2000));
       if (data.debug) console.log('[card] 결재 debug:', JSON.stringify(data.debug).substring(0, 3000));
 
       if (data.status === 'success') {
-        window.showToast(selectedRecords.length + '건 ' + modeLabel + ' 완료!', 'smail', anchorBtn);
+        window.showToast(selectedRecords.length + '건 임시저장 완료!', 'smail', anchorBtn);
       } else if (data.error === 'SESSION_EXPIRED' || data.error === 'NO_SESSION') {
         window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
       } else {
-        window.showToast(data.message || modeLabel + '에 실패했어.', 'sad', anchorBtn);
+        window.showToast(data.message || '임시저장에 실패했어.', 'sad', anchorBtn);
       }
     } catch (e) {
-      console.error('[card] ' + modeLabel + ' 예외:', e);
+      console.error('[card] 예외:', e);
       window.showToast('서버 연결에 실패했어.', 'sad', anchorBtn);
     } finally {
       cardApprovalLoading = false;
-      if (btn) {
-        btn.innerHTML = btnOrigHtml;
-        btn.disabled = false;
-      }
+      resetBtn();
     }
   };
 
@@ -774,7 +770,7 @@
   async function fetchCardRecords(force) {
     if (!force && (cardFetchState === 'loaded' || cardFetchState === 'loading')) return;
 
-    const token = localStorage.getItem('edu_token');
+    const token = localStorage.getItem('token');
     const session = localStorage.getItem('bizplay_session');
     if (!token || !session) {
       cardFetchState = 'no-session';
@@ -784,6 +780,7 @@
 
     cardFetchState = 'loading';
     renderCardDashboard();
+    if (window.showLoading) window.showLoading();
 
     try {
       console.log('[card] 사용내역 조회 시작...');
@@ -815,25 +812,22 @@
       cardFetchState = 'error';
     }
 
+    if (window.hideLoading) window.hideLoading();
     renderCardDashboard();
   }
 
-  /* ─── Bizplay 재로그인 → 자동 재시도 ─── */
+  /* ─── Bizplay 재로그인 안내 ─── */
   window._cardBizLogin = function() {
-    if (window.openBizLoginOverlay) {
-      window.openBizLoginOverlay(function() {
-        // 로그인 성공 콜백 → 카드 내역 강제 재조회
-        fetchCardRecords(true);
-      });
-    }
+    window.showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad');
   };
 
   /* ─── 외부 인터페이스 ─── */
   window.initCardModule = function(data) {
     cardAlarmOn = !!(data.userInfo && data.userInfo.isCardAlarmAgreed);
     cardDailyAlarmOn = !!(data.userInfo && data.userInfo.isCardDailyAlarmOn);
+    hasBizplayPw = !!(data.userInfo && data.userInfo.hasBizplayPw);
     renderCardDashboard();
-    fetchCardRecords();
+    // fetchCardRecords는 밥카 탭 클릭 시 switchTab에서 호출
   };
 
   window.fetchCardRecords = fetchCardRecords;

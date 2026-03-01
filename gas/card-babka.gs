@@ -1,7 +1,7 @@
 /**
  * 밥카(법인카드 중식대) 모듈
- * - 밥카 알람 수신 설정 (웹페이지관리 시트 I열)
- * - 매월 16일 / 18일 자동 알림 발송
+ * - 밥카 알람 수신 설정 (웹페이지관리 시트 I열 + K열)
+ * - 매월 16일 / 18일 자동 알림 발송 (K열 기준)
  *
  * code.gs의 doGet에서 호출:
  *   handleUpdateCardAlarm(adminRow, e)
@@ -11,11 +11,14 @@
 
 /* ═══════════════ 상수 ═══════════════ */
 
-/** 웹페이지관리 시트 밥카 알람 컬럼 (I열 = index 8) */
-var CARD_ALARM_COL = 9; // 1-based: I열
+/** 웹페이지관리 시트 밥카 알람 컬럼 (G열 = index 6) */
+var CARD_ALARM_COL = 7; // 1-based: G열
 
-/** 웹페이지관리 시트 밥카 평일 잔액알림 PW 컬럼 (J열 = index 9) */
-var CARD_DAILY_COL = 10; // 1-based: J열
+/** 웹페이지관리 시트 밥카 평일 잔액알림 PW 컬럼 (H열 = index 7) */
+var CARD_DAILY_COL = 8; // 1-based: H열
+
+/** 웹페이지관리 시트 밥카 16일 결재 알람 컬럼 (I열 = index 8) */
+var CARD_16_ALARM_COL = 9; // 1-based: I열
 
 /** XOR 암호화 키 */
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
@@ -28,12 +31,13 @@ var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
  */
 function handleUpdateCardAlarm(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   var isAgreed = (e.parameter.isAgreed === 'true');
+  var newVal = isAgreed ? 'Y' : 'N';
 
   // adminRow: 웹페이지관리 시트의 해당 사용자 행 번호
-  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  mgmtSheet.getRange(adminRow, CARD_ALARM_COL).setValue(isAgreed ? 'Y' : 'N');
+  mgmtSheet.getRange(adminRow, CARD_ALARM_COL).setValue(newVal);      // I열 (기존 호환)
+  mgmtSheet.getRange(adminRow, CARD_16_ALARM_COL).setValue(newVal);   // K열 (16일 결재 알람)
 
   return createResponse({ status: 'success' });
 }
@@ -45,7 +49,7 @@ function handleUpdateCardAlarm(adminRow, e) {
  * 트리거 설정: 시간 기반 트리거 → 매월 16일 오전 9시
  */
 function sendCardAlarmDay16() {
-  _sendCardAlarm('밥카 결재를 진행해 주세요! 🍚');
+  _sendCardAlarm('밥카 결재 진행해줘! 🍚');
 }
 
 /**
@@ -54,7 +58,7 @@ function sendCardAlarmDay16() {
  */
 function sendCardAlarmDay18() {
   // TODO: 결재상신 내역 체크 후 미상신자만 발송
-  _sendCardAlarm('밥카 결재 아직 안 하셨나요? 잊지 말고 상신해 주세요! 🍚');
+  _sendCardAlarm('밥카 결재 아직 안 했어? 잊지 말고 상신해줘! 🍚');
 }
 
 /**
@@ -68,9 +72,9 @@ function _sendCardAlarm(message) {
   // 헤더 제외
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
-    var cardAlarm = data[i][CARD_ALARM_COL - 1]; // I열: 밥카알람수신여부
+    var card16Alarm = data[i][CARD_16_ALARM_COL - 1]; // K열: 밥카16일알람수신여부
 
-    if (!knoxId || cardAlarm !== 'Y') continue;
+    if (!knoxId || card16Alarm !== 'Y') continue;
 
     try {
       _sendFlowCardMessage(knoxId, message);
@@ -104,13 +108,12 @@ function _decryptPw(cipher) {
   return Utilities.newBlob(dec).getDataAsString();
 }
 
-/* ═══════════════ 평일 잔액알림 PW 저장 ═══════════════ */
+/* ═══════════════ 평일 잔액알림 설정 ═══════════════ */
 
 /**
- * 평일 잔액알림 비밀번호 저장/삭제
- * action=saveCardDailyAlarm&token={UUID}&pw={password}
- * pw가 비어있으면 J열 클리어 (알림 OFF)
- * pw가 있으면 암호화하여 J열에 저장 (알림 ON)
+ * 평일 잔액알림 수신 동의/해제
+ * action=saveCardDailyAlarm&token={UUID}&isAgreed={true/false}
+ * I열만 Y/N으로 변경 (J열 PW는 건드리지 않음)
  *
  * @param {number} rowIndex - 0-based 행 인덱스 (adminData 배열 기준)
  * @param {object} e - request event
@@ -118,13 +121,9 @@ function _decryptPw(cipher) {
 function handleSaveCardDailyAlarm(rowIndex, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var pw = e.parameter.pw || '';
+  var isAgreed = (e.parameter.isAgreed === 'true');
 
-  if (pw) {
-    adminSheet.getRange(rowIndex + 1, CARD_DAILY_COL).setValue(_encryptPw(pw));
-  } else {
-    adminSheet.getRange(rowIndex + 1, CARD_DAILY_COL).setValue('');
-  }
+  adminSheet.getRange(rowIndex + 1, CARD_ALARM_COL).setValue(isAgreed ? 'Y' : 'N'); // I열: 잔액알림 수신여부
 
   return createResponse({ status: 'success' });
 }
@@ -148,9 +147,10 @@ function sendCardDailyBalance() {
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
+    var dailyAlarm = data[i][CARD_ALARM_COL - 1]; // I열: 잔액알림 수신여부
     var encPw = data[i][CARD_DAILY_COL - 1]; // J열: 암호화된 PW
 
-    if (!knoxId || !encPw) continue;
+    if (!knoxId || dailyAlarm !== 'Y' || !encPw) continue;
 
     try {
       var userId = knoxId + '@emro.co.kr';
@@ -176,7 +176,6 @@ function sendCardDailyBalance() {
       var usedCount = 0;
       var records = result.records || [];
       records.forEach(function(r) {
-        if (r.purpose && r.purpose.trim()) return; // 이미 결재 완료된 건 제외
         var merchant = (r.merchant || '').trim();
         if (transportKeywords.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
         usedSum += Number(r.cost) || 0;
@@ -274,29 +273,58 @@ function _fmtMoney(n) {
 function handleCardRecords(adminRow, e) {
   var propKey = 'bizplay_' + adminRow[ADMIN_COL.KNOX_ID];
   var rawSession = PropertiesService.getScriptProperties().getProperty(propKey);
-  if (!rawSession) return createResponse({ error: 'NO_SESSION', message: 'Bizplay 로그인이 필요합니다.' });
+  if (!rawSession) return _cardAutoRelogin(adminRow, e, propKey);
 
   var session = JSON.parse(rawSession);
-  if (!session.bizplayCookies) return createResponse({ error: 'NO_SESSION', message: 'Bizplay 세션이 없습니다.' });
+  if (!session.bizplayCookies) return _cardAutoRelogin(adminRow, e, propKey);
 
   try {
-    // 1. 로그인 시 획득한 webank 쿠키 사용
     var webankCookies = session.webankCookies || '';
 
+    // 자동 복구 1: webankCookies 없으면 bizplayCookies로 SSO 획득 시도
     if (!webankCookies) {
-      return createResponse({ error: 'WEBANK_SSO_FAIL', message: 'webank 인증 정보가 없습니다. Bizplay 재로그인 해주세요.' });
+      console.log('[card] webankCookies 없음 → _acquireWebankCookies 시도');
+      var acquired = _acquireWebankCookies(session);
+      if (acquired.cookies) {
+        webankCookies = acquired.cookies;
+        session.webankCookies = webankCookies;
+        PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+        console.log('[card] webank 쿠키 복구 성공');
+      }
     }
 
-    // 2. API 호출 (기간 파라미터 지원)
+    // 자동 복구 2: 여전히 없으면 저장된 PW로 재로그인
+    if (!webankCookies) {
+      console.log('[card] webank 쿠키 복구 실패 → 재로그인 시도');
+      var reloginResult = _cardTryRelogin(adminRow, propKey);
+      if (reloginResult.webankCookies) {
+        webankCookies = reloginResult.webankCookies;
+        session = reloginResult.session;
+      }
+    }
+
+    if (!webankCookies) {
+      return createResponse({ error: 'WEBANK_SSO_FAIL', message: 'webank 인증 정보가 없어. Bizplay 재로그인 해줘.' });
+    }
+
+    // API 호출 (기간 파라미터 지원)
     var fromDt = e.parameter.fromDt || '';
     var toDt = e.parameter.toDt || '';
     var result = _callWebankApi(webankCookies, fromDt, toDt);
 
     if (result.expired) {
-      // 쿠키 만료 → 클리어 후 재로그인 유도
+      // 쿠키 만료 → 재로그인으로 한번 더 시도
+      console.log('[card] webank 세션 만료 → 재로그인 시도');
+      var retry = _cardTryRelogin(adminRow, propKey);
+      if (retry.webankCookies) {
+        result = _callWebankApi(retry.webankCookies, fromDt, toDt);
+        if (!result.expired && !result.error) {
+          return createResponse({ status: 'success', records: result.records, totalCount: result.totalCount });
+        }
+      }
       session.webankCookies = '';
       PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
-      return createResponse({ error: 'SESSION_EXPIRED', message: '세션이 만료되었습니다. Bizplay 재로그인 해주세요.' });
+      return createResponse({ error: 'SESSION_EXPIRED', message: '세션이 만료됐어. Bizplay 재로그인 해줘.' });
     }
 
     if (result.error) {
@@ -307,6 +335,59 @@ function handleCardRecords(adminRow, e) {
   } catch (err) {
     return createResponse({ error: 'CARD_API_ERROR', message: err.message });
   }
+}
+
+/** 저장된 PW로 Bizplay 재로그인 → webank 쿠키 획득 */
+function _cardTryRelogin(adminRow, propKey) {
+  var encPw = adminRow[7]; // H열: 암호화된 Bizplay PW
+  if (!encPw || !String(encPw).trim()) return { webankCookies: '' };
+
+  try {
+    var bizUserId = adminRow[ADMIN_COL.KNOX_ID] + '@emro.co.kr';
+    var bizPwd = _decryptPw(String(encPw));
+    var result = _bizplayLoginCore(bizUserId, bizPwd);
+    if (result.error || !result.webankCookies) {
+      // _bizplayLoginCore의 webank SSO 실패 시 _acquireWebankCookies로 재시도
+      if (!result.error && result.bizplayCookies) {
+        var acquired = _acquireWebankCookies({ bizplayCookies: result.bizplayCookies });
+        if (acquired.cookies) result.webankCookies = acquired.cookies;
+      }
+    }
+    if (!result.error) {
+      var sessionData = {
+        bizplayCookies: result.bizplayCookies,
+        approvalCookies: result.approvalCookies || '',
+        webankCookies: result.webankCookies || '',
+        userId: bizUserId,
+        userName: result.userName,
+        deptCd: result.deptCd || '',
+        deptNm: result.deptNm || '',
+        deptShort: result.deptShort || '',
+        useInttId: result.useInttId || '',
+        loginTime: new Date().toISOString()
+      };
+      PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(sessionData));
+      console.log('[card] 재로그인 성공, webankCookies: ' + (result.webankCookies ? 'Y' : 'N'));
+      return { webankCookies: result.webankCookies || '', session: sessionData };
+    }
+  } catch (err) {
+    console.log('[card] 재로그인 실패: ' + err.message);
+  }
+  return { webankCookies: '' };
+}
+
+/** 세션 없을 때 자동 재로그인 시도 후 카드 조회 */
+function _cardAutoRelogin(adminRow, e, propKey) {
+  var retry = _cardTryRelogin(adminRow, propKey);
+  if (retry.webankCookies) {
+    var fromDt = e.parameter.fromDt || '';
+    var toDt = e.parameter.toDt || '';
+    var result = _callWebankApi(retry.webankCookies, fromDt, toDt);
+    if (!result.expired && !result.error) {
+      return createResponse({ status: 'success', records: result.records, totalCount: result.totalCount });
+    }
+  }
+  return createResponse({ error: 'NO_SESSION', message: 'Bizplay 로그인이 필요해.' });
 }
 
 /** webank 카드 내역 API 호출 (분리) */
@@ -347,7 +428,7 @@ function _callWebankApi(webankCookies, fromDt, toDt) {
       cost: Math.round(Number(r.BUY_SUM) || 0),
       category: r.CARD_TPBZ_NM || '',
       apvNo: r.APV_NO || '',
-      purpose: r.TRAN_KIND_NM || '',
+      purpose: r.PROC_STS || '',
       cardNo: r.CARD_NO || '',
       txSeq: r.TX_SEQ || '',
       seq: r.SEQ || ''
@@ -510,21 +591,21 @@ function _followRdmKey(gateUrl, rdmKey, debug) {
 function handleCardApproval(adminRow, e) {
   var propKey = 'bizplay_' + adminRow[ADMIN_COL.KNOX_ID];
   var rawSession = PropertiesService.getScriptProperties().getProperty(propKey);
-  if (!rawSession) return createResponse({ error: 'NO_SESSION', message: 'Bizplay 로그인이 필요합니다.' });
+  if (!rawSession) return createResponse({ error: 'NO_SESSION', message: 'Bizplay 로그인이 필요해.' });
 
   var session = JSON.parse(rawSession);
   var webankCookies = session.webankCookies || '';
-  if (!webankCookies) return createResponse({ error: 'NO_SESSION', message: 'webank 인증 정보가 없습니다. Bizplay 재로그인 해주세요.' });
+  if (!webankCookies) return createResponse({ error: 'NO_SESSION', message: 'webank 인증 정보가 없어. Bizplay 재로그인 해줘.' });
 
   var mode = e.parameter.mode || 'temp'; // 'temp' = 임시저장, 'approve' = 결재요청
   var selectedJson = e.parameter.selectedRecords;
-  if (!selectedJson) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없습니다.' });
+  if (!selectedJson) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없어.' });
 
   var selected;
   try { selected = JSON.parse(selectedJson); } catch (pe) {
     return createResponse({ error: 'INVALID_PARAM', message: '선택 레코드 파싱 실패' });
   }
-  if (!selected || selected.length === 0) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없습니다.' });
+  if (!selected || selected.length === 0) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없어.' });
 
   var debug = {};
   try {
@@ -537,7 +618,7 @@ function handleCardApproval(adminRow, e) {
     if (actResp.getResponseCode() === 302 || actResp.getResponseCode() === 301) {
       session.webankCookies = '';
       PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
-      return createResponse({ error: 'SESSION_EXPIRED', message: '세션이 만료되었습니다.' });
+      return createResponse({ error: 'SESSION_EXPIRED', message: '세션이 만료됐어.' });
     }
     var actHtml = actResp.getContentText();
     debug.webankCookieLen = webankCookies.length;
@@ -568,7 +649,7 @@ function handleCardApproval(adminRow, e) {
     debug.matchedCount = matched.length;
 
     if (matched.length === 0) {
-      return createResponse({ error: 'NO_MATCH', message: '선택한 레코드를 찾을 수 없습니다.', debug: debug });
+      return createResponse({ error: 'NO_MATCH', message: '선택한 레코드를 찾을 수 없어.', debug: debug });
     }
 
     // Step 3: 파이프 구분 리스트 구성
@@ -630,7 +711,15 @@ function handleCardApproval(adminRow, e) {
 
     // eapr 폼 필드 전체 파싱
     var eaprForm = _parseFormFields(eaprHtml, '');
+    var isTemp = (mode !== 'approve');
     debug = { eaprStatus: eaprResp.getResponseCode(), matchedCount: matched.length };
+    debug.eaprKeyFields = {
+      APPR_DEFAULT_TYPE: eaprForm.APPR_DEFAULT_TYPE || '',
+      PAPER_SEQ_NO: eaprForm.PAPER_SEQ_NO || '',
+      APPR_SEQ_NO: eaprForm.APPR_SEQ_NO || '',
+      APPR_STS: eaprForm.APPR_STS || '',
+      CNTS_ID: eaprForm.CNTS_ID || ''
+    };
 
     // === Step 6: r010 검증 호출 ===
     var rcptRec = matched.map(function(r) {
@@ -669,11 +758,30 @@ function handleCardApproval(adminRow, e) {
         MGMT_NM7: '퇴근시간',
         BIZ_UNIT: '41999',
         BIZ_UNIT_NM: '중식대',
-        BIZ_UNIT_ERP_CD: '',
+        BIZ_UNIT_ERP_CD: 'EX049',
         ADD_ITEM_REC: [],
         API_REC: []
       };
     });
+
+    // 결재요청 시: bizplayApprLine에서 저장한 APPRLINE_SEQ_NO를 r010에 전달
+    var savedApprLineSeqNo = '';
+    var savedApprLineRaw = null;
+    if (!isTemp) {
+      var alProp = PropertiesService.getScriptProperties().getProperty(propKey + '_cardApprLine');
+      if (alProp) {
+        try {
+          savedApprLineRaw = JSON.parse(alProp);
+          // APPRLINE_SEQ_NO 추출 (첫 번째 비-0 값)
+          savedApprLineRaw.forEach(function(r) {
+            if (!savedApprLineSeqNo && r.APPRLINE_SEQ_NO && r.APPRLINE_SEQ_NO !== '0') {
+              savedApprLineSeqNo = r.APPRLINE_SEQ_NO;
+            }
+          });
+          debug.savedApprLineSeqNo = savedApprLineSeqNo;
+        } catch (pe) { debug.alPropParseFail = pe.message; }
+      }
+    }
 
     var r010Json = {
       PTL_ID: eaprForm.PTL_ID || 'PTL_3',
@@ -682,6 +790,25 @@ function handleCardApproval(adminRow, e) {
       RCPT_REC: rcptRec,
       CARD_REC: rcptRec
     };
+    // 결재요청: APPRLINE_SEQ_NO + 결재라인 REC를 r010에 전달 (브라우저와 동일 형식)
+    if (savedApprLineSeqNo) {
+      r010Json.APPRLINE_SEQ_NO = savedApprLineSeqNo;
+    }
+    if (!isTemp && savedApprLineRaw && savedApprLineRaw.length > 0) {
+      // 브라우저와 동일한 최소 필드만 전달 (7개)
+      r010Json.REC = savedApprLineRaw.map(function(r) {
+        return {
+          APPR_ORD: r.APPR_ORD || '0',
+          APPR_USER_GB: r.APPR_USER_GB || '1',
+          APPRLINE_KIND: r.APPRLINE_KIND || '2',
+          RECENT_SAVE_YN: r.RECENT_SAVE_YN || 'Y',
+          BOTTOM_FIXED_YN: r.BOTTOM_FIXED_YN || 'N',
+          DEPT_CD: r.DEPT_CD || r.APPR_DEPT_CD || '',
+          DEPT_NM: r.DEPT_NM || r.APPR_DEPT_NM || ''
+        };
+      });
+      debug.r010ApprLineRec = r010Json.REC;
+    }
 
     var r010Payload = '_JSON_=' + encodeURIComponent(JSON.stringify(r010Json));
     var r010Resp = UrlFetchApp.fetch('https://webank.appplay.co.kr/eapr_1001_01_r010.jct', {
@@ -712,7 +839,6 @@ function handleCardApproval(adminRow, e) {
     }
 
     // === Step 7: c004 저장 호출 (r010 성공 후) ===
-    var isTemp = (mode !== 'approve');
     var totAmt = 0;
     matched.forEach(function(r) { totAmt += Math.round(Number(r.BUY_SUM) || 0); });
 
@@ -738,7 +864,12 @@ function handleCardApproval(adminRow, e) {
       DRAFT_DATE: '',
       APPR_TYPE: eaprForm.APPR_DEFAULT_TYPE || '',
       APPR_OPIN: '',
-      APPR_SUBJ: '카드영수증 ' + matched.length + '건',
+      APPR_SUBJ: (function() {
+        var mon = new Date().getMonth() + 1;
+        var cardNo = (matched[0] && matched[0].CARD_NO) || '';
+        var last4 = cardNo.length >= 4 ? cardNo.slice(-4) : cardNo;
+        return mon + '월중식대(' + last4 + ')';
+      })(),
       APPR_CONT: '중식대 결재',
       TMP_APPR_CONT: '중식대 결재',
       TEMP_APPR_YN: isTemp ? 'Y' : 'N',
@@ -755,11 +886,17 @@ function handleCardApproval(adminRow, e) {
       ITEM_INPUT_GB: eaprForm.ITEM_INPUT_GB || '',
       REC: rcptRec
     };
-
-    // r010에서 APPRLINE_REC이 왔으면 추가 (결재요청 시 필수)
-    if (r010Data.APPRLINE_REC) {
+    // 결재요청: r010에서 받은 APPRLINE_REC을 c004에 전달
+    if (!isTemp && r010Data.APPRLINE_REC && r010Data.APPRLINE_REC.length > 0) {
       c004Json.APPRLINE_REC = r010Data.APPRLINE_REC;
+      debug.apprLineSource = 'r010';
+      debug.apprLineCount = r010Data.APPRLINE_REC.length;
     }
+    // _cardApprLine 프로퍼티 정리
+    if (!isTemp) {
+      PropertiesService.getScriptProperties().deleteProperty(propKey + '_cardApprLine');
+    }
+    debug.c004TempApprYn = c004Json.TEMP_APPR_YN;
 
     var c004Payload = '_JSON_=' + encodeURIComponent(JSON.stringify(c004Json));
     var c004Resp = UrlFetchApp.fetch('https://webank.appplay.co.kr/eapr_1001_01_c004.jct', {

@@ -185,6 +185,95 @@ Chrome UA 헤더를 모든 요청에 포함해야 정상 동작.
 
 ---
 
+# 밥카(법인카드) webank 연동 스펙
+
+## 개요
+
+밥카 탭(`html/card-babka.html`)에서 Bizplay webank 시스템을 통해 법인카드 사용내역 조회 및 결재 제출.
+GAS(`gas/card-babka.gs`)를 프록시로 사용.
+
+## webank SSO 흐름 (`_acquireWebankCookies`)
+
+### 방법 A: 직접 sendRdmKey (세션 살아있는 경우)
+
+```
+POST https://www.bizplay.co.kr/weAuth
+  auth_srno=88, auth_val={SVC_PTRN:"M", APP_TARG:"Y"}, STND_PAGE=https://webank.appplay.co.kr/rcard_main.act
+
+→ 응답 HTML에서 sendRdmKey('gate_url', 'rdm_key') 파싱
+
+POST {gate_url}
+  RDM_KEY={rdm_key}
+→ webank 쿠키 획득
+```
+
+### 방법 B: /consumer 경유 (form submit 필요)
+
+```
+POST /weAuth → HTML form 파싱 (hidden inputs)
+POST /consumer (cntsId, lang=DF) → {AUTH_SERVLET, USER_DATA}
+POST {AUTH_SERVLET} (form fields + userData) → sendRdmKey 탐색
+POST gate → webank 쿠키
+```
+
+## 카드 사용내역 조회 (`_callWebankApi`)
+
+```
+POST https://webank.appplay.co.kr/eusr_9001_01_r001.jct
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Cookie: (webank 쿠키)
+Payload: _JSON_={PAGE_NO, PAGE_SZ:100, FROM_APV_DT, TO_APV_DT, CNTS_IDNT_ID:"CRD_MAGR_NEW", GB:"R", ...}
+
+Response: {REC: [{APV_DT, APV_TM, MEST_NM, BUY_SUM, CARD_NO, SEQ, APV_NO, ...}], TOT_CNT}
+```
+
+## 밥카 결재 제출 (`handleCardApproval`)
+
+### Step 1: eusr_9001_01.act (Form1 hidden 필드 파싱)
+### Step 2: eusr_9001_01_r001.jct (raw 레코드 조회 → 선택 매칭)
+### Step 3: eapr_1001_01.act (파이프 구분 리스트로 POST)
+### Step 4: eapr_1001_01_r010.jct (검증)
+
+```
+POST eapr_1001_01_r010.jct
+_JSON_={PTL_ID, USE_INTT_ID, CHNL_ID, RCPT_REC, CARD_REC}
+
+RCPT_REC 매핑:
+  CARD_NO, APV_DT, APV_NO, BUY_SUM → REQ_AMT
+  TRAN_KIND_CD: "C0093" (중식대 공통)
+  TRAN_KIND_NM: "중식대(공통)"
+  TRAN_KIND_ERP_CD: "54901"
+  MGMT1: "중식대", SUMMARY: "중식대"
+  BIZ_UNIT: "41999", BIZ_UNIT_NM: "중식대"
+
+Response: {RSLT_CD:"0000", APPRLINE_REC:[...]}
+```
+
+### Step 5: eapr_1001_01_c004.jct (저장)
+
+```
+POST eapr_1001_01_c004.jct
+_JSON_={USER_NM, USER_NO, DEPT_NM, ..., TEMP_APPR_YN:"Y"/"N", APPR_SUBJ:"카드영수증 N건", REC:[...], APPRLINE_REC:[...]}
+
+TEMP_APPR_YN: "Y" = 임시저장, "N" = 결재요청
+Response: {RSLT_CD:"0000", RSLT_MSG:"..."}
+```
+
+## 자동 알림 (GAS 트리거)
+
+| 함수 | 트리거 | I열 기준 | 내용 |
+|------|--------|----------|------|
+| `sendCardAlarmDay16()` | 매월 16일 09시 | I열 'Y' | "밥카 결재 진행해줘! 🍚" + 밥카 탭 링크 |
+| `sendCardAlarmDay18()` | 매월 18일 09시 | I열 'Y' | "밥카 결재 아직 안 했어? 잊지 말고 상신해줘! 🍚" |
+| `sendCardDailyBalance()` | 매일 평일 11시 | G열 'Y' + H열 PW | 잔액/사용액 계산 후 Flow 발송 (공휴일 제외) |
+
+## 암호화
+
+- `_encryptPw(plain)` / `_decryptPw(cipher)`: XOR 암호화 (`ENCRYPT_SECRET` 키 SHA-256) + Base64
+- H열에 저장된 Bizplay PW는 암호화 상태
+
+---
+
 # 비즈플레이 원본 소스 참조
 
 ## weAuth 소스정보

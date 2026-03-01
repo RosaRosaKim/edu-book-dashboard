@@ -150,18 +150,80 @@ function validate(label, output, checks) {
 async function buildModule(inputFile, outputFile) {
   console.log(`\n--- Module: ${path.basename(inputFile)} ---`);
   let html = fs.readFileSync(inputFile, 'utf-8');
+  const $ = cheerio.load(html, { decodeEntities: false });
 
-  html = await minifyHTML(html, {
+  // ── Process inline <script> blocks: console 삭제 + 난독화 ──
+  const terser = require('terser');
+  const scripts = $('script').toArray();
+  for (const scriptEl of scripts) {
+    const el = $(scriptEl);
+    if (el.attr('src')) continue;
+    const code = el.html();
+    if (!code || !code.trim()) continue;
+
+    console.log(`  [JS] Stripping console & obfuscating...`);
+    const stripped = await terser.minify(code, {
+      compress: { drop_console: true },
+      mangle: false,
+      format: { comments: true, beautify: true },
+    });
+    const cleanCode = stripped.code || code;
+
+    const result = JavaScriptObfuscator.obfuscate(cleanCode, {
+      compact: true,
+      controlFlowFlattening: true,
+      controlFlowFlatteningThreshold: 0.5,
+      deadCodeInjection: false,
+      debugProtection: false,
+      disableConsoleOutput: false,
+      identifierNamesGenerator: 'hexadecimal',
+      log: false,
+      numbersToExpressions: true,
+      renameGlobals: false,
+      renameProperties: false,
+      selfDefending: false,
+      simplify: true,
+      splitStrings: true,
+      splitStringsChunkLength: 10,
+      stringArray: true,
+      stringArrayCallsTransform: true,
+      stringArrayEncoding: ['base64'],
+      stringArrayIndexShift: true,
+      stringArrayRotate: true,
+      stringArrayShuffle: true,
+      stringArrayWrappersCount: 2,
+      stringArrayWrappersChainedCalls: true,
+      stringArrayWrappersType: 'function',
+      stringArrayThreshold: 0.75,
+      transformObjectKeys: false,
+      unicodeEscapeSequence: false,
+    });
+    el.html(result.getObfuscatedCode());
+  }
+
+  // ── Process inline <style> blocks ──
+  $('style').each(function () {
+    const el = $(this);
+    const css = el.html();
+    if (!css || !css.trim()) return;
+    console.log(`  [CSS] Minifying...`);
+    const minResult = new CleanCSS({ level: 2 }).minify(css);
+    if (minResult.styles) el.html(minResult.styles);
+  });
+
+  // ── Minify entire HTML ──
+  let output = $.html();
+  output = await minifyHTML(output, {
     collapseWhitespace: true,
     removeComments: true,
     removeRedundantAttributes: true,
     removeEmptyAttributes: true,
-    minifyJS: true,
-    minifyCSS: true,
+    minifyJS: false,
+    minifyCSS: false,
   });
 
-  fs.writeFileSync(outputFile, html, 'utf-8');
-  const sizeKB = (Buffer.byteLength(html, 'utf-8') / 1024).toFixed(1);
+  fs.writeFileSync(outputFile, output, 'utf-8');
+  const sizeKB = (Buffer.byteLength(output, 'utf-8') / 1024).toFixed(1);
   console.log(`  ${path.basename(outputFile)} (${sizeKB} KB)`);
 }
 
@@ -195,10 +257,6 @@ async function build() {
   const userPass = validate('edu-book-dashboard.html', userOutput, [
     ['cdn.tailwindcss.com', userOutput.includes('cdn.tailwindcss.com')],
     ['tailwind.config', userOutput.includes('tailwind.config')],
-    ['onclick="requestAuth()"', userOutput.includes('requestAuth()')],
-    ['onclick="verifyCode()"', userOutput.includes('verifyCode()')],
-    ['onclick="resendCode()"', userOutput.includes('resendCode()')],
-    ['onclick="backToStep1()"', userOutput.includes('backToStep1()')],
     ['onclick="loadDashboard()"', userOutput.includes('loadDashboard()')],
     ['onclick="toggleAlarm()"', userOutput.includes('toggleAlarm()')],
     ['onclick="logout()"', userOutput.includes('logout()')],
@@ -235,6 +293,25 @@ async function build() {
     copyDirSync(IMG_DIR, path.join(DIST_DIR, IMG_DIR));
     const imgCount = fs.readdirSync(IMG_DIR).length;
     console.log(`  ${imgCount} files → ${DIST_DIR}/${IMG_DIR}/`);
+  }
+
+  // 5. PWA 파일 복사 (html/ → dist/ 경로 보정)
+  console.log('\n========== Copying PWA files ==========');
+  const pwaSource = path.join(SRC_DIR, 'manifest.json');
+  if (fs.existsSync(pwaSource)) {
+    let manifest = fs.readFileSync(pwaSource, 'utf-8');
+    manifest = manifest.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
+    manifest = manifest.replace(/\.\.\/img\//g, 'img/');
+    fs.writeFileSync(path.join(DIST_DIR, 'manifest.json'), manifest, 'utf-8');
+    console.log('  manifest.json (path adjusted)');
+  }
+  const swSource = path.join(SRC_DIR, 'sw.js');
+  if (fs.existsSync(swSource)) {
+    let sw = fs.readFileSync(swSource, 'utf-8');
+    sw = sw.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
+    sw = sw.replace(/\.\.\/img\//g, 'img/');
+    fs.writeFileSync(path.join(DIST_DIR, 'sw.js'), sw, 'utf-8');
+    console.log('  sw.js (path adjusted)');
   }
 
   if (userPass && adminPass) {

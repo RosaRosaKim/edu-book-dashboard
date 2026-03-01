@@ -2,30 +2,40 @@
 
 ## 1. 프로젝트 개요
 
-- **목적:** 사내 직원별 연간 교육비(한도 50만원) 사용 내역 및 실시간 잔액 조회 + 관리자 통합 관제
-- **환경:** GitHub Pages (Static Hosting)
-- **인증:** 사내 메신저 'Flow' 연동 6자리 OTP (3분 제한)
+- **목적:** 사내 직원별 연간 교육비(한도 50만원) 사용 내역 및 실시간 잔액 조회 + 관리자 통합 관제 + 법인카드(밥카) 사용내역/결재
+- **환경:** GitHub Pages (Static Hosting), PWA 지원 (Android 설치 / iOS 홈화면 추가)
+- **인증:** Bizplay SSO 로그인 (사내 메신저 Flow OTP 인증은 제거됨)
 - **백엔드:** Google Apps Script (GAS) + Google Sheets
+- **다크모드:** CSS 변수 + `html.dark` 클래스 토글, localStorage 저장, FOUC 방지
 
 ## 2. 파일 구조
 
 | 파일 | 설명 |
 |------|------|
-| `dev-edu-book-dashboard.html` | 사용자 대시보드 (개발용) |
-| `edu-book-dashboard.html` | 사용자 대시보드 (배포용, 난독화) |
-| `dev-admin-dashboard.html` | 관리자 대시보드 (개발용) |
-| `admin-dashboard.html` | 관리자 대시보드 (배포용, 난독화) |
-| `gas/code.gs` | GAS 백엔드 (API + 자동 알림 트리거) |
+| `html/dev-edu-book-dashboard.html` | 사용자 대시보드 (개발용) |
+| `html/dev-admin-dashboard.html` | 관리자 대시보드 (개발용) |
+| `html/edu-bizplay.html` | Bizplay 교육 신청서 임시저장 모듈 |
+| `html/card-babka.html` | 법인카드(밥카) 모듈 |
+| `html/manifest.json` | PWA 매니페스트 |
+| `html/sw.js` | Service Worker (네트워크 우선 + 캐시 폴백) |
+| `gas/code.gs` | GAS 백엔드 (라우터 + 자동 알림 트리거) |
+| `gas/edu-bizplay.gs` | GAS — Bizplay SSO 로그인 + 교육 임시저장 |
+| `gas/card-babka.gs` | GAS — 밥카 알람, 사용내역, 결재, 잔액알림 |
 | `gas/generateUUID.gs` | GAS 유틸리티 (UUID 일괄 생성) |
+| `build.js` | 빌드 스크립트 (난독화 + 압축 + 경로 치환) |
+| `deploy.js` | 배포 스크립트 (빌드 → GitHub Pages push) |
 | `img/` | 정적 에셋 (파비콘, 마스코트 이미지, GIF 애니메이션) |
+| `dist/` | 빌드 출력 (배포용 파일) |
 
 ## 3. 기술 스택
 
 - **프론트엔드:** 단일 HTML 파일, Tailwind CSS (CDN), Chart.js (관리자), Noto Sans KR + IBM Plex Mono
+- **테마:** CSS 변수 RGB triplet + `html.dark` 클래스 기반 다크모드
+- **PWA:** manifest.json + Service Worker, Android 설치 프롬프트, iOS 홈화면 추가 가이드
 - **백엔드:** Google Apps Script (`doGet` 핸들러)
-- **데이터:** Google Sheets (4개 시트: 교육 신청서, 도서 신청서, 웹페이지관리, 관리자)
+- **데이터:** Google Sheets (5개 시트: 교육 신청서, 도서 신청서, 웹페이지관리, 관리자, Flow자동발송이력)
 - **메신저 연동:** Flow API (`flow.emro.co.kr/MGateway`)
-- **배포:** GitHub Pages, `@google/clasp` 으로 GAS 배포
+- **배포:** GitHub Pages (`deploy.js`), `@google/clasp` 으로 GAS 배포
 
 ## 4. API 인터페이스
 
@@ -33,11 +43,16 @@
 
 | 기능 | Endpoint (GET) | 응답 | 비고 |
 |------|----------------|------|------|
-| 인증번호 발송 | `?action=sendCode&knoxId={사번}` | `{status:"success"}` | Flow 메신저로 6자리 OTP 발송 |
-| 인증번호 검증 | `?action=verify&knoxId={사번}&authCode={6자리}` | `{status:"success", token:UUID}` | 3분 이내 검증, 성공 시 UUID 토큰 반환 |
+| Bizplay 로그인 | `?action=bizplayAuth&bizUserId={ID}&bizPwd={PW}&savePw={bool}` | `{status,token,userName,session}` | SSO 로그인 + UUID 발급 |
 | 데이터 조회 | `?token={UUID}` | `{userInfo, myHistory, adminStats?}` | 관리자인 경우 adminStats 추가 포함 |
-| 알람 설정 변경 | `?action=updateAlarm&token={UUID}&isAgreed={true/false}` | `{status:"success"}` | 웹페이지관리 시트 실시간 업데이트 |
-| 잔액 정보 발송 | `?action=sendBalanceInfo&token={UUID}&targetKnoxId={사번}` | `{status:"success"}` | 관리자 전용, 대상 사용자에게 Flow 발송 |
+| 교육 알람 설정 | `?action=updateAlarm&token={UUID}&isAgreed={true/false}` | `{status:"success"}` | 웹페이지관리 B열 |
+| 밥카 알람 설정 | `?action=updateCardAlarm&token={UUID}&isAgreed={true/false}` | `{status:"success"}` | 웹페이지관리 G열 + I열 |
+| 잔액 알림 설정 | `?action=saveCardDailyAlarm&token={UUID}&isAgreed={true/false}` | `{status:"success"}` | 웹페이지관리 G열 (Y/N), J열 PW 미터치 |
+| 밥카 사용내역 | `?action=cardRecords&token={UUID}&fromDt=&toDt=` | `{status,records,totalCount}` | webank API 프록시 |
+| 밥카 결재 | `?action=cardApproval&token={UUID}&mode={temp/approve}&selectedRecords={JSON}` | `{status,message}` | 임시저장 또는 결재요청 |
+| Bizplay 세션 로그인 | `?action=bizplayLogin&token={UUID}&bizUserId=&bizPwd=` | `{status,session}` | 밥카 탭 내 재로그인 |
+| 교육 임시저장 | `?action=bizplayDraft&token={UUID}&...` | `{status,message}` | Bizplay 교육 신청서 임시저장 |
+| 잔액 정보 발송 | `?action=sendBalanceInfo&token={UUID}&targetKnoxId={사번}` | `{status:"success"}` | 관리자 전용, Flow 발송 |
 
 ### 데이터 조회 응답 구조
 
@@ -79,23 +94,34 @@
 
 | 시트명 | 용도 | 주요 컬럼 |
 |--------|------|-----------|
-| 교육 신청서 | 교육비 신청 데이터 | knoxId(J), 이름(K), 과정명(L), 금액(Q), 업체(R), 상태(T) |
-| 도서 신청서 | 도서비 신청 데이터 | knoxId(J), 이름(K), 도서명(L), 금액(M), 상태(Q) |
-| 웹페이지관리 | 사용자/인증 관리 | knoxId(A), 알람동의(B), UUID(C), 최종로그인(D), 인증코드(E), 인증시각(F), 부서(G), 이름(I) |
+| 교육 신청서 | 교육비 신청 데이터 | knoxId(J=9), 이름(K=10), 과정명(L=11), 기간(M=12), 교육구분(N=13), 목적(O=14), 비용청구(P=15), 금액(Q=16), 업체(R=17), 비고(S=18), 상태(T=19) |
+| 도서 신청서 | 도서비 신청 데이터 | knoxId(J=9), 이름(K=10), 도서명(L=11), 금액(M=12), 상태(Q=16) |
+| 웹페이지관리 | 사용자 관리 | knoxId(A=0), 교육알람동의(B=1), UUID(C=2), 최종로그인(D=3), 부서(E=4), 이름(G=6), 밥카알람(G열=col7), BizplayPW(H열=col8), 16일결재알람(I열=col9) |
 | 관리자 | 관리자 권한 목록 | knoxId(A) |
 | Flow자동발송이력 | 알림 발송 이력 | 문서번호(A), 일시(B), knoxId(C) |
+
+### 웹페이지관리 컬럼 상세 (GAS 상수 매핑)
+
+| 컬럼 | 1-based | 0-based | GAS 상수 | 용도 |
+|------|---------|---------|----------|------|
+| A | 1 | 0 | `ADMIN_COL.KNOX_ID` | 사번 |
+| B | 2 | 1 | `ADMIN_COL.AGREE` | 교육비 알람 동의 (Y/N) |
+| C | 3 | 2 | `ADMIN_COL.UUID` | 세션 토큰 |
+| D | 4 | 3 | `ADMIN_COL.LAST_LOGIN` | 최종 로그인 시각 |
+| E | 5 | 4 | `ADMIN_COL.DEPT` | 부서 |
+| F | 6 | 5 | — | (예비) |
+| G | 7 | 6 | `ADMIN_COL.NAME` / `CARD_ALARM_COL` | 이름 / 밥카 잔액알림 (Y/N) |
+| H | 8 | 7 | `CARD_DAILY_COL` | Bizplay 암호화 PW (잔액알림 + 자동로그인) |
+| I | 9 | 8 | `CARD_16_ALARM_COL` | 밥카 16일 결재알림 (Y/N) |
 
 ## 6. 사용자 대시보드 (`dev-edu-book-dashboard.html`)
 
 ### A. 인증 및 세션 관리
 
-- **로그인 화면:** Flow ID 입력 + `@emro.co.kr` 접미사 표시
-- **2단계 인증:** Step1(ID 입력 → 인증요청) → Step2(6자리 OTP 입력 → 검증)
-- **3분 카운트다운 타이머:** 만료 시 재전송 버튼 노출
-- **자동 로그인:** `localStorage.edu_token` 기반 토큰 자동 인증
-- **세션 복원:** `localStorage.edu_auth_session` 으로 Flow 앱 재진입 시 Step2 자동 복원
-- **URL 토큰:** `?token=` 파라미터로 진입 시 자동 저장 후 URL 정리
-- **에러 안내:** "인재성장파트 김우정 프로에게!" 문의 안내 표시
+- **로그인 화면:** Bizplay ID/PW 입력, 비밀번호 저장(자동로그인) 체크박스
+- **Bizplay SSO 인증:** GAS 프록시로 Bizplay 로그인 → UUID 토큰 발급
+- **자동 로그인:** `localStorage.token` 기반 토큰 자동 인증, Bizplay PW 저장 시 세션 자동 복원
+- **URL 파라미터:** `?token=` 자동 저장, `?tab=card` 등 탭 직접 진입 지원
 
 ### B. 대시보드 메인
 
@@ -119,13 +145,39 @@
 **교육비 신청 바로가기:**
 - Bizplay 결재 시스템 외부 링크 (`approval.appplay.co.kr`)
 
-### C. UX 디테일
+### C. 탭 구성
+
+| 탭 | 내용 |
+|-----|------|
+| 교육비 | 잔액 요약 + 알람 토글 + 신청 내역 + Bizplay 임시저장 |
+| 밥카 | 법인카드 잔액 요약 + 결재/잔액 알림 토글 + 사용내역 + TOP5 통계 + 결재(임시저장/상신) |
+| 지출결의 | (예정, opacity-40) |
+| 타임시트 | (예정, opacity-40) |
+
+### D. 다크모드
+
+- 헤더 🌙/☀️ 아이콘 버튼으로 토글
+- CSS 변수 RGB triplet: `--c-surface`, `--c-surface2`, `--c-border`, `--c-accent` 등
+- `html.dark` 클래스 추가 → `:root` / `html.dark` 블록에서 변수 전환
+- FOUC 방지: `<head>` 내 인라인 스크립트로 localStorage 읽어 즉시 클래스 적용
+- 하드코딩 Tailwind 임의값(`text-[#47635f]` 등)은 `html.dark .text-\[\#47635f\]` CSS 셀렉터로 오버라이드
+
+### E. PWA
+
+- `manifest.json` + `sw.js` (html/ 폴더, 빌드 시 dist/로 경로 보정 복사)
+- Service Worker: 네트워크 우선 + 캐시 폴백, HTTP/HTTPS만 캐시
+- Android: `beforeinstallprompt` → 헤더 ⬇️ 버튼으로 설치
+- iOS: Safari 감지 → 홈화면 추가 3단계 가이드 토스트
+- standalone 모드(PWA로 열었을 때)에서는 설치 버튼 숨김
+
+### F. UX 디테일
 
 - 스켈레톤 로딩 (시머 애니메이션)
 - 마스코트 애니메이션 (인증 중 working.gif, 헤더 idle dance GIF)
 - 5초 미조작 시 헤더 아이콘 → 댄스 애니메이션 전환
 - 버튼 로딩 시 시머 효과 + 스피너
 - 관리자인 경우 헤더에 '관리자' 링크 자동 표시
+- 추천 버튼(🤝): HTML 포맷 토스트 + 닫기 버튼
 
 ## 7. 관리자 대시보드 (`dev-admin-dashboard.html`)
 
@@ -174,28 +226,51 @@
 - `action=sendBalanceInfo` API 호출
 - 발송 중 스피너 + 완료/실패 토스트 알림
 
-## 8. GAS 백엔드 (`gas/code.gs`)
+## 8. GAS 백엔드
 
-### A. `doGet(e)` — 웹 요청 처리
+### A. `gas/code.gs` — 라우터 + 공통
 
-1. `action=sendCode`: 6자리 OTP 생성 → 시트 저장 → Flow 발송
-2. `action=verify`: 인증코드 + 3분 유효성 검증 → UUID 토큰 발급
-3. `action=updateAlarm`: 알람 동의 Y/N 시트 업데이트
-4. `action=sendBalanceInfo`: 관리자 → 사용자 잔액 정보 Flow 발송
-5. `token` 기본 조회: 교육+도서 데이터 병합, 본인 내역 + 관리자 통계 반환
+**`doGet(e)` 액션 라우팅:**
+1. `bizplayAuth`: Bizplay SSO 로그인 → UUID 토큰 발급 + PW 저장
+2. `updateAlarm`: 교육비 알람 동의 Y/N
+3. `updateCardAlarm`: 밥카 결재 알림 + 16일 알람 동의 (G열 + I열)
+4. `saveCardDailyAlarm`: 잔액 알림 동의 (G열 Y/N, PW 미터치)
+5. `bizplayLogin` / `bizplayDraft`: Bizplay 세션 로그인 / 교육 임시저장
+6. `cardRecords`: 밥카 사용내역 조회 (webank 프록시)
+7. `cardApproval`: 밥카 결재 제출 (임시저장/결재요청)
+8. `sendBalanceInfo`: 관리자 → 사용자 잔액 Flow 발송
+9. `token` 기본 조회: 교육+도서 병합 + 본인 내역 + 관리자 통계 + Bizplay 자동 세션 복원
 
-### B. `onSpreadsheetChange(e)` — 자동 알림 트리거
+**`onSpreadsheetChange(e)` — 자동 알림 트리거:**
+- 교육/도서 신청서 "완료" 변경 감지 → 알람 동의 사용자에게 Flow 발송
+- `Flow자동발송이력` 시트로 중복 방지
 
-- 교육/도서 신청서 시트 변경 감지
-- 상태가 "완료"로 변경된 건 자동 감지
-- 알람 동의한 사용자에게 Flow 메신저 자동 발송
-- `Flow자동발송이력` 시트로 중복 발송 방지
+### B. `gas/card-babka.gs` — 밥카 모듈
 
-### C. Flow 메신저 연동
+| 함수 | 트리거 | 설명 |
+|------|--------|------|
+| `sendCardAlarmDay16()` | 매월 16일 9시 | I열 'Y' 사용자에게 결재 요청 알림 Flow 발송 |
+| `sendCardAlarmDay18()` | 매월 18일 9시 | 미상신자 리마인더 발송 |
+| `sendCardDailyBalance()` | 매일 평일 11시 | G열 'Y' + H열 PW 존재 사용자에게 잔액 Flow 발송 (공휴일 제외) |
+| `handleUpdateCardAlarm()` | API | 결재 알림 토글 (G열 + I열) |
+| `handleSaveCardDailyAlarm()` | API | 잔액 알림 토글 (G열 Y/N, PW 미터치) |
+| `handleCardRecords()` | API | webank 사용내역 조회 (자동 재로그인 포함) |
+| `handleCardApproval()` | API | webank 결재 제출 (r010 검증 → c004 저장) |
+
+**밥카 기간 계산:** 매월 15일~다음달 14일, 영업일 × 10,000원 예산, 공휴일+근로자의날 제외
+
+### C. `gas/edu-bizplay.gs` — Bizplay SSO
+
+- Bizplay 로그인 → weAuth SSO → approval/webank 쿠키 획득
+- `fetchWithCookies` 헬퍼: 리다이렉트 + 쿠키 누적 수동 처리
+- 세션 ScriptProperties 저장 (`bizplay_{knoxId}`)
+- 상세 스펙: `spec/bizplay-spec.md` 참조
+
+### D. Flow 메신저 연동
 
 - **API:** `https://flow.emro.co.kr/MGateway`
 - **봇 ID:** helpdesk
-- **발송 내용:** OTP 인증번호, 결재 완료 알림(과정명/금액/잔액), 잔액 안내
+- **발송 내용:** 결재 완료 알림, 밥카 결재 요청, 잔액 안내, 교육비 잔액
 
 ## 9. 디자인 시스템
 
@@ -387,23 +462,45 @@ GAS 백엔드 배포:
 - **연간 한도:** 1인당 500,000원 (`LIMIT_BUDGET` 상수)
 - **교육+도서 통합:** 교육 신청서와 도서 신청서를 병합하여 단일 예산으로 관리
 
-## 13. 법인카드(중식대 결재) 
-- 15일부터 다음달 14일까지를 한 그룹으로 보면되고 15일부터는 이전에 사용한 내역을 비즈플레이를 통해 결재를 올려야함. 
-- 법인카드는 교통카드로도 쓸수 있으며 이건 결재내역에 포함되면 안된다. 교통비로 판단하는 기준은 사용처에 티머니 버스, 티머니 지하철, 수신단계가 실시간 이면 교통비로 판단.
-- 지출용도가 빈값인것만 대상
-- 교육비의 flow 알람 수신 동의처럼 매달 16일에 '매월 16일에 밥카결재요청 알림' 을 추가 웹페이지관리의 I 열에 밥카알람수신여부(Y/N) 추가함. 여기에 데이터를 저장
-- 밥카알람수신여부가 Y인 사용자가 있으면 매달 16일에 알람발송함. 밥카 결재진행할까요? link도 함께 보냄.
-- 밥카알람수신여부가 Y인 사용자중 18일에도 결재상신 내역이 없으면 한번 더 발송함
-- 밥카내역을 보려면 weAuth를 통해 https://webank.appplay.co.kr/rcard_main.act 로 진입.
-- 법인카드 탭의 UI는 교육비와 동일하게 하면된다. 사용금액, 알람수신여부, 사용내역, 간편신청 그대로. 
-- 법인카드는 기간별 1일당 1만원이며 주말, 공휴일은 제외인 영업일로만 계산하여 잔액을 계산하고 실제 사용금액은 초과하여 사용가능함에 유의
+## 13. 법인카드(밥카) 탭 — `html/card-babka.html`
 
-## 99. 추후 구현 예정 아이디어 
-- 나의 교육이력내역을 동료에게 공유해서 쉽게 교육신청가능
-- **각종 마감일 알림**: 밥카상신, 경비 등 각종 품의를 마감일까지 올리지 않앗따면 flow 로 알림
-- 매월 1일 타임시트정보를 불러와 휴일근무수당 자동 신청
-- 로그인을 2원화해야함. bizplay로 바로 로그인가능해야함. 나중에 flow 로그인은 없애야 할듯. 
-- 결재요청 시 실제 결제요청이라는 하나의 서비스를 더 실행해야함
-- 
+### 기간 및 예산
+- **기간:** 매월 15일 ~ 다음달 14일
+- **예산:** 영업일 × 10,000원 (주말 + 공휴일 + 근로자의날 제외)
+- **초과 사용 가능** (잔액이 음수가 될 수 있음)
+- **교통비 제외:** 사용처에 '티머니 버스', '티머니 지하철' 포함 시 필터링
 
-## 100. 오류 
+### UI 구성
+- **잔액 요약 카드:** 사용 금액 / 남은 잔액 / 기간 / 영업일 / 프로그레스 바
+- **알림 토글 2개:**
+  - 결재 알림 — 매월 16일 결재 요청 알림 (I열 = `CARD_16_ALARM_COL`)
+  - 잔액 알림 — 평일 10~11시 잔액 Flow 발송 (G열 = `CARD_ALARM_COL`, PW 필요)
+- **사용내역:** 현재월 테이블/카드 뷰 + TOP5 사용처 통계 (6개월)
+- **결재 버튼 2개:** 임시저장 / 결재요청
+
+### 알림 정책
+| 토글 | 시트 컬럼 | ON/OFF 방식 | 실제 발송 조건 |
+|------|-----------|-------------|---------------|
+| 결재 알림 | I열 (Y/N) | 토글 직접 변경 | I열 'Y' |
+| 잔액 알림 | G열 (Y/N) | 토글 직접 변경 (PW 미터치) | G열 'Y' AND H열 PW 존재 |
+
+- **H열 PW:** 로그인 시 "비밀번호 저장" 체크 여부로만 관리 (잔액 알림 OFF 시 삭제하지 않음)
+
+### webank API 연동
+- Bizplay SSO → weAuth → webank 쿠키 획득 → 카드 내역 API 호출
+- 자동 재로그인: 세션 만료 시 저장된 PW로 재시도
+- 결재 제출: r010 검증 → c004 저장 (임시저장/결재요청)
+- 상세 스펙: `spec/bizplay-spec.md` 참조
+
+## 14. 메시지 톤 & 스타일
+
+- **전체 반말 모드**: 프로젝트 내 모든 사용자 대상 메시지(UI 텍스트, 에러 메시지, 알림, 토스트 등)는 반말로 작성
+  - 예: "로그인이 필요합니다" → "로그인이 필요해", "재로그인 해주세요" → "재로그인 해줘", "완료되었습니다" → "완료됐어"
+- 존댓말(~합니다, ~습니다, ~해주세요 등) 사용 금지
+- 코드 주석, 스펙 문서 등 개발자 대상 텍스트는 해당 없음
+
+## 99. 추후 구현 예정 아이디어
+
+- 동료 교육 추천 기능 (🤝 버튼 → 동료 Bizplay 임시저장으로 전송) — UI만 구현, "곧 추가될 기능" 안내 표시 중
+- **지출결의 탭:** 야근식대, 교육비, 휴일근무수당 자동 신청
+- **타임시트 탭:** 진심모드, 대충모드
