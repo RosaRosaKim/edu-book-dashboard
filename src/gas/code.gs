@@ -612,53 +612,42 @@ function sendFlowGAS(userId, content, previewLink, previewTitle) {
  * GAS 편집기에서 수동 실행하여 로그 확인
  */
 function testTimesheetApi() {
-  var BASE = 'https://8vxu0grpsd.execute-api.ap-northeast-2.amazonaws.com';
-  var headers = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0'
-  };
+  var BASE_AWS = 'https://8vxu0grpsd.execute-api.ap-northeast-2.amazonaws.com';
+  var BASE_PB  = 'https://m.pearbranch.com';
+  var TK = 'EMRO';
 
-  // 1) tenant 조회
-  try {
-    var r1 = UrlFetchApp.fetch(BASE + '/ifm/api/v5/tenant', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: headers,
-      payload: JSON.stringify({ tenantKey: 'ecopro' }),
-      muteHttpExceptions: true
-    });
-    Logger.log('[tenant POST] ' + r1.getResponseCode() + ': ' + r1.getContentText().substring(0, 2000));
-  } catch(e) { Logger.log('[tenant POST err] ' + e.message); }
+  // 1) tenant - AWS (JSON)
+  _testFetch('AWS tenant JSON', BASE_AWS + '/ifm/api/v5/tenant', 'post', 'application/json', JSON.stringify({ tenantKey: TK }));
+  // 2) tenant - AWS (form)
+  _testFetch('AWS tenant FORM', BASE_AWS + '/ifm/api/v5/tenant', 'post', 'application/x-www-form-urlencoded', 'tenantKey=' + TK);
+  // 3) tenant - PB (JSON)
+  _testFetch('PB tenant JSON', BASE_PB + '/ifm/api/v5/tenant', 'post', 'application/json', JSON.stringify({ tenantKey: TK }));
+  // 4) tenant - PB (form)
+  _testFetch('PB tenant FORM', BASE_PB + '/ifm/api/v5/tenant', 'post', 'application/x-www-form-urlencoded', 'tenantKey=' + TK);
+  // 5) encryption - AWS
+  _testFetch('AWS encryption POST', BASE_AWS + '/ifm/api/v5/login/encryption', 'post', 'application/json', JSON.stringify({ tenantKey: TK }));
+  // 6) encryption - PB
+  _testFetch('PB encryption POST', BASE_PB + '/ifm/api/v5/login/encryption', 'post', 'application/json', JSON.stringify({ tenantKey: TK }));
+  // 7) encryption - AWS GET
+  _testFetch('AWS encryption GET', BASE_AWS + '/ifm/api/v5/login/encryption', 'get');
+  // 8) encryption - PB GET
+  _testFetch('PB encryption GET', BASE_PB + '/ifm/api/v5/login/encryption', 'get');
+}
 
-  // 1b) tenant GET
+function _testFetch(label, url, method, contentType, payload) {
   try {
-    var r1b = UrlFetchApp.fetch(BASE + '/ifm/api/v5/tenant?tenantKey=ecopro', {
-      method: 'get',
-      headers: headers,
-      muteHttpExceptions: true
-    });
-    Logger.log('[tenant GET] ' + r1b.getResponseCode() + ': ' + r1b.getContentText().substring(0, 2000));
-  } catch(e) { Logger.log('[tenant GET err] ' + e.message); }
-
-  // 2) encryption 조회
-  try {
-    var r2 = UrlFetchApp.fetch(BASE + '/ifm/api/v5/login/encryption', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: headers,
-      payload: JSON.stringify({ tenantKey: 'ecopro' }),
-      muteHttpExceptions: true
-    });
-    Logger.log('[encryption POST] ' + r2.getResponseCode() + ': ' + r2.getContentText().substring(0, 2000));
-  } catch(e) { Logger.log('[encryption POST err] ' + e.message); }
-
-  // 2b) encryption GET
-  try {
-    var r2b = UrlFetchApp.fetch(BASE + '/ifm/api/v5/login/encryption?tenantKey=ecopro', {
-      method: 'get',
-      headers: headers,
-      muteHttpExceptions: true
-    });
-    Logger.log('[encryption GET] ' + r2b.getResponseCode() + ': ' + r2b.getContentText().substring(0, 2000));
-  } catch(e) { Logger.log('[encryption GET err] ' + e.message); }
+    var opts = { method: method, muteHttpExceptions: true };
+    if (contentType) opts.contentType = contentType;
+    if (payload) opts.payload = payload;
+    var r = UrlFetchApp.fetch(url, opts);
+    var body = r.getContentText().substring(0, 800);
+    // HTML 응답이면 짧게 요약
+    if (body.indexOf('<!DOCTYPE') >= 0 || body.indexOf('<html') >= 0) {
+      var m = body.match(/<title>([^<]+)<\/title>/);
+      body = '[HTML] ' + (m ? m[1] : body.substring(0, 100));
+    }
+    Logger.log('[' + label + '] ' + r.getResponseCode() + ': ' + body);
+  } catch(e) {
+    Logger.log('[' + label + ' ERR] ' + e.message);
+  }
 }

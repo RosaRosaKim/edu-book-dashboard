@@ -40,7 +40,10 @@
       "WebFetch(domain:guide.ncloud-docs.com)",
       "WebFetch(domain:rosarosakim.github.io)",
       "Bash(jadx:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(where jadx:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep:*)"
     ]
   }
 }
