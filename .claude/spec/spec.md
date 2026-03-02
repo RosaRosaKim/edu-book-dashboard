@@ -16,11 +16,13 @@
 | `html/dev-admin-dashboard.html` | 관리자 대시보드 (개발용) |
 | `html/edu-bizplay.html` | Bizplay 교육 신청서 임시저장 모듈 |
 | `html/card-babka.html` | 법인카드(밥카) 모듈 |
+| `html/edu-board.html` | 익명 게시판 모듈 (정렬, 페이지네이션, 관리자 답변) |
 | `html/manifest.json` | PWA 매니페스트 |
 | `html/sw.js` | Service Worker (네트워크 우선 + 캐시 폴백) |
 | `gas/code.gs` | GAS 백엔드 (라우터 + 자동 알림 트리거) |
 | `gas/edu-bizplay.gs` | GAS — Bizplay SSO 로그인 + 교육 임시저장 |
 | `gas/card-babka.gs` | GAS — 밥카 알람, 사용내역, 결재, 잔액알림 |
+| `gas/board.gs` | GAS — 게시판 CRUD (목록, 작성, 반응, 관리자 답변) |
 | `gas/generateUUID.gs` | GAS 유틸리티 (UUID 일괄 생성) |
 | `build.js` | 빌드 스크립트 (난독화 + 압축 + 경로 치환) |
 | `deploy.js` | 배포 스크립트 (빌드 → GitHub Pages push) |
@@ -33,7 +35,7 @@
 - **테마:** CSS 변수 RGB triplet + `html.dark` 클래스 기반 다크모드
 - **PWA:** manifest.json + Service Worker, Android 설치 프롬프트, iOS 홈화면 추가 가이드
 - **백엔드:** Google Apps Script (`doGet` 핸들러)
-- **데이터:** Google Sheets (5개 시트: 교육 신청서, 도서 신청서, 웹페이지관리, 관리자, Flow자동발송이력)
+- **데이터:** Google Sheets (6개 시트: 교육 신청서, 도서 신청서, 웹페이지관리, 관리자, Flow자동발송이력, 게시판)
 - **메신저 연동:** Flow API (`flow.emro.co.kr/MGateway`)
 - **배포:** GitHub Pages (`deploy.js`), `@google/clasp` 으로 GAS 배포
 
@@ -53,6 +55,10 @@
 | Bizplay 세션 로그인 | `?action=bizplayLogin&token={UUID}&bizUserId=&bizPwd=` | `{status,session}` | 밥카 탭 내 재로그인 |
 | 교육 임시저장 | `?action=bizplayDraft&token={UUID}&...` | `{status,message}` | Bizplay 교육 신청서 임시저장 |
 | 잔액 정보 발송 | `?action=sendBalanceInfo&token={UUID}&targetKnoxId={사번}` | `{status:"success"}` | 관리자 전용, Flow 발송 |
+| 게시판 목록 | `?action=boardList&token={UUID}` | `{status,posts[]}` | 전체 목록 + 본인 반응 상태 |
+| 게시판 글쓰기 | `?action=boardWrite&token={UUID}&content={텍스트}` | `{status:"success"}` | 익명, 1~200자 |
+| 게시판 반응 | `?action=boardReact&token={UUID}&postId={ID}&type={like/dislike}` | `{status,likes,dislikes,myReaction}` | 좋아요/싫어요 토글 |
+| 게시판 답변 | `?action=boardReply&token={UUID}&postId={ID}&reply={텍스트}` | `{status,reply}` | 관리자 전용, 1~200자 |
 
 ### 데이터 조회 응답 구조
 
@@ -99,6 +105,7 @@
 | 웹페이지관리 | 사용자 관리 | knoxId(A=0), 교육알람동의(B=1), UUID(C=2), 최종로그인(D=3), 부서(E=4), 이름(G=6), 밥카알람(G열=col7), BizplayPW(H열=col8), 16일결재알람(I열=col9) |
 | 관리자 | 관리자 권한 목록 | knoxId(A) |
 | Flow자동발송이력 | 알림 발송 이력 | 문서번호(A), 일시(B), knoxId(C) |
+| 게시판 | 익명 게시판 | ID(A=0), 내용(B=1), 날짜(C=2), 좋아요(D=3), 싫어요(E=4), 관리자답변(F=5) |
 
 ### 웹페이지관리 컬럼 상세 (GAS 상수 매핑)
 
@@ -151,6 +158,7 @@
 |-----|------|
 | 교육비 | 잔액 요약 + 알람 토글 + 신청 내역 + Bizplay 임시저장 |
 | 밥카 | 법인카드 잔액 요약 + 결재/잔액 알림 토글 + 사용내역 + TOP5 통계 + 결재(임시저장/상신) |
+| 게시판 | 익명 글쓰기 + 좋아요/싫어요 + 최신순/인기순 정렬 + 페이지네이션 + 관리자 답변 |
 | 지출결의 | (예정, opacity-40) |
 | 타임시트 | (예정, opacity-40) |
 
@@ -239,7 +247,8 @@
 6. `cardRecords`: 밥카 사용내역 조회 (webank 프록시)
 7. `cardApproval`: 밥카 결재 제출 (임시저장/결재요청)
 8. `sendBalanceInfo`: 관리자 → 사용자 잔액 Flow 발송
-9. `token` 기본 조회: 교육+도서 병합 + 본인 내역 + 관리자 통계 + Bizplay 자동 세션 복원
+9. `boardList` / `boardWrite` / `boardReact` / `boardReply`: 게시판 CRUD
+10. `token` 기본 조회: 교육+도서 병합 + 본인 내역 + 관리자 통계 + Bizplay 자동 세션 복원
 
 **`onSpreadsheetChange(e)` — 자동 알림 트리거:**
 - 교육/도서 신청서 "완료" 변경 감지 → 알람 동의 사용자에게 Flow 발송
@@ -259,14 +268,27 @@
 
 **밥카 기간 계산:** 매월 15일~다음달 14일, 영업일 × 10,000원 예산, 공휴일+근로자의날 제외
 
-### C. `gas/edu-bizplay.gs` — Bizplay SSO
+### C. `gas/board.gs` — 게시판
+
+| 함수 | 설명 |
+|------|------|
+| `handleBoardList(adminRow, e)` | 전체 글 목록 조회 (본인 반응 상태 + 관리자 답변 포함) |
+| `handleBoardWrite(adminRow, e)` | 익명 글 작성 (1~200자, sanitize) |
+| `handleBoardReact(adminRow, e)` | 좋아요/싫어요 토글 (UUID 기반 중복 방지) |
+| `handleBoardReply(adminRow, e)` | 관리자 답변 작성/수정 (관리자 시트 체크, 1~200자) |
+
+- **컬럼 상수:** `BOARD_COL = { ID: 0, CONTENT: 1, DATE: 2, LIKES: 3, DISLIKES: 4, REPLY: 5 }`
+- **좋아요/싫어요:** D/E열에 UUID 쉼표 구분 리스트 저장, 토글 방식
+- **관리자 답변:** F열에 덮어쓰기 (작성/수정 동일 엔드포인트)
+
+### D. `gas/edu-bizplay.gs` — Bizplay SSO
 
 - Bizplay 로그인 → weAuth SSO → approval/webank 쿠키 획득
 - `fetchWithCookies` 헬퍼: 리다이렉트 + 쿠키 누적 수동 처리
 - 세션 ScriptProperties 저장 (`bizplay_{knoxId}`)
 - 상세 스펙: `spec/bizplay-spec.md` 참조
 
-### D. Flow 메신저 연동
+### E. Flow 메신저 연동
 
 - **API:** `https://flow.emro.co.kr/MGateway`
 - **봇 ID:** helpdesk
@@ -492,14 +514,36 @@ GAS 백엔드 배포:
 - 결재 제출: r010 검증 → c004 저장 (임시저장/결재요청)
 - 상세 스펙: `spec/bizplay-spec.md` 참조
 
-## 14. 메시지 톤 & 스타일
+## 14. 게시판 탭 — `html/edu-board.html`
+
+### 기능 개요
+- 익명 글쓰기 + 좋아요/싫어요 반응 + 관리자 답변
+
+### UI 구성
+- **안내 문구:** "익명이야! 그래서 수정,삭제도 못해"
+- **글쓰기 폼:** textarea (200자 제한) + 글자수 카운터 + 올리기 버튼
+- **정렬 토글:** 최신순(ID desc) / 인기순(likes-dislikes desc, 동점 시 최신 우선)
+- **글 카드:** 내용 + 날짜(상대시간) + 좋아요/싫어요 버튼 + 관리자 답변 영역
+- **관리자 답변:** 좌측 accent 보더 + 연한 배경, 관리자인 경우 답변 textarea + 작성/수정 버튼 표시
+- **페이지네이션:** 10개씩 표시, "더보기" 버튼으로 추가 로드
+
+### 프론트엔드 상태 관리
+- `_allPosts[]`: 서버에서 받은 전체 목록 로컬 캐시
+- `_sortMode`: 'latest' | 'popular'
+- `_displayedCount`: 현재 화면에 표시된 개수
+- `PAGE_SIZE`: 10
+- `reactPost` 성공 시 `_allPosts` 로컬 업데이트 (전체 재조회 안 함)
+- `replyPost` 성공 시 `_allPosts` 로컬 업데이트 후 재렌더
+- `window._isAdmin`: 대시보드 로그인 시 설정되는 전역 플래그
+
+## 15. 메시지 톤 & 스타일
 
 - **전체 반말 모드**: 프로젝트 내 모든 사용자 대상 메시지(UI 텍스트, 에러 메시지, 알림, 토스트 등)는 반말로 작성
   - 예: "로그인이 필요합니다" → "로그인이 필요해", "재로그인 해주세요" → "재로그인 해줘", "완료되었습니다" → "완료됐어"
 - 존댓말(~합니다, ~습니다, ~해주세요 등) 사용 금지
 - 코드 주석, 스펙 문서 등 개발자 대상 텍스트는 해당 없음
 
-## 99. 추후 구현 예정 아이디어
+## 16. 추후 구현 예정 아이디어
 
 - 동료 교육 추천 기능 (🤝 버튼 → 동료 Bizplay 임시저장으로 전송) — UI만 구현, "곧 추가될 기능" 안내 표시 중
 - **지출결의 탭:** 야근식대, 교육비, 휴일근무수당 자동 신청
