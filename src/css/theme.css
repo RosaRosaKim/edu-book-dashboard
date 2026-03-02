@@ -41,21 +41,30 @@ body::before {
   background-size: 40px 40px; pointer-events: none; z-index: 0;
 }
 
-/* ═══════ 브랜드 그라디언트 ═══════ */
+/* ═══════ 브랜드 그라디언트 (shimmer + glow) ═══════ */
+@keyframes brand-shimmer { 0%{background-position:0% center} 100%{background-position:200% center} }
 .brand-name {
-  background: linear-gradient(135deg, #2d8a7e 0%, #059669 50%, #2d8a7e 100%);
+  background: linear-gradient(135deg, #2d8a7e 0%, #059669 30%, #34d399 50%, #059669 70%, #2d8a7e 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
+  animation: brand-shimmer 4s linear infinite;
+  filter: drop-shadow(0 0 8px #2d8a7e30);
+}
+.brand-sub {
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 html.dark .brand-name {
-  background: linear-gradient(135deg, #5eead4 0%, #34d399 50%, #5eead4 100%);
+  background: linear-gradient(135deg, #5eead4 0%, #34d399 30%, #6ee7b7 50%, #34d399 70%, #5eead4 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: brand-shimmer 4s linear infinite;
+  filter: drop-shadow(0 0 12px #5eead450) drop-shadow(0 0 24px #34d39920);
 }
 
 /* ═══════ accent 색상 유틸 (동적 모듈용) ═══════ */
