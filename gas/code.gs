@@ -14,7 +14,8 @@ const SHEET_NAME = {
   ADMIN: "웹페이지관리",
   MANAGER: "관리자",
   TEMPLATE: "신청 템플릿",
-  NOTICE: "공지사항"
+  NOTICE: "공지사항",
+  BOARD: "게시판"
 };
 
 const DATA_COL = {
@@ -214,6 +215,28 @@ const doGet = (e) => {
     const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
     if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
     return handleCardApproval(adminRow, e);
+  }
+
+  // [기능 12] 게시판
+  if (action === "boardList" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBoardList(adminRow, e);
+  }
+  if (action === "boardWrite" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBoardWrite(adminRow, e);
+  }
+  if (action === "boardReact" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBoardReact(adminRow, e);
+  }
+  if (action === "boardReply" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBoardReply(adminRow, e);
   }
 
   // [기능 3] 통합 데이터 조회

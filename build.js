@@ -282,7 +282,7 @@ async function build() {
 
   // 3. 모듈 HTML 빌드
   console.log('\n========== Building modules ==========');
-  const modules = ['edu-bizplay.html', 'card-babka.html'];
+  const modules = ['edu-bizplay.html', 'card-babka.html', 'edu-draft.html', 'edu-expense.html', 'edu-timesheet.html', 'edu-board.html'];
   for (const mod of modules) {
     const src = path.join(SRC_DIR, mod);
     if (fs.existsSync(src)) {

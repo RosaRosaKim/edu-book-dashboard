@@ -18,6 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
 tailwind.config = {
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -201,6 +202,7 @@ tailwind.config = {
   html.dark .border-\[\#ccebe2\] { border-color: rgb(var(--c-border)) !important; }
   html.dark .hover\:bg-\[\#e2f5ef\]:hover { background-color: rgb(var(--c-surface2)) !important; }
 
+
 </style>
 </head>
 <body class="font-sans text-[#47635f] min-h-screen relative">
@@ -259,8 +261,8 @@ tailwind.config = {
     <!-- 시스템 안내 -->
     <div class="mt-6 border-t" style="border-color:rgba(204,235,226,0.5); font-size:11px; color:rgba(110,127,123,0.6);">
       <p class="mb-2 leading-relaxed text-center">
-        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라 + 시스템 초기라</span><br>
-        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">느리거나 오류가 있을 수 있어!</span>
+        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라(GAS)라 느려.. 어쩔수 없지</span><br>
+        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">시스템 초기라 오류가 있을 수 있어!</span>
       </p>
       <div class="bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
     </div>
@@ -299,6 +301,8 @@ tailwind.config = {
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💳 밥카</button>
       <button id="tabBtnDraft" onclick="switchTab('draft')"
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">📋 기안문서</button>
+      <button id="tabBtnBoard" onclick="switchTab('board')"
+        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💬 게시판</button>
       <button id="tabBtnExpense" onclick="switchTab('expense')"
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40">🚧 지출결의</button>
       <button id="tabBtnTimesheet" onclick="switchTab('timesheet')"
@@ -551,74 +555,16 @@ tailwind.config = {
       </div><!-- /tabPanelCard -->
 
       <!-- ─── 기안문서 ─── -->
-      <div id="tabPanelDraft" class="hidden">
-        <div class="fade-in">
-          <div class="bg-surface border border-border rounded-2xl overflow-hidden">
-            <div id="draftsCards" class="p-3 space-y-3"></div>
-            <div id="draftsLoading" class="hidden p-3 space-y-3">
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-1/2 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/4 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-1/2 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-28 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
-              <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
-            </div>
-            <div id="noDrafts" class="hidden text-center py-10 text-[#6e7f7b] text-sm">
-              <img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">기안문서가 없어.
-            </div>
-          </div>
-        </div>
-      </div><!-- /tabPanelDraft -->
+      <div id="tabPanelDraft" class="hidden"><div id="draftContainer"></div></div><!-- /tabPanelDraft -->
+
+      <!-- ─── 방문록 ─── -->
+      <div id="tabPanelBoard" class="hidden"><div id="boardContainer"></div></div><!-- /tabPanelBoard -->
 
       <!-- ─── 지출결의 (Coming Soon) ─── -->
-      <div id="tabPanelExpense" class="hidden">
-        <div class="fade-in space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="bg-surface border border-border rounded-2xl p-5 text-center opacity-75">
-              <div class="text-3xl mb-2">🍜</div>
-              <div class="text-sm font-semibold mb-1">야근식대</div>
-              <div class="text-xs text-[#6e7f7b] mb-3">야근 시 식대 청구</div>
-              <span class="pill pill-pend text-[10px]">준비 중</span>
-            </div>
-            <div class="bg-surface border border-border rounded-2xl p-5 text-center opacity-75">
-              <div class="text-3xl mb-2">📚</div>
-              <div class="text-sm font-semibold mb-1">교육비</div>
-              <div class="text-xs text-[#6e7f7b] mb-3">원안문서 자동 연동</div>
-              <span class="pill pill-pend text-[10px]">준비 중</span>
-            </div>
-            <div class="bg-surface border border-border rounded-2xl p-5 text-center opacity-75">
-              <div class="text-3xl mb-2">🏢</div>
-              <div class="text-sm font-semibold mb-1">휴일근무수당</div>
-              <div class="text-xs text-[#6e7f7b] mb-3">타임시트에서 휴일근무정보를 자동으로 가져올거야</div>
-              <span class="pill pill-pend text-[10px]">준비 중</span>
-            </div>
-          </div>
-          <div class="text-center text-xs text-[#6e7f7b] py-4">곧 추가될 기능이야</div>
-        </div>
-      </div><!-- /tabPanelExpense -->
+      <div id="tabPanelExpense" class="hidden"><div id="expenseContainer"></div></div><!-- /tabPanelExpense -->
 
       <!-- ─── 타임시트 (Coming Soon) ─── -->
-      <div id="tabPanelTimesheet" class="hidden">
-        <div class="fade-in space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="bg-surface border border-border rounded-2xl p-5 opacity-75">
-              <div class="text-3xl mb-2">🔥</div>
-              <div class="text-sm font-semibold mb-1">진심모드</div>
-              <div class="text-xs text-[#6e7f7b] mb-3">꼼꼼하게 하루하루 기록</div>
-              <span class="pill pill-pend text-[10px]">준비 중</span>
-            </div>
-            <div class="bg-surface border border-border rounded-2xl p-5 opacity-75">
-              <div class="text-3xl mb-2">🦥</div>
-              <div class="text-sm font-semibold mb-1">대충모드</div>
-              <div class="text-xs text-[#6e7f7b] mb-3">그냥 대충 복사해서 사용</div>
-              <span class="pill pill-pend text-[10px]">준비 중</span>
-            </div>
-          </div>
-          <div class="text-center text-xs text-[#6e7f7b] py-4">곧 추가될 기능이야</div>
-        </div>
-      </div><!-- /tabPanelTimesheet -->
+      <div id="tabPanelTimesheet" class="hidden"><div id="timesheetContainer"></div></div><!-- /tabPanelTimesheet -->
 
     </div>
 
@@ -681,16 +627,16 @@ tailwind.config = {
 <!-- 공지사항 팝업 -->
 <div id="noticeBox" class="fixed inset-0 z-[70]" style="display:none;">
   <div class="absolute inset-0 bg-black/30" onclick="closeNotice()"></div>
-  <div class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[71] max-w-sm mx-auto">
-    <div id="noticeCard" class="rounded-2xl shadow-xl overflow-hidden border border-accent/20" style="background:linear-gradient(135deg, #f1faf7 0%, #fff7ee 50%, #f5f0ff 100%);">
+  <div class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[71] max-w-sm mx-auto max-h-[85vh]">
+    <div id="noticeCard" class="rounded-2xl shadow-xl overflow-hidden border border-accent/20 flex flex-col max-h-[85vh]" style="background:linear-gradient(135deg, #f1faf7 0%, #fff7ee 50%, #f5f0ff 100%);">
       <div id="noticeImage" style="display:none;">
-        <img id="noticeImg" src="" alt="공지 이미지" class="w-full block" />
+        <img id="noticeImg" src="" alt="공지 이미지" class="w-full block" style="max-height:min(50vh, calc(85vh - 10rem));" />
       </div>
-      <div class="p-5">
-        <div class="text-[10px] font-bold text-accent uppercase tracking-[1.5px] mb-2">공지사항</div>
-        <div id="noticeTitle" class="text-base font-bold text-[#2d3a37] mb-2"></div>
-        <div id="noticeContent" class="text-sm text-[#4a5a56] leading-relaxed max-h-[40vh] overflow-y-auto whitespace-pre-line"></div>
-        <div class="flex items-center justify-between mt-4">
+      <div class="p-5 flex flex-col min-h-0">
+        <div class="text-[10px] font-bold text-accent uppercase tracking-[1.5px] mb-2 shrink-0">공지사항</div>
+        <div id="noticeTitle" class="text-base font-bold text-[#2d3a37] mb-2 shrink-0"></div>
+        <div id="noticeContent" class="text-sm text-[#4a5a56] leading-relaxed overflow-y-auto whitespace-pre-line min-h-0"></div>
+        <div class="flex items-center justify-between mt-4 shrink-0">
           <label class="flex items-center gap-2 cursor-pointer select-none group" onclick="toggleNoticeChk(event)">
             <span class="relative flex items-center justify-center w-5 h-5 rounded-md border-2 border-[#b5c9c3] bg-white transition-all group-hover:border-accent" id="noticeChkBox">
               <svg id="noticeChkIcon" class="w-3 h-3 text-white opacity-0 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -707,8 +653,8 @@ tailwind.config = {
 
 <script>
 /* ─── 탭 전환 ─── */
-window.switchTab = function(tabId) {
-  const tabs = ['edu', 'card', 'draft', 'expense', 'timesheet'];
+window.switchTab = async function(tabId) {
+  const tabs = ['edu', 'card', 'draft', 'board', 'expense', 'timesheet'];
   const comingSoon = ['expense', 'timesheet'];
   const activeClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';
   const inactiveClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap';
@@ -728,9 +674,18 @@ window.switchTab = function(tabId) {
   // bizplayContainer는 edu 탭에서만 표시
   document.getElementById('bizplayContainer').classList.toggle('hidden', tabId !== 'edu');
 
-  // 탭별 데이터 refresh
+  // 모듈 로딩 + 탭별 데이터 refresh
   if (tabId === 'card' && window.fetchCardRecords) window.fetchCardRecords();
-  if (tabId === 'draft' && window.fetchDraftList) window.fetchDraftList();
+  if (tabId === 'draft') {
+    await window._loadModule('edu-draft.html', 'draftContainer');
+    if (window.fetchDraftList) window.fetchDraftList();
+  }
+  if (tabId === 'board') {
+    await window._loadModule('edu-board.html', 'boardContainer');
+    if (window.loadBoard) window.loadBoard();
+  }
+  if (tabId === 'expense') window._loadModule('edu-expense.html', 'expenseContainer');
+  if (tabId === 'timesheet') window._loadModule('edu-timesheet.html', 'timesheetContainer');
   if (tabId === 'edu') {
     if (window.updateRemainDisplay) window.updateRemainDisplay();
     if (window.refreshEduSession) window.refreshEduSession();
@@ -985,6 +940,7 @@ async function loadDashboard() {
     }
 
     userInfo = data.userInfo || {};
+    window._isAdmin = userInfo.isAdmin || false;
     records = data.myHistory || [];
     templates = data.templates || [];
 
@@ -1248,6 +1204,26 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+
+/* ─── 범용 모듈 로더 ─── */
+const _moduleLoaded = {};
+async function loadModule(name, containerId) {
+  if (_moduleLoaded[name]) return;
+  try {
+    const resp = await fetch(name + '?v=' + Date.now());
+    if (!resp.ok) return;
+    const container = $(containerId);
+    if (!container) return;
+    container.innerHTML = await resp.text();
+    container.querySelectorAll('script').forEach(old => {
+      const s = document.createElement('script');
+      s.textContent = old.textContent;
+      old.replaceWith(s);
+    });
+    _moduleLoaded[name] = true;
+  } catch (e) { console.warn('[' + name + '] 모듈 로드 실패:', e.message); }
+}
+window._loadModule = loadModule;
 
 /* ─── Bizplay 모듈 로드 ─── */
 async function loadBizplayModule() {

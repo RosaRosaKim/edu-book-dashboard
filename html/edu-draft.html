@@ -1,0 +1,134 @@
+<style>
+  /* 기안문서 카드 — light */
+  .draft-bg-ok { background: #f6fdf7; }
+  .draft-bg-reject { background: #fff8f8; }
+  .draft-bg-progress { background: #f5faff; }
+  .draft-bg-default { background: #ffffff; }
+  .draft-bar-ok { background: #4caf50; }
+  .draft-bar-reject { background: #ef5350; }
+  .draft-bar-progress { background: #42a5f5; }
+  .draft-bar-default { background: #aab5b2; }
+  /* 기안문서 카드 — dark */
+  html.dark .draft-bg-ok { background: #1a2a22; }
+  html.dark .draft-bg-reject { background: #2a1a1a; }
+  html.dark .draft-bg-progress { background: #1a222a; }
+  html.dark .draft-bg-default { background: var(--card-bg); }
+  html.dark .draft-bar-ok { background: #2e7d32; }
+  html.dark .draft-bar-reject { background: #c62828; }
+  html.dark .draft-bar-progress { background: #1565c0; }
+  html.dark .draft-bar-default { background: #4a5a56; }
+</style>
+
+<div class="fade-in">
+  <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div id="draftsCards" class="p-3 space-y-3"></div>
+    <div id="draftsLoading" class="hidden p-3 space-y-3">
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-1/2 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/4 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-1/2 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-24 rounded"></div><div class="skeleton h-5 w-28 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-20 rounded"></div><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-16 rounded"></div></div></div>
+      <div class="bg-white border border-border rounded-xl p-3.5 space-y-2"><div class="flex items-center justify-between gap-2"><div class="skeleton h-4 w-2/5 rounded"></div><div class="skeleton h-5 w-14 rounded-full"></div></div><div class="flex gap-1.5"><div class="skeleton h-5 w-28 rounded"></div><div class="skeleton h-5 w-24 rounded"></div></div></div>
+    </div>
+    <div id="noDrafts" class="hidden text-center py-10 text-[#6e7f7b] text-sm">
+      <img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">기안문서가 없어.
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+const $ = window.$;
+const API_URL = window.API_URL;
+const TOKEN_KEY = window.TOKEN_KEY;
+
+async function fetchDraftList() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  const loading = $('draftsLoading');
+  const noDrafts = $('noDrafts');
+  const cards = $('draftsCards');
+  if (loading) loading.classList.remove('hidden');
+  if (noDrafts) noDrafts.classList.add('hidden');
+  if (cards) cards.innerHTML = '';
+  if (window.showLoading) window.showLoading();
+
+  try {
+    const params = new URLSearchParams({ action: 'bizplayDraftList', token });
+    const data = await window.gasFetch(`${API_URL}?${params}`);
+    if (data.debug) console.log('[draftList] debug:', JSON.stringify(data.debug, null, 2));
+    if (data.status === 'success') {
+      renderDraftList(data.draftList || []);
+    } else {
+      window.showToast(data.message || '기안문서 조회 실패', 'angry');
+    }
+  } catch (err) {
+    window.showToast('기안문서 조회 실패: ' + err.message, 'angry');
+  } finally {
+    if (loading) loading.classList.add('hidden');
+    if (window.hideLoading) window.hideLoading();
+  }
+}
+
+function renderDraftList(list) {
+  const cards = $('draftsCards');
+  const noDrafts = $('noDrafts');
+  if (!list || list.length === 0) {
+    if (noDrafts) noDrafts.classList.remove('hidden');
+    return;
+  }
+  if (noDrafts) noDrafts.classList.add('hidden');
+
+  const statusInfo = (s) => {
+    const st = String(s || '').trim();
+    if (st.includes('승인') || st.includes('완료')) return { badge: 'bg-[#e8f5e9] text-[#2e7d32] border border-[#a5d6a7] dark:bg-[#1b3a2a] dark:text-[#6fcf8a] dark:border-[#2e5e3e]', icon: '✓', bar: 'draft-bar-ok', bg: 'draft-bg-ok' };
+    if (st.includes('반려') || st.includes('반송')) return { badge: 'bg-[#ffebee] text-[#c62828] border border-[#ef9a9a] dark:bg-[#3a1b1b] dark:text-[#f08080] dark:border-[#5e2e2e]', icon: '✕', bar: 'draft-bar-reject', bg: 'draft-bg-reject' };
+    if (st.includes('진행') || st.includes('결재')) return { badge: 'bg-[#e3f2fd] text-[#1565c0] border border-[#90caf9] dark:bg-[#1b2a3a] dark:text-[#6fb3f0] dark:border-[#2e4a5e]', icon: '⏳', bar: 'draft-bar-progress', bg: 'draft-bg-progress' };
+    return { badge: 'bg-[#6e7f7b]/10 text-[#6e7f7b] border border-[#6e7f7b]/20', icon: '', bar: 'draft-bar-default', bg: 'draft-bg-default' };
+  };
+
+  let html = '';
+  list.forEach((doc, idx) => {
+    const title = doc.APPR_SUBJ || doc.PAPER_NM || doc.SUBJ || ('문서 ' + (idx + 1));
+    const paperNm = doc.PAPER_NM || doc.FORM_NM || '';
+    const dttm = doc.DRAFT_DTTM || doc.DRAFT_DATE || doc.REG_DATE || '';
+    let dispDate = '';
+    if (dttm.length >= 12) {
+      dispDate = dttm.substring(0,4) + '-' + dttm.substring(4,6) + '-' + dttm.substring(6,8)
+        + ' ' + dttm.substring(8,10) + ':' + dttm.substring(10,12);
+    } else if (dttm.length >= 8) {
+      dispDate = dttm.substring(0,4) + '-' + dttm.substring(4,6) + '-' + dttm.substring(6,8);
+    }
+    const status = doc.APPR_STS_NM || doc.PROC_NM || doc.STS_NM || '';
+    const si = statusInfo(status);
+    const docNo = doc.APPR_NO || doc.DOC_NO || doc.APPR_SEQ_NO || '';
+    const amt = doc.TOT_AMT || doc.AMT || '';
+    const amtDisp = amt ? Number(String(amt).replace(/,/g, '')).toLocaleString('ko-KR') + '원' : '';
+
+    html += '<div class="flex border border-border rounded-xl overflow-hidden ' + si.bg + '">'
+      + '<div class="w-1 shrink-0 rounded-l-xl ' + si.bar + '"></div>'
+      + '<div class="flex-1 p-3.5">'
+      + '<div class="flex items-start justify-between gap-2 mb-1.5">'
+      + '<div class="text-sm font-semibold text-[#47635f] leading-snug flex-1 min-w-0 truncate">' + title + '</div>'
+      + (status ? '<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ' + si.badge + '">' + (si.icon ? si.icon + ' ' : '') + status + '</span>' : '')
+      + '</div>'
+      + '<div class="flex flex-wrap items-center gap-1.5 mt-1">'
+      + (docNo ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono font-medium border border-accent/20">' + docNo + '</span>' : '')
+      + (paperNm ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/80 dark:bg-white/10 text-[#6e7f7b] border border-border">' + paperNm + '</span>' : '')
+      + (dispDate ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/80 dark:bg-white/10 text-[#6e7f7b] border border-border">기안 ' + dispDate + '</span>' : '')
+      + (amtDisp ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/80 dark:bg-white/10 text-[#47635f] font-mono font-medium border border-border">' + amtDisp + '</span>' : '')
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  });
+  cards.innerHTML = html;
+}
+
+window.fetchDraftList = fetchDraftList;
+
+})();
+</script>
