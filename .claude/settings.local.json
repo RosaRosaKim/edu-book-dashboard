@@ -37,7 +37,8 @@
       "Bash(do wc:*)",
       "Bash(test:*)",
       "Bash(mkdir:*)",
-      "WebFetch(domain:guide.ncloud-docs.com)"
+      "WebFetch(domain:guide.ncloud-docs.com)",
+      "WebFetch(domain:rosarosakim.github.io)"
     ]
   }
 }

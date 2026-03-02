@@ -790,7 +790,7 @@ async function loadDashboard() {
     }
 
     renderDashboard();
-    initCard(data);
+    await initCard(data);
 
     $('loadingState').classList.add('hidden');
     $('dashContent').classList.remove('hidden');
@@ -1399,13 +1399,21 @@ async function loadCardModule() {
   }
 }
 
-function initCard(data) {
-  loadCardModule().then(() => {
-    // 모듈 로드 완료 후 데이터 전달
-    setTimeout(() => {
-      if (window.initCardModule) window.initCardModule(data);
-    }, 50);
-  });
+async function initCard(data) {
+  await loadCardModule();
+  // 스크립트 실행 대기 (동적 로드 시 지연 가능)
+  let wait = 0;
+  while (!window.initCardModule && wait < 2000) {
+    await new Promise(r => setTimeout(r, 50));
+    wait += 50;
+  }
+  if (window.initCardModule) window.initCardModule(data);
+  // ?tab=card 직접 진입 시 바로 데이터 조회
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  const savedTab = localStorage.getItem('init_tab');
+  if ((urlTab === 'card' || savedTab === 'card') && window.fetchCardRecords) {
+    window.fetchCardRecords();
+  }
 }
 
 /* ─── records를 Bizplay 모듈에서 참조할 수 있도록 노출 ─── */

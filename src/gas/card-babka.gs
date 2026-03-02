@@ -57,7 +57,7 @@ function sendBabCardAlarm() {
 function sendCardAlarmDay15() {
   var now = new Date();
   if (!_isFirstBizDayFrom15(now)) return;
-  _sendCardAlarm('밥카 결재 진행해줘! 🍚');
+  _sendCardAlarm(FLOW_MSG.cardDay15());
 }
 
 /**
@@ -90,7 +90,7 @@ function sendCardAlarmReminder() {
         Logger.log('[리마인더] 스킵(상신완료) - ' + knoxId);
         continue;
       }
-      _sendFlowCardMessage(knoxId, '밥카 결재 아직 안 했어? 잊지 말고 결재요청 해줘! 🍚');
+      sendFlowMsg(knoxId, FLOW_MSG.cardReminder());
       Logger.log('[리마인더] 발송 완료 - ' + knoxId);
     } catch (e) {
       Logger.log('[리마인더] 실패 - ' + knoxId + ': ' + e.message);
@@ -99,9 +99,9 @@ function sendCardAlarmReminder() {
 }
 
 /**
- * 공통 알림 발송 로직
+ * 공통 알림 발송 로직 (msg: FLOW_MSG 객체)
  */
-function _sendCardAlarm(message) {
+function _sendCardAlarm(msg) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   var data = mgmtSheet.getDataRange().getValues();
@@ -114,19 +114,11 @@ function _sendCardAlarm(message) {
     if (!knoxId || alarmOn !== 'Y') continue;
 
     try {
-      _sendFlowCardMessage(knoxId, message);
+      sendFlowMsg(knoxId, msg);
     } catch (e) {
       Logger.log('[밥카알림] 발송 실패 - ' + knoxId + ': ' + e.message);
     }
   }
-}
-
-/**
- * Flow 메신저로 밥카 알림 발송
- */
-function _sendFlowCardMessage(knoxId, message) {
-  var link = 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=card';
-  sendFlowGAS(knoxId, message, link, '밥카 알림');
 }
 
 /* ═══════════════ 리마인더 헬퍼 ═══════════════ */
@@ -413,8 +405,8 @@ function sendCardDailyBalance() {
       var budget = _calcCardBudget();
       var remain = budget - usedSum;
 
-      var msg = '밥카 잔액: ' + _fmtMoney(remain) + '원 / ' + _fmtMoney(budget) + '원 (사용 ' + _fmtMoney(usedSum) + '원, ' + usedCount + '건)';
-      _sendFlowCardMessage(knoxId, msg);
+      var msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
+      sendFlowMsg(knoxId, msg);
       Logger.log('[잔액알림] 발송 완료 - ' + knoxId + ': ' + msg);
     } catch (ex) {
       Logger.log('[잔액알림] 예외 - ' + knoxId + ': ' + ex.message);

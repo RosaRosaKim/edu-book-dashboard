@@ -70,9 +70,7 @@ const doGet = (e) => {
     });
 
     const remain = LIMIT_BUDGET - used;
-    const content = `[교육비 잔액 안내]\n- 사용 금액: ${used.toLocaleString()}원\n- 잔여 금액: ${remain.toLocaleString()}원\n- 연간 한도: ${LIMIT_BUDGET.toLocaleString()}원`;
-
-    sendFlowGAS(targetKnoxId, content, 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html');
+    sendFlowMsg(targetKnoxId, FLOW_MSG.balanceInfo(used, remain, LIMIT_BUDGET));
     return createResponse({ status: "success" });
   }
 
@@ -547,11 +545,9 @@ const onSpreadsheetChange = (e) => {
         }
       });
 
-      // 동적으로 [교육비 결재 완료] 또는 [도서비 결재 완료] 출력
-      const content = `[${reqType} 결재 완료]\n- 문서번호: ${docId}\n- 과정/도서명: ${row[activeCol.TITLE]}\n- 금액: ${Number(row[activeCol.COST]).toLocaleString()}원\n- 총 사용: ${totalUsed.toLocaleString()}원\n- 잔액: ${(LIMIT_BUDGET - totalUsed).toLocaleString()}원`;
-
       // 5. Flow 발송 및 이력 기록
-      if (sendFlowGAS(knoxId, content, 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html')) {
+      var msg = FLOW_MSG.approvalComplete(reqType, docId, row[activeCol.TITLE], row[activeCol.COST], totalUsed, LIMIT_BUDGET - totalUsed);
+      if (sendFlowMsg(knoxId, msg)) {
         historySheet.appendRow([docId, new Date(), knoxId]);
         sentDocIds.add(docId); // 루프 내 중복 발송 방지
         console.log(`신규 알람 발송 완료: ${docId} (${reqType})`);
@@ -577,9 +573,8 @@ function processAlarm(sheet, rowIndex, knoxId, rowData) {
       if (r[9] === knoxId && r[19] === "완료") totalUsed += (Number(r[16]) || 0);
     });
 
-    const content = `과정: ${rowData[11]}\n- 금액: ${Number(rowData[16]).toLocaleString()}원\n- 총 사용: ${totalUsed.toLocaleString()}원\n- 잔액: ${(LIMIT_BUDGET - totalUsed).toLocaleString()}원`;
-
-    if (sendFlowGAS(knoxId, content, 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html')) {
+    var msg = FLOW_MSG.approvalNotice(rowData[11], rowData[16], totalUsed, LIMIT_BUDGET - totalUsed);
+    if (sendFlowMsg(knoxId, msg)) {
       sheet.getRange(rowIndex, 27).setValue("Y"); // AA열 발송 완료 표시
       console.log(`Row ${rowIndex}: ${knoxId} 알람 발송 성공`);
     }
