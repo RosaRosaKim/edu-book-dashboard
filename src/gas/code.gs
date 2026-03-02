@@ -606,3 +606,59 @@ function sendFlowGAS(userId, content, previewLink, previewTitle) {
   const response = UrlFetchApp.fetch(API_URL, { 'method': 'post', 'contentType': 'application/x-www-form-urlencoded', 'payload': payload, 'muteHttpExceptions': true });
   try { return JSON.parse(decodeURIComponent(response.getContentText())); } catch (e) { return null; }
 }
+
+/**
+ * [테스트] 타임시트 앱 API 탐색
+ * GAS 편집기에서 수동 실행하여 로그 확인
+ */
+function testTimesheetApi() {
+  var BASE = 'https://8vxu0grpsd.execute-api.ap-northeast-2.amazonaws.com';
+  var headers = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'Mozilla/5.0'
+  };
+
+  // 1) tenant 조회
+  try {
+    var r1 = UrlFetchApp.fetch(BASE + '/ifm/api/v5/tenant', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: headers,
+      payload: JSON.stringify({ tenantKey: 'ecopro' }),
+      muteHttpExceptions: true
+    });
+    Logger.log('[tenant POST] ' + r1.getResponseCode() + ': ' + r1.getContentText().substring(0, 2000));
+  } catch(e) { Logger.log('[tenant POST err] ' + e.message); }
+
+  // 1b) tenant GET
+  try {
+    var r1b = UrlFetchApp.fetch(BASE + '/ifm/api/v5/tenant?tenantKey=ecopro', {
+      method: 'get',
+      headers: headers,
+      muteHttpExceptions: true
+    });
+    Logger.log('[tenant GET] ' + r1b.getResponseCode() + ': ' + r1b.getContentText().substring(0, 2000));
+  } catch(e) { Logger.log('[tenant GET err] ' + e.message); }
+
+  // 2) encryption 조회
+  try {
+    var r2 = UrlFetchApp.fetch(BASE + '/ifm/api/v5/login/encryption', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: headers,
+      payload: JSON.stringify({ tenantKey: 'ecopro' }),
+      muteHttpExceptions: true
+    });
+    Logger.log('[encryption POST] ' + r2.getResponseCode() + ': ' + r2.getContentText().substring(0, 2000));
+  } catch(e) { Logger.log('[encryption POST err] ' + e.message); }
+
+  // 2b) encryption GET
+  try {
+    var r2b = UrlFetchApp.fetch(BASE + '/ifm/api/v5/login/encryption?tenantKey=ecopro', {
+      method: 'get',
+      headers: headers,
+      muteHttpExceptions: true
+    });
+    Logger.log('[encryption GET] ' + r2b.getResponseCode() + ': ' + r2b.getContentText().substring(0, 2000));
+  } catch(e) { Logger.log('[encryption GET err] ' + e.message); }
+}

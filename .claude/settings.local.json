@@ -38,7 +38,9 @@
       "Bash(test:*)",
       "Bash(mkdir:*)",
       "WebFetch(domain:guide.ncloud-docs.com)",
-      "WebFetch(domain:rosarosakim.github.io)"
+      "WebFetch(domain:rosarosakim.github.io)",
+      "Bash(jadx:*)",
+      "Bash(pip install:*)"
     ]
   }
 }
