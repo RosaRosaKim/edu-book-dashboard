@@ -1,0 +1,63 @@
+/* ═══════ 테마 변수 (라이트/다크) ═══════ */
+:root {
+  --c-surface: 241 251 247;
+  --c-surface2: 226 245 239;
+  --c-border: 204 235 226;
+  --c-accent: 45 138 126;
+  --accent-light-a: 0.08;
+  --body-bg: #fff7ee;
+  --header-bg: rgba(255,247,238,.93);
+  --card-bg: #ffffff;
+  --grid-line: rgba(45,138,126,.04);
+  --skeleton-a: #e2f5ef;
+  --skeleton-b: #ccebe2;
+  --bubble-bg: #ffffff;
+}
+html.dark {
+  --c-surface: 26 35 50;
+  --c-surface2: 34 48 63;
+  --c-border: 48 65 79;
+  --c-accent: 45 138 126;
+  --accent-light-a: 0.14;
+  --body-bg: #0f1419;
+  --header-bg: rgba(15,20,25,.93);
+  --card-bg: #1a2332;
+  --grid-line: rgba(45,138,126,.06);
+  --skeleton-a: #22303f;
+  --skeleton-b: #30414f;
+  --bubble-bg: #1a2332;
+  color-scheme: dark;
+}
+
+/* ═══════ 기본 바탕 ═══════ */
+html { scrollbar-gutter: stable; }
+body { background: var(--body-bg); }
+html.dark body { color: #d4e0dc; }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events: none; z-index: 0;
+}
+
+/* ═══════ 브랜드 그라디언트 ═══════ */
+.brand-name {
+  background: linear-gradient(135deg, #2d8a7e 0%, #059669 50%, #2d8a7e 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+html.dark .brand-name {
+  background: linear-gradient(135deg, #5eead4 0%, #34d399 50%, #5eead4 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════ accent 색상 유틸 (동적 모듈용) ═══════ */
+.text-accent { color: #2d8a7e !important; }
+html.dark .text-accent { color: #2d8a7e !important; }

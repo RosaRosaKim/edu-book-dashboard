@@ -16,6 +16,95 @@
 /** GAS 기본 UA가 앱 설치 페이지를 유발하므로 브라우저 UA 사용 */
 var BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+/** Approval SSO 세션 재사용 허용 시간 (초) */
+var APPROVAL_SSO_TTL = 1800; // 30분
+
+/* ═══════════════ Approval SSO 공통 헬퍼 ═══════════════ */
+
+/**
+ * 세션에 저장된 approval 쿠키 재사용 or PW로 fresh SSO
+ * PW 없어도 세션이 살아있으면 재사용 시도
+ * @returns {{ sso, session, error? }}
+ */
+function _getApprovalSso(session, adminRow) {
+  var ssoAge = session.approvalSsoTime
+    ? (new Date().getTime() - new Date(session.approvalSsoTime).getTime()) / 1000
+    : 9999;
+
+  // 1) 세션 재사용 (TTL 이내)
+  if (ssoAge < APPROVAL_SSO_TTL && session.approvalCookies) {
+    return {
+      sso: {
+        approvalCookies: session.approvalCookies,
+        bizplayCookies: session.bizplayCookies,
+        userName: session.userName,
+        useInttId: session.useInttId,
+        deptCd: session.deptCd || '',
+        deptNm: session.deptNm || '',
+        deptShort: session.deptShort || '',
+        formFields: session.formFields || {},
+        debug: { reusedSession: true, ssoAge: Math.round(ssoAge) }
+      },
+      session: session
+    };
+  }
+
+  // 2) Fresh SSO (PW 필요)
+  var encPw = adminRow[7];
+  if (!encPw || !String(encPw).trim()) {
+    // 만료된 세션이라도 한번 시도해볼 수 있도록
+    if (session.approvalCookies) {
+      return {
+        sso: {
+          approvalCookies: session.approvalCookies,
+          bizplayCookies: session.bizplayCookies,
+          userName: session.userName,
+          useInttId: session.useInttId,
+          deptCd: session.deptCd || '',
+          deptNm: session.deptNm || '',
+          deptShort: session.deptShort || '',
+          formFields: session.formFields || {},
+          debug: { reusedExpired: true, ssoAge: Math.round(ssoAge) }
+        },
+        session: session,
+        noPw: true  // PW 없음 표시 — 실패 시 안내 메시지용
+      };
+    }
+    return { error: 'NO_PASSWORD' };
+  }
+
+  var bizPwd = _decryptPw(String(encPw));
+  var sso = _approvalSsoOnly(session.userId, bizPwd);
+  return { sso: sso, session: session };
+}
+
+/**
+ * SSO 실패 시 PW로 재시도 (fresh SSO)
+ * @returns {object|null} 성공 시 sso 객체, PW 없으면 null
+ */
+function _retryApprovalSso(session, adminRow) {
+  var encPw = adminRow[7];
+  if (!encPw || !String(encPw).trim()) return null;
+  var bizPwd = _decryptPw(String(encPw));
+  return _approvalSsoOnly(session.userId, bizPwd);
+}
+
+/**
+ * SSO 후 세션 업데이트 + 저장
+ */
+function _saveApprovalSession(propKey, session, sso) {
+  session.approvalCookies = sso.approvalCookies;
+  session.bizplayCookies = sso.bizplayCookies;
+  if (sso.deptCd) session.deptCd = sso.deptCd;
+  if (sso.deptNm) session.deptNm = sso.deptNm;
+  if (sso.deptShort) session.deptShort = sso.deptShort;
+  if (sso.useInttId) session.useInttId = sso.useInttId;
+  if (sso.formFields) session.formFields = sso.formFields;
+  session.approvalSsoTime = new Date().toISOString();
+  session.loginTime = session.approvalSsoTime;
+  PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+}
+
 /* ═══════════════ 쿠키 헬퍼 ═══════════════ */
 
 /**
@@ -559,26 +648,13 @@ function handleBizplayEduInit(adminRow, e) {
   if (!rawSession) return createResponse({ error: "NO_SESSION", message: "Bizplay 로그인이 필요해." });
 
   var session = JSON.parse(rawSession);
-  var encPw = adminRow[7];
-  if (!encPw || !String(encPw).trim()) {
-    return createResponse({ error: "NO_PASSWORD", message: "Bizplay 비밀번호가 없어." });
-  }
-  var bizPwd = _decryptPw(String(encPw));
-  var sso = _approvalSsoOnly(session.userId, bizPwd);
+  var result = _getApprovalSso(session, adminRow);
+  if (result.error) return createResponse({ error: result.error, message: "비밀번호 저장 후 다시 로그인해줘." });
 
+  var sso = result.sso;
   if (sso.error) return createResponse({ status: 'fail', message: sso.error, debug: sso.debug });
 
-  // 세션에 approval 쿠키 + 폼 필드 저장
-  session.approvalCookies = sso.approvalCookies;
-  session.bizplayCookies = sso.bizplayCookies;
-  if (sso.deptCd) session.deptCd = sso.deptCd;
-  if (sso.deptNm) session.deptNm = sso.deptNm;
-  if (sso.deptShort) session.deptShort = sso.deptShort;
-  if (sso.useInttId) session.useInttId = sso.useInttId;
-  if (sso.formFields) session.formFields = sso.formFields;
-  session.approvalSsoTime = new Date().toISOString();
-  session.loginTime = session.approvalSsoTime;
-  PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+  _saveApprovalSession(propKey, session, sso);
 
   return createResponse({
     status: 'success', message: 'Approval SSO 완료',
@@ -598,53 +674,17 @@ function handleBizplayDraft(adminRow, e) {
   var p = e.parameter;
   var debug = {};
 
-  // ── approval SSO: 최근 2분 이내 세션 재사용, 없으면 fresh SSO ──
-  var encPw = adminRow[7];
-  if (!encPw || !String(encPw).trim()) {
-    return createResponse({ error: "NO_PASSWORD", message: "Bizplay 비밀번호가 없어. 다시 로그인해줘." });
-  }
-  var bizPwd = _decryptPw(String(encPw));
+  // ── approval SSO: 세션 재사용 (30분) → 실패 시 PW로 fresh SSO ──
+  var result = _getApprovalSso(session, adminRow);
+  if (result.error) return createResponse({ error: result.error, message: "비밀번호 저장 후 다시 로그인해줘." });
 
-  var sso;
-  var ssoAge = session.approvalSsoTime
-    ? (new Date().getTime() - new Date(session.approvalSsoTime).getTime()) / 1000
-    : 9999;
-
-  if (ssoAge < 120 && session.approvalCookies) {
-    // 최근 탭 전환 시 이미 SSO 수행됨 → 재사용
-    sso = {
-      approvalCookies: session.approvalCookies,
-      bizplayCookies: session.bizplayCookies,
-      userName: session.userName,
-      useInttId: session.useInttId,
-      deptCd: session.deptCd || '',
-      deptNm: session.deptNm || '',
-      deptShort: session.deptShort || '',
-      formFields: session.formFields || {},
-      debug: { reusedSession: true, ssoAge: Math.round(ssoAge) }
-    };
-  } else {
-    // SSO 세션 없거나 오래됨 → fresh SSO
-    sso = _approvalSsoOnly(session.userId, bizPwd);
-  }
+  var sso = result.sso;
   debug.sso = sso.debug;
 
-  if (sso.error) {
-    return createResponse({ status: 'fail', message: sso.error, debug: debug });
-  }
-  if (!sso.approvalCookies) {
-    return createResponse({ status: 'fail', message: 'Approval SSO 실패. 다시 로그인해줘.', debug: debug });
-  }
+  if (sso.error) return createResponse({ status: 'fail', message: sso.error, debug: debug });
+  if (!sso.approvalCookies) return createResponse({ status: 'fail', message: 'Approval SSO 실패. 다시 로그인해줘.', debug: debug });
 
-  // 세션 업데이트 (approval 쿠키 + 부서 정보)
-  session.approvalCookies = sso.approvalCookies;
-  session.bizplayCookies = sso.bizplayCookies;
-  if (sso.deptCd) session.deptCd = sso.deptCd;
-  if (sso.deptNm) session.deptNm = sso.deptNm;
-  if (sso.deptShort) session.deptShort = sso.deptShort;
-  if (sso.useInttId) session.useInttId = sso.useInttId;
-  session.loginTime = new Date().toISOString();
-  PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+  _saveApprovalSession(propKey, session, sso);
 
   // ── 폼 필드에서 값 가져오기 (밥카의 eaprForm 패턴) ──
   var ff = sso.formFields || {};
@@ -881,33 +921,9 @@ function handleBizplayDraftList(adminRow, e) {
   var session = JSON.parse(rawSession);
   var debug = {};
 
-  var encPw = adminRow[7];
-  if (!encPw || !String(encPw).trim()) {
-    return createResponse({ error: "NO_PASSWORD", message: "Bizplay 비밀번호가 없어. 다시 로그인해줘." });
-  }
-  var bizPwd = _decryptPw(String(encPw));
-
-  // ── SSO 획득 (캐시 재사용 or fresh) ──
-  function getSso(forceRefresh) {
-    var ssoAge = session.approvalSsoTime
-      ? (new Date().getTime() - new Date(session.approvalSsoTime).getTime()) / 1000
-      : 9999;
-
-    if (!forceRefresh && ssoAge < 120 && session.approvalCookies) {
-      return {
-        approvalCookies: session.approvalCookies,
-        bizplayCookies: session.bizplayCookies,
-        userName: session.userName,
-        useInttId: session.useInttId,
-        deptCd: session.deptCd || '',
-        deptNm: session.deptNm || '',
-        deptShort: session.deptShort || '',
-        formFields: session.formFields || {},
-        debug: { reusedSession: true, ssoAge: Math.round(ssoAge) }
-      };
-    }
-    return _approvalSsoOnly(session.userId, bizPwd);
-  }
+  // ── SSO 획득 (세션 재사용 30분 → 실패 시 PW로 fresh SSO) ──
+  var ssoResult = _getApprovalSso(session, adminRow);
+  if (ssoResult.error) return createResponse({ error: ssoResult.error, message: "비밀번호 저장 후 다시 로그인해줘." });
 
   // ── r007 API 호출 ──
   function callR007(sso) {
@@ -951,8 +967,8 @@ function handleBizplayDraftList(adminRow, e) {
     return { respText: resp.getContentText(), httpStatus: resp.getResponseCode() };
   }
 
-  // ── 1차 시도 (캐시 세션) ──
-  var sso = getSso(false);
+  // ── 1차 시도 (세션 재사용) ──
+  var sso = ssoResult.sso;
   debug.sso = sso.debug;
 
   if (sso.error) return createResponse({ status: 'fail', message: sso.error, debug: debug });
@@ -966,18 +982,19 @@ function handleBizplayDraftList(adminRow, e) {
     var body;
     try { body = JSON.parse(result.respText); } catch (pe) { body = null; }
 
-    // 세션 만료 에러 → fresh SSO로 재시도
+    // 세션 만료 에러 → PW로 fresh SSO 재시도
     if (body && body.COMMON_HEAD && body.COMMON_HEAD.ERROR === true) {
       var errMsg = body.COMMON_HEAD.MESSAGE || '';
       if (errMsg.includes('로그아웃') || errMsg.includes('세션') || errMsg.includes('만료')) {
         debug.retry = true;
         debug.retryReason = errMsg;
-        sso = getSso(true);
-        debug.ssoRetry = sso.debug;
+        sso = _retryApprovalSso(session, adminRow);
 
-        if (sso.error || !sso.approvalCookies) {
-          return createResponse({ status: 'fail', message: sso.error || 'SSO 재시도 실패', debug: debug });
+        if (!sso || sso.error || !sso.approvalCookies) {
+          var failMsg = ssoResult.noPw ? '세션이 만료됐어. 비밀번호 저장 후 다시 로그인해줘.' : (sso && sso.error ? sso.error : 'SSO 재시도 실패');
+          return createResponse({ status: 'fail', message: failMsg, debug: debug });
         }
+        debug.ssoRetry = sso.debug;
 
         result = callR007(sso);
         debug.retryHttpStatus = result.httpStatus;
@@ -986,16 +1003,7 @@ function handleBizplayDraftList(adminRow, e) {
       }
     }
 
-    // 세션 업데이트
-    session.approvalCookies = sso.approvalCookies;
-    session.bizplayCookies = sso.bizplayCookies;
-    if (sso.deptCd) session.deptCd = sso.deptCd;
-    if (sso.deptNm) session.deptNm = sso.deptNm;
-    if (sso.deptShort) session.deptShort = sso.deptShort;
-    if (sso.useInttId) session.useInttId = sso.useInttId;
-    session.approvalSsoTime = new Date().toISOString();
-    session.loginTime = session.approvalSsoTime;
-    PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+    _saveApprovalSession(propKey, session, sso);
 
     if (!body) {
       debug.respHead = result.respText.substring(0, 500);
@@ -1034,48 +1042,17 @@ function handleBizplayApprLine(adminRow, e) {
   var session = JSON.parse(rawSession);
   var debug = {};
 
-  // ── approval SSO: 최근 2분 이내 세션 재사용, 없으면 fresh SSO ──
-  var encPw = adminRow[7];
-  if (!encPw || !String(encPw).trim()) {
-    return createResponse({ error: "NO_PASSWORD", message: "Bizplay 비밀번호가 없어. 다시 로그인해줘." });
-  }
-  var bizPwd = _decryptPw(String(encPw));
+  // ── approval SSO: 세션 재사용 (30분) → 실패 시 PW로 fresh SSO ──
+  var ssoResult = _getApprovalSso(session, adminRow);
+  if (ssoResult.error) return createResponse({ error: ssoResult.error, message: "비밀번호 저장 후 다시 로그인해줘." });
 
-  var sso;
-  var ssoAge = session.approvalSsoTime
-    ? (new Date().getTime() - new Date(session.approvalSsoTime).getTime()) / 1000
-    : 9999;
-
-  if (ssoAge < 120 && session.approvalCookies) {
-    sso = {
-      approvalCookies: session.approvalCookies,
-      bizplayCookies: session.bizplayCookies,
-      userName: session.userName,
-      useInttId: session.useInttId,
-      deptCd: session.deptCd || '',
-      deptNm: session.deptNm || '',
-      deptShort: session.deptShort || '',
-      formFields: session.formFields || {},
-      debug: { reusedSession: true, ssoAge: Math.round(ssoAge) }
-    };
-  } else {
-    sso = _approvalSsoOnly(session.userId, bizPwd);
-  }
+  var sso = ssoResult.sso;
   debug.sso = sso.debug;
 
   if (sso.error) return createResponse({ status: 'fail', message: sso.error, debug: debug });
   if (!sso.approvalCookies) return createResponse({ status: 'fail', message: 'Approval SSO 실패. 다시 로그인해줘.', debug: debug });
 
-  // 세션 업데이트
-  session.approvalCookies = sso.approvalCookies;
-  session.bizplayCookies = sso.bizplayCookies;
-  if (sso.deptCd) session.deptCd = sso.deptCd;
-  if (sso.deptNm) session.deptNm = sso.deptNm;
-  if (sso.deptShort) session.deptShort = sso.deptShort;
-  if (sso.useInttId) session.useInttId = sso.useInttId;
-  session.approvalSsoTime = new Date().toISOString();
-  session.loginTime = session.approvalSsoTime;
-  PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+  _saveApprovalSession(propKey, session, sso);
 
   var ff = sso.formFields || {};
   var useInttId = ff.USE_INTT_ID || session.useInttId || sso.useInttId || '';

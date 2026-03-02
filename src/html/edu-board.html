@@ -1,32 +1,4 @@
-<style>
-  .board-card { background: var(--card-bg); border: 1px solid rgb(var(--c-border)); border-radius: 12px; padding: 14px; }
-  .board-react-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; border: 1px solid rgb(var(--c-border)); background: transparent; cursor: pointer; transition: all .15s; }
-  .board-react-btn:hover { background: rgb(var(--c-surface2)); }
-  .board-react-btn.active-like { background: rgba(5,150,105,.12); border-color: #059669; color: #059669; }
-  .board-react-btn.active-dislike { background: rgba(220,38,38,.12); border-color: #dc2626; color: #dc2626; }
-  .board-textarea { width: 100%; min-height: 80px; padding: 10px 12px; border: 1px solid rgb(var(--c-border)); border-radius: 10px; background: var(--card-bg); color: inherit; font-size: 14px; resize: none; font-family: inherit; outline: none; transition: border-color .15s; }
-  .board-textarea:focus { border-color: #2d8a7e; }
-  .board-textarea::placeholder { color: #aab5b2; }
-  html.dark .board-textarea::placeholder { color: #5a6a66; }
-  .board-reply { margin-top: 10px; padding: 10px 12px; border-left: 3px solid #2d8a7e; background: rgba(45,138,126,.06); border-radius: 0 8px 8px 0; }
-  html.dark .board-reply { background: rgba(45,138,126,.12); }
-  .board-reply-label { font-size: 11px; font-weight: 600; color: #2d8a7e; margin-bottom: 4px; }
-  .board-reply-text { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .board-sort-btn { padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid rgb(var(--c-border)); background: transparent; cursor: pointer; transition: all .15s; color: inherit; }
-  .board-sort-btn:hover { background: rgb(var(--c-surface2)); }
-  .board-sort-btn.active { background: #2d8a7e; color: #fff; border-color: #2d8a7e; }
-  .board-reply-input { width: 100%; min-height: 48px; padding: 8px 10px; border: 1px solid rgb(var(--c-border)); border-radius: 8px; background: var(--card-bg); color: inherit; font-size: 13px; resize: none; font-family: inherit; outline: none; transition: border-color .15s; }
-  .board-reply-input:focus { border-color: #2d8a7e; }
-  .board-reply-input::placeholder { color: #aab5b2; }
-  html.dark .board-reply-input::placeholder { color: #5a6a66; }
-</style>
-
 <div class="fade-in">
-  <!-- 안내 문구 -->
-  <div class="text-center text-sm text-[#6e7f7b] dark:text-[#8a9a96] mb-4 leading-relaxed">
-    익명이야! 그래서 수정,삭제도 못해
-  </div>
-
   <!-- 글쓰기 -->
   <div class="bg-surface border border-border rounded-2xl p-3 mb-4">
     <textarea id="boardInput" class="board-textarea" maxlength="200" placeholder="건의사항이나 불편한 점을 써줘"></textarea>
@@ -36,6 +8,9 @@
         class="px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-accent hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed" disabled>올리기</button>
     </div>
   </div>
+
+  <!-- 공지사항 -->
+  <div id="boardPinned" class="hidden mb-4 space-y-2"></div>
 
   <!-- 정렬 토글 -->
   <div class="flex items-center gap-2 mb-3">
@@ -110,21 +85,54 @@ function escapeHtml(str) {
 }
 
 function _sortPosts(posts) {
+  var normal = posts.filter(function(p) { return !p.pinned; });
   if (_sortMode === 'popular') {
-    return posts.slice().sort((a, b) => {
+    return normal.slice().sort((a, b) => {
       const scoreA = a.likes - a.dislikes;
       const scoreB = b.likes - b.dislikes;
       if (scoreB !== scoreA) return scoreB - scoreA;
       return Number(b.id) - Number(a.id);
     });
   }
-  return posts.slice().sort((a, b) => Number(b.id) - Number(a.id));
+  return normal.slice().sort((a, b) => Number(b.id) - Number(a.id));
+}
+
+function _renderPinned() {
+  var pinnedEl = $('boardPinned');
+  if (!pinnedEl) return;
+  var pinned = _allPosts.filter(function(p) { return p.pinned; });
+  pinned.sort((a, b) => Number(b.id) - Number(a.id));
+  if (pinned.length === 0) {
+    pinnedEl.classList.add('hidden');
+    pinnedEl.innerHTML = '';
+    return;
+  }
+  pinnedEl.classList.remove('hidden');
+  pinnedEl.innerHTML = pinned.map(function(p) { return _pinnedCardHtml(p); }).join('');
 }
 
 function _sortAndRender() {
+  _renderPinned();
   const sorted = _sortPosts(_allPosts);
   _displayedCount = Math.min(PAGE_SIZE, sorted.length);
   renderPosts(sorted.slice(0, _displayedCount), sorted.length);
+}
+
+function _pinnedCardHtml(p) {
+  const isAdmin = window._isAdmin || false;
+  let html = '<div class="board-card border-accent/30 bg-accent/5" data-post-id="' + p.id + '">' +
+    '<div class="flex items-center gap-1.5 mb-1.5">' +
+      '<span class="text-[10px] font-bold text-white bg-accent px-1.5 py-0.5 rounded">📌 공지</span>' +
+      '<span class="text-[10px] text-[#aab5b2]">' + formatDate(p.date) + '</span>' +
+    '</div>' +
+    '<div class="text-sm leading-relaxed whitespace-pre-wrap break-words">' + escapeHtml(p.content) + '</div>';
+  if (isAdmin) {
+    html += '<div class="flex justify-end mt-2">' +
+      '<button id="unpinBtn-' + p.id + '" onclick="togglePin(\'' + p.id + '\',false)" class="px-2.5 py-0.5 rounded text-[10px] font-medium text-[#6e7f7b] border border-border hover:bg-surface-2 transition-colors">고정 해제</button>' +
+    '</div>';
+  }
+  html += '</div>';
+  return html;
 }
 
 function _postCardHtml(p) {
@@ -137,7 +145,7 @@ function _postCardHtml(p) {
     '<div class="text-xs text-[#aab5b2] mb-2">' + formatDate(p.date) + '</div>' +
     '<div class="flex items-center gap-2">' +
       '<button id="likeBtn-' + p.id + '" class="board-react-btn' + likeActive + '" onclick="reactPost(\'' + p.id + '\',\'like\',this)">' +
-        '<span style="font-size:14px">👍</span> 좋아요 <span>' + p.likes + '</span></button>' +
+        '<span style="font-size:14px">💚</span> 좋아요 <span>' + p.likes + '</span></button>' +
       '<button id="dislikeBtn-' + p.id + '" class="board-react-btn' + dislikeActive + '" onclick="reactPost(\'' + p.id + '\',\'dislike\',this)">' +
         '<span style="font-size:14px">👎</span> 싫어요 <span>' + p.dislikes + '</span></button>' +
     '</div>';
@@ -154,8 +162,10 @@ function _postCardHtml(p) {
   if (isAdmin) {
     html += '<div class="mt-2">' +
       '<textarea id="replyInput-' + p.id + '" class="board-reply-input" maxlength="200" placeholder="관리자 답변 작성...">' + (p.reply ? escapeHtml(p.reply) : '') + '</textarea>' +
-      '<div class="flex justify-end mt-1">' +
-        '<button onclick="replyPost(\'' + p.id + '\')" class="px-3 py-1 rounded-lg text-xs font-medium text-white bg-accent hover:opacity-90 transition-opacity">' + (p.reply ? '답변 수정' : '답변 달기') + '</button>' +
+      '<div class="flex justify-end gap-1.5 mt-1">' +
+        '<button id="pinBtn-' + p.id + '" onclick="togglePin(\'' + p.id + '\',true)" class="px-3 py-1 rounded-lg text-xs font-medium text-[#6e7f7b] border border-border hover:bg-surface-2 transition-colors">📌 고정</button>' +
+        (p.reply ? '<button id="replyDelBtn-' + p.id + '" onclick="deleteReply(\'' + p.id + '\')" class="px-3 py-1 rounded-lg text-xs font-medium text-danger border border-danger/30 hover:bg-danger/10 transition-colors">답변 삭제</button>' : '') +
+        '<button id="replyBtn-' + p.id + '" onclick="replyPost(\'' + p.id + '\')" class="px-3 py-1 rounded-lg text-xs font-medium text-white bg-accent hover:opacity-90 transition-opacity">' + (p.reply ? '답변 수정' : '답변 달기') + '</button>' +
       '</div>' +
     '</div>';
   }
@@ -192,7 +202,13 @@ function changeBoardSort(mode) {
   _sortMode = mode;
   $('sortLatest').classList.toggle('active', mode === 'latest');
   $('sortPopular').classList.toggle('active', mode === 'popular');
-  _sortAndRender();
+  $('boardPosts').classList.add('hidden');
+  $('boardLoading').classList.remove('hidden');
+  setTimeout(function() {
+    _sortAndRender();
+    $('boardLoading').classList.add('hidden');
+    $('boardPosts').classList.remove('hidden');
+  }, 300);
 }
 
 function loadMorePosts() {
@@ -285,7 +301,7 @@ async function reactPost(id, type, btnEl) {
       var dislikeBtn = document.getElementById('dislikeBtn-' + id);
       if (likeBtn) {
         likeBtn.className = 'board-react-btn' + (data.myReaction === 'like' ? ' active-like' : '');
-        likeBtn.innerHTML = '<span style="font-size:14px">👍</span> 좋아요 <span>' + data.likes + '</span>';
+        likeBtn.innerHTML = '<span style="font-size:14px">💚</span> 좋아요 <span>' + data.likes + '</span>';
         likeBtn.disabled = false;
       }
       if (dislikeBtn) {
@@ -313,6 +329,9 @@ async function replyPost(id) {
     window.showToast('1~200자 답변을 입력해줘.', 'angry', textarea);
     return;
   }
+  const btn = document.getElementById('replyBtn-' + id);
+  const btnLabel = btn ? btn.textContent : '답변 달기';
+  if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, '등록 중...'); }
   try {
     const params = new URLSearchParams({ action: 'boardReply', token, postId: id, reply });
     const data = await window.gasFetch(API_URL + '?' + params);
@@ -327,6 +346,57 @@ async function replyPost(id) {
     }
   } catch (err) {
     window.showToast('답변 실패: ' + err.message, 'angry', textarea);
+  } finally {
+    if (btn) { btn.disabled = false; if (window.setBtnLoading) window.setBtnLoading(btn, false, btnLabel); }
+  }
+}
+
+async function deleteReply(id) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  if (!confirm('답변을 삭제할까?')) return;
+  const btn = document.getElementById('replyDelBtn-' + id);
+  if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, '삭제 중...'); }
+  try {
+    const params = new URLSearchParams({ action: 'boardReplyDelete', token, postId: id });
+    const data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      const post = _allPosts.find(p => p.id === String(id));
+      if (post) post.reply = null;
+      _sortAndRender();
+      window.showToast('답변이 삭제됐어.', 'happy', btn);
+    } else {
+      window.showToast(data.message || '삭제 실패', 'angry', btn);
+    }
+  } catch (err) {
+    window.showToast('삭제 실패: ' + err.message, 'angry', btn);
+  } finally {
+    if (btn) { btn.disabled = false; if (window.setBtnLoading) window.setBtnLoading(btn, false, '답변 삭제'); }
+  }
+}
+
+async function togglePin(id, pin) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  var btnId = pin ? 'pinBtn-' + id : 'unpinBtn-' + id;
+  var btn = document.getElementById(btnId);
+  var label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, pin ? '고정 중...' : '해제 중...'); }
+  try {
+    var params = new URLSearchParams({ action: 'boardPin', token: token, postId: id, pin: pin ? 'Y' : 'N' });
+    var data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      var post = _allPosts.find(function(p) { return p.id === String(id); });
+      if (post) post.pinned = data.pinned;
+      _sortAndRender();
+      window.showToast(pin ? '공지로 고정했어!' : '고정 해제했어.', 'happy', btn);
+    } else {
+      window.showToast(data.message || '실패', 'angry', btn);
+    }
+  } catch (err) {
+    window.showToast('실패: ' + err.message, 'angry', btn);
+  } finally {
+    if (btn) { btn.disabled = false; if (window.setBtnLoading) window.setBtnLoading(btn, false, label); }
   }
 }
 
@@ -334,6 +404,8 @@ window.loadBoard = loadBoard;
 window.writePost = writePost;
 window.reactPost = reactPost;
 window.replyPost = replyPost;
+window.deleteReply = deleteReply;
+window.togglePin = togglePin;
 window.changeBoardSort = changeBoardSort;
 window.loadMorePosts = loadMorePosts;
 

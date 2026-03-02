@@ -15,11 +15,12 @@ const SHEET_NAME = {
   MANAGER: "관리자",
   TEMPLATE: "신청 템플릿",
   NOTICE: "공지사항",
-  BOARD: "게시판"
+  BOARD: "게시판",
+  RATING: "맛집평가"
 };
 
 const DATA_COL = {
-  KNOX_ID: 9, NAME: 10, TITLE: 11, PERIOD: 12, EDU_TYPE: 13, PURPOSE: 14, BILLING: 15, COST: 16, VENDOR: 17, REMARK: 18, STATUS: 19
+  KNOX_ID: 9, NAME: 10, TITLE: 11, PERIOD: 12, EDU_TYPE: 13, PURPOSE: 14, VENDOR: 15, COST: 16, BILLING: 17, REMARK: 18, STATUS: 19
 };
 const BOOK_COL = {
   KNOX_ID: 9, NAME: 10, TITLE: 11, COST: 12, STATUS: 16
@@ -91,8 +92,7 @@ const doGet = (e) => {
     if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
 
     const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
-    adminSheet.getRange(rowIndex + 1, 7).setValue(newVal);  // G열: 밥카알람 (기존 호환)
-    adminSheet.getRange(rowIndex + 1, 9).setValue(newVal);  // I열: 16일 결재 알람
+    adminSheet.getRange(rowIndex + 1, 7).setValue(newVal);  // G열: 밥카 Flow 알람
     return createResponse({ status: "success" });
   }
 
@@ -196,18 +196,25 @@ const doGet = (e) => {
     return handleBizplayDraft(adminRow, e);
   }
 
+  // [기능 13] 맛집 평점 조회
+  if (action === "cardRatings" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleCardRatings(adminRow, e);
+  }
+
+  // [기능 14] 맛집 평점 등록/수정
+  if (action === "cardRate" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleCardRate(adminRow, e);
+  }
+
   // [기능 9] 밥카 사용내역 조회
   if (action === "cardRecords" && token) {
     const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
     if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
     return handleCardRecords(adminRow, e);
-  }
-
-  // [기능 11] 밥카 평일 잔액 알림 PW 저장
-  if (action === "saveCardDailyAlarm" && token) {
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
-    if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
-    return handleSaveCardDailyAlarm(rowIndex, e);
   }
 
   // [기능 10] 밥카 결재 제출
@@ -237,6 +244,16 @@ const doGet = (e) => {
     const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
     if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
     return handleBoardReply(adminRow, e);
+  }
+  if (action === "boardReplyDelete" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBoardReplyDelete(adminRow, e);
+  }
+  if (action === "boardPin" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBoardPin(adminRow, e);
   }
 
   // [기능 3] 통합 데이터 조회
@@ -439,7 +456,7 @@ const doGet = (e) => {
     } catch (nErr) { /* 시트 없으면 무시 */ }
 
     const resp = {
-      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", isCard16AlarmAgreed: adminRow[8] === "Y", isCardDailyAlarmOn: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()) },
+      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()) },
       myHistory: myHistory,
       adminStats: adminStats,
       templates: templates,

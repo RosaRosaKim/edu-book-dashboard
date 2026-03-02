@@ -2,8 +2,8 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const GAS_SRC = './gas/code.gs';
-const GAS_DEST = path.join('gas', 'code.gs');
+const GAS_SRC = './src/gas/code.gs';
+const GAS_DEST = path.join('src/gas', 'code.gs');
 const isDeploy = process.argv.includes('--deploy');
 
 function run(cmd) {

@@ -1,7 +1,8 @@
 /**
  * 밥카(법인카드 중식대) 모듈
- * - 밥카 알람 수신 설정 (웹페이지관리 시트 I열 + K열)
- * - 매월 16일 / 18일 자동 알림 발송 (K열 기준)
+ * - 밥카 알람 수신 설정 (웹페이지관리 시트 G열 + H열)
+ * - 통합 트리거 sendBabCardAlarm (매일 오전 10~11시)
+ *   → 15일 첫 영업일 알림, 3번째 영업일 미결재 리마인더, 매 영업일 잔액 알림
  *
  * code.gs의 doGet에서 호출:
  *   handleUpdateCardAlarm(adminRow, e)
@@ -11,16 +12,13 @@
 
 /* ═══════════════ 상수 ═══════════════ */
 
-/** 웹페이지관리 시트 밥카 알람 컬럼 (G열 = index 6) */
+/** 웹페이지관리 시트 밥카 Flow 알람 컬럼 (G열 = index 6) — 통합 토글 */
 var CARD_ALARM_COL = 7; // 1-based: G열
 
-/** 웹페이지관리 시트 밥카 평일 잔액알림 PW 컬럼 (H열 = index 7) */
+/** 웹페이지관리 시트 암호화된 Bizplay PW 컬럼 (H열 = index 7) */
 var CARD_DAILY_COL = 8; // 1-based: H열
 
-/** 웹페이지관리 시트 밥카 16일 결재 알람 컬럼 (I열 = index 8) */
-var CARD_16_ALARM_COL = 9; // 1-based: I열
-
-/** XOR 암호화 키 */
+/** AES 암호화 키 (SHA-256 → 32바이트 AES-CBC 키) */
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 
 /* ═══════════════ 밥카 알람 설정 ═══════════════ */
@@ -36,8 +34,7 @@ function handleUpdateCardAlarm(adminRow, e) {
   var newVal = isAgreed ? 'Y' : 'N';
 
   // adminRow: 웹페이지관리 시트의 해당 사용자 행 번호
-  mgmtSheet.getRange(adminRow, CARD_ALARM_COL).setValue(newVal);      // I열 (기존 호환)
-  mgmtSheet.getRange(adminRow, CARD_16_ALARM_COL).setValue(newVal);   // K열 (16일 결재 알람)
+  mgmtSheet.getRange(adminRow, CARD_ALARM_COL).setValue(newVal);      // G열: 밥카 Flow 알람
 
   return createResponse({ status: 'success' });
 }
@@ -45,20 +42,60 @@ function handleUpdateCardAlarm(adminRow, e) {
 /* ═══════════════ 밥카 자동 알림 ═══════════════ */
 
 /**
- * 매월 16일 트리거: 밥카 결재 요청 알림 발송
- * 트리거 설정: 시간 기반 트리거 → 매월 16일 오전 9시
+ * 밥카 통합 알림 트리거 (매일 오전 10~11시)
+ * 1) 15일 첫 영업일: 전원 결재 안내
+ * 2) 15일부터 3번째 영업일: 미상신자 리마인더
+ * 3) 매 영업일: 잔액 알림
  */
-function sendCardAlarmDay16() {
+function sendBabCardAlarm() {
+  sendCardAlarmDay15();
+  sendCardAlarmReminder();
+  sendCardDailyBalance();
+}
+
+/** 15일부터 첫 번째 영업일: 전원 결재 안내 */
+function sendCardAlarmDay15() {
+  var now = new Date();
+  if (!_isFirstBizDayFrom15(now)) return;
   _sendCardAlarm('밥카 결재 진행해줘! 🍚');
 }
 
 /**
- * 매월 18일 트리거: 미상신자 리마인더
- * 트리거 설정: 시간 기반 트리거 → 매월 18일 오전 9시
+ * 미결재 리마인드 스마트 알림 (매일 오전 트리거)
+ * 15일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
+ * 트리거 설정: 시간 기반 트리거 → 매일 오전 9~10시
  */
-function sendCardAlarmDay18() {
-  // TODO: 결재상신 내역 체크 후 미상신자만 발송
-  _sendCardAlarm('밥카 결재 아직 안 했어? 잊지 말고 상신해줘! 🍚');
+function sendCardAlarmReminder() {
+  var now = new Date();
+  if (!_isCardAlarmDay(now)) return;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var data = mgmtSheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = data[i][0]; // A열: knoxId
+    var alarmOn = data[i][CARD_ALARM_COL - 1]; // G열: 밥카 Flow 알람
+    var encPw = data[i][CARD_DAILY_COL - 1]; // H열: 암호화된 PW
+
+    if (!knoxId || alarmOn !== 'Y') continue;
+
+    if (!encPw || !String(encPw).trim()) {
+      Logger.log('[리마인더] 스킵(PW없음) - ' + knoxId);
+      continue;
+    }
+
+    try {
+      if (_checkUserHasCardDraft(knoxId, encPw)) {
+        Logger.log('[리마인더] 스킵(상신완료) - ' + knoxId);
+        continue;
+      }
+      _sendFlowCardMessage(knoxId, '밥카 결재 아직 안 했어? 잊지 말고 결재요청 해줘! 🍚');
+      Logger.log('[리마인더] 발송 완료 - ' + knoxId);
+    } catch (e) {
+      Logger.log('[리마인더] 실패 - ' + knoxId + ': ' + e.message);
+    }
+  }
 }
 
 /**
@@ -72,9 +109,9 @@ function _sendCardAlarm(message) {
   // 헤더 제외
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
-    var card16Alarm = data[i][CARD_16_ALARM_COL - 1]; // K열: 밥카16일알람수신여부
+    var alarmOn = data[i][CARD_ALARM_COL - 1]; // G열: 밥카 Flow 알람
 
-    if (!knoxId || card16Alarm !== 'Y') continue;
+    if (!knoxId || alarmOn !== 'Y') continue;
 
     try {
       _sendFlowCardMessage(knoxId, message);
@@ -92,41 +129,231 @@ function _sendFlowCardMessage(knoxId, message) {
   sendFlowGAS(knoxId, message, link, '밥카 알림');
 }
 
-/* ═══════════════ 암호화/복호화 ═══════════════ */
+/* ═══════════════ 리마인더 헬퍼 ═══════════════ */
+
+/** 오늘이 해당월 15일부터 첫 번째 영업일인지 판별 */
+function _isFirstBizDayFrom15(date) {
+  var y = date.getFullYear(), m = date.getMonth();
+  var holidays = _loadHolidays(y);
+  for (var d = 15; d <= 31; d++) {
+    var check = new Date(y, m, d);
+    if (check.getMonth() !== m) break;
+    var dow = check.getDay();
+    if (dow === 0 || dow === 6) continue;
+    if (_isHolidayFromList(check, holidays)) continue;
+    return _sameDate(check, date);
+  }
+  return false;
+}
+
+/** 오늘이 해당월 15일부터 세어 3번째 영업일인지 판별 */
+function _isCardAlarmDay(date) {
+  var y = date.getFullYear(), m = date.getMonth();
+  var holidays = _loadHolidays(y);
+  var bizDayCount = 0;
+  for (var d = 15; d <= 31; d++) {
+    var check = new Date(y, m, d);
+    if (check.getMonth() !== m) break;
+    var dow = check.getDay();
+    if (dow === 0 || dow === 6) continue;
+    if (_isHolidayFromList(check, holidays)) continue;
+    bizDayCount++;
+    if (bizDayCount === 3) {
+      return _sameDate(check, date);
+    }
+  }
+  return false;
+}
+
+/** 공휴일 JSON 로드 (1회 호출, 캐싱용) */
+function _loadHolidays(year) {
+  try {
+    var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + year + '.json', { muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) return {};
+    return JSON.parse(resp.getContentText());
+  } catch (e) { return {}; }
+}
+
+/** 공휴일 목록에서 해당 날짜 체크 (근로자의 날 포함) */
+function _isHolidayFromList(date, holidays) {
+  var mm = ('0' + (date.getMonth() + 1)).slice(-2);
+  var dd = ('0' + date.getDate()).slice(-2);
+  var dateStr = date.getFullYear() + '-' + mm + '-' + dd;
+  if (mm === '05' && dd === '01') return true; // 근로자의 날
+  return dateStr in holidays;
+}
+
+/** 두 Date가 같은 날짜인지 비교 */
+function _sameDate(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/**
+ * 사용자가 이미 "지출결의서(법인카드)"를 상신했는지 확인
+ * approval SSO → r007 기안문서 목록 조회 → PAPER_NM 매칭
+ */
+function _checkUserHasCardDraft(knoxId, encPw) {
+  var userId = knoxId + '@emro.co.kr';
+  var password = _decryptPw(String(encPw));
+
+  // approval SSO 획득
+  var sso = _approvalSsoOnly(userId, password);
+  if (!sso.approvalCookies) return false; // SSO 실패 → 판별 불가, 알림 발송
+
+  // r007 호출: 검색 기간 = 결재월 15일 ~ 오늘
+  var period = _getCardQueryPeriod();
+  var now = new Date();
+  var enDate = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2);
+  var ff = sso.formFields || {};
+
+  var r007Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+    PTL_ID: ff.PTL_ID || 'PTL_3',
+    CHNL_ID: ff.CHNL_ID || 'CHNL_1',
+    USE_INTT_ID: ff.USE_INTT_ID || sso.useInttId || '',
+    DRAFT_USER_ID: userId,
+    ST_DRAFT_DATE: period.from,
+    EN_DRAFT_DATE: enDate,
+    SRCH_WD: '',
+    SRCH_DV: 'pp',
+    DRAFT_USER_NM: 'pp',
+    PG_NO: '1',
+    PG_PER_CNT: '30',
+    PAPER_SEQ_NO: '',
+    DATE_GB: '1'
+  }));
+
+  var resp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_r007.jct', {
+    method: 'post',
+    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+    headers: {
+      'User-Agent': BROWSER_UA,
+      'Cookie': sso.approvalCookies,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
+    },
+    payload: r007Payload,
+    muteHttpExceptions: true
+  });
+
+  var data;
+  try { data = JSON.parse(resp.getContentText()); } catch (e) { return false; }
+
+  // 상신해야 할 월: period.from 기준 YYYYMM
+  var targetYM = period.from.substring(0, 6);
+  var recs = data.REC || [];
+  for (var i = 0; i < recs.length; i++) {
+    var paperNm = recs[i].PAPER_NM || '';
+    var draftDttm = recs[i].DRAFT_DTTM || '';
+    if (paperNm.indexOf('지출결의서(법인카드)') >= 0 && draftDttm.substring(0, 6) === targetYM) {
+      return true; // 이미 상신함
+    }
+  }
+  return false;
+}
+
+/* ═══════════════ 암호화/복호화 (HMAC-CTR) ═══════════════ */
+/*
+ * GAS V8에는 AES API가 없으므로 HMAC-SHA256 기반 CTR 스트림 암호 사용
+ * - 매 암호화마다 랜덤 nonce(16바이트) 생성 → 같은 평문도 다른 암호문
+ * - keystream = HMAC(key, nonce||counter) 블록을 이어붙여 생성
+ * - 저장 형식: "enc1:" + base64(nonce + ciphertext)
+ */
 
 function _encryptPw(plain) {
   var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
-  var bytes = Utilities.newBlob(plain).getBytes();
-  var enc = bytes.map(function(b, i) { return b ^ key[i % key.length]; });
-  return Utilities.base64Encode(enc);
+  var nonce = _randomBytes(16);
+  var plainBytes = Utilities.newBlob(plain, 'UTF-8').getBytes();
+  var keystream = _hmacKeystream(key, nonce, plainBytes.length);
+
+  var cipherBytes = [];
+  for (var i = 0; i < plainBytes.length; i++) {
+    cipherBytes.push(plainBytes[i] ^ keystream[i]);
+  }
+
+  return 'enc1:' + Utilities.base64Encode(nonce.concat(cipherBytes));
 }
 
 function _decryptPw(cipher) {
+  if (!cipher) return '';
+
+  // 레거시 XOR 형식 (접두어 없음)
+  if (String(cipher).indexOf('enc1:') !== 0) {
+    return _decryptPwLegacyXor(cipher);
+  }
+
+  var raw = Utilities.base64Decode(cipher.substring(5));
+  var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
+  var nonce = raw.slice(0, 16);
+  var cipherBytes = raw.slice(16);
+  var keystream = _hmacKeystream(key, nonce, cipherBytes.length);
+
+  var plainBytes = [];
+  for (var i = 0; i < cipherBytes.length; i++) {
+    plainBytes.push(cipherBytes[i] ^ keystream[i]);
+  }
+
+  return Utilities.newBlob(plainBytes).getDataAsString();
+}
+
+/** HMAC-SHA256 카운터 모드 키스트림 생성 */
+function _hmacKeystream(key, nonce, length) {
+  var stream = [];
+  var counter = 0;
+  while (stream.length < length) {
+    var input = nonce.concat([counter >> 24 & 0xff, counter >> 16 & 0xff, counter >> 8 & 0xff, counter & 0xff]);
+    var block = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, input, key);
+    for (var i = 0; i < block.length && stream.length < length; i++) {
+      stream.push(block[i]);
+    }
+    counter++;
+  }
+  return stream;
+}
+
+/** 랜덤 바이트 배열 생성 */
+function _randomBytes(n) {
+  var bytes = [];
+  for (var i = 0; i < n; i++) bytes.push(Math.floor(Math.random() * 256) - 128);
+  return bytes;
+}
+
+/** 레거시 XOR 복호화 (하위 호환) */
+function _decryptPwLegacyXor(cipher) {
   var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
   var enc = Utilities.base64Decode(cipher);
   var dec = enc.map(function(b, i) { return b ^ key[i % key.length]; });
   return Utilities.newBlob(dec).getDataAsString();
 }
 
-/* ═══════════════ 평일 잔액알림 설정 ═══════════════ */
-
 /**
- * 평일 잔액알림 수신 동의/해제
- * action=saveCardDailyAlarm&token={UUID}&isAgreed={true/false}
- * I열만 Y/N으로 변경 (J열 PW는 건드리지 않음)
- *
- * @param {number} rowIndex - 0-based 행 인덱스 (adminData 배열 기준)
- * @param {object} e - request event
+ * 일회성 마이그레이션: 기존 XOR 암호화 PW → HMAC-CTR로 변환
+ * GAS 편집기에서 수동 실행: migratePasswords()
  */
-function handleSaveCardDailyAlarm(rowIndex, e) {
+function migratePasswords() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var isAgreed = (e.parameter.isAgreed === 'true');
+  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var data = sheet.getDataRange().getValues();
+  var migrated = 0;
 
-  adminSheet.getRange(rowIndex + 1, CARD_ALARM_COL).setValue(isAgreed ? 'Y' : 'N'); // I열: 잔액알림 수신여부
+  for (var i = 1; i < data.length; i++) {
+    var encPw = data[i][CARD_DAILY_COL - 1]; // H열
+    if (!encPw || String(encPw).indexOf('enc1:') === 0) continue;
 
-  return createResponse({ status: 'success' });
+    try {
+      var plain = _decryptPwLegacyXor(String(encPw));
+      var newEnc = _encryptPw(plain);
+      sheet.getRange(i + 1, CARD_DAILY_COL).setValue(newEnc);
+      migrated++;
+    } catch (e) {
+      Logger.log('[마이그레이션] 실패 행 ' + (i + 1) + ': ' + e.message);
+    }
+  }
+
+  Logger.log('[마이그레이션] 완료: ' + migrated + '건 변환');
+  return migrated;
 }
+
+/* ═══════════════ 평일 잔액알림 설정 ═══════════════ */
 
 /* ═══════════════ 평일 잔액알림 발송 ═══════════════ */
 
@@ -431,7 +658,8 @@ function _callWebankApi(webankCookies, fromDt, toDt) {
       purpose: r.PROC_STS || '',
       cardNo: r.CARD_NO || '',
       txSeq: r.TX_SEQ || '',
-      seq: r.SEQ || ''
+      seq: r.SEQ || '',
+      address: r.MEST_ADDR || r.MEST_ADR || ''
     };
   });
 
@@ -1028,6 +1256,107 @@ function _parseEaprUserInfo(html) {
   });
 
   return info;
+}
+
+/* ═══════════════ 맛집 평가 ═══════════════ */
+
+/**
+ * 맛집평가 시트 자동 생성 (없으면 헤더 삽입)
+ */
+function ensureRatingSheet(ss) {
+  var sheet = ss.getSheetByName(SHEET_NAME.RATING);
+  if (sheet) return sheet;
+  sheet = ss.insertSheet(SHEET_NAME.RATING);
+  sheet.appendRow(['사용처', 'knoxId', '평점', '날짜']);
+  return sheet;
+}
+
+/**
+ * 전체 평점 집계 + 내 평점 반환
+ * action=cardRatings&token={UUID}
+ */
+function handleCardRatings(adminRow, e) {
+  var knoxId = String(adminRow[ADMIN_COL.KNOX_ID]);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ensureRatingSheet(ss);
+  var data = sheet.getDataRange().getValues();
+
+  var ratings = {}; // { merchant: { sum, count, myRating } }
+  for (var i = 1; i < data.length; i++) {
+    var merchant = String(data[i][0]).trim();
+    var rater = String(data[i][1]).trim();
+    var score = Number(data[i][2]) || 0;
+    if (!merchant || score < 1 || score > 5) continue;
+
+    if (!ratings[merchant]) ratings[merchant] = { sum: 0, count: 0, myRating: 0 };
+    ratings[merchant].sum += score;
+    ratings[merchant].count++;
+    if (rater === knoxId) ratings[merchant].myRating = score;
+  }
+
+  var result = {};
+  for (var m in ratings) {
+    var r = ratings[m];
+    result[m] = {
+      avg: Math.round((r.sum / r.count) * 10) / 10,
+      count: r.count,
+      myRating: r.myRating
+    };
+  }
+
+  return createResponse({ status: 'success', ratings: result });
+}
+
+/**
+ * 평점 저장/수정
+ * action=cardRate&token={UUID}&merchant={name}&rating={1~5}
+ */
+function handleCardRate(adminRow, e) {
+  var knoxId = String(adminRow[ADMIN_COL.KNOX_ID]);
+  var merchant = (e.parameter.merchant || '').trim();
+  var rating = Number(e.parameter.rating) || 0;
+
+  if (!merchant) return createResponse({ error: 'MISSING_MERCHANT' });
+  if (rating < 1 || rating > 5) return createResponse({ error: 'INVALID_RATING' });
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ensureRatingSheet(ss);
+  var data = sheet.getDataRange().getValues();
+
+  // 기존 행 찾기
+  var existingRow = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === merchant && String(data[i][1]).trim() === knoxId) {
+      existingRow = i + 1; // 1-based
+      break;
+    }
+  }
+
+  var now = new Date().toISOString();
+  if (existingRow > 0) {
+    sheet.getRange(existingRow, 3).setValue(rating);
+    sheet.getRange(existingRow, 4).setValue(now);
+  } else {
+    sheet.appendRow([merchant, knoxId, rating, now]);
+  }
+
+  // 해당 음식점 집계 반환
+  var allData = sheet.getDataRange().getValues();
+  var sum = 0, count = 0;
+  for (var j = 1; j < allData.length; j++) {
+    if (String(allData[j][0]).trim() === merchant) {
+      var s = Number(allData[j][2]) || 0;
+      if (s >= 1 && s <= 5) { sum += s; count++; }
+    }
+  }
+
+  return createResponse({
+    status: 'success',
+    merchant: merchant,
+    avg: count > 0 ? Math.round((sum / count) * 10) / 10 : 0,
+    count: count,
+    myRating: rating
+  });
 }
 
 /* ─── 유틸리티 ─── */

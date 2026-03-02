@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>if(localStorage.getItem('darkMode')==='true')document.documentElement.classList.add('dark');</script>
-<title>HelpDesk+</title>
+<title>엠로생활</title>
 <link rel="icon" type="image/x-icon" href="../img/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="../img/favicon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
@@ -16,6 +16,12 @@
 <link rel="apple-touch-icon" href="../img/preview-full-256.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/theme.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/dark-mode.css">
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="../css/board.css">
+<link rel="stylesheet" href="../css/draft.css">
 <script>
 tailwind.config = {
   darkMode: 'class',
@@ -38,172 +44,6 @@ tailwind.config = {
   }
 }
 </script>
-<style>
-  :root {
-    --c-surface: 241 251 247;
-    --c-surface2: 226 245 239;
-    --c-border: 204 235 226;
-    --c-accent: 45 138 126;
-    --accent-light-a: 0.08;
-    --body-bg: #fff7ee;
-    --header-bg: rgba(255,247,238,.93);
-    --card-bg: #ffffff;
-    --grid-line: rgba(45,138,126,.04);
-    --skeleton-a: #e2f5ef;
-    --skeleton-b: #ccebe2;
-    --bubble-bg: #ffffff;
-  }
-  html.dark {
-    --c-surface: 26 35 50;
-    --c-surface2: 34 48 63;
-    --c-border: 48 65 79;
-    --c-accent: 45 138 126;
-    --accent-light-a: 0.14;
-    --body-bg: #0f1419;
-    --header-bg: rgba(15,20,25,.93);
-    --card-bg: #1a2332;
-    --grid-line: rgba(45,138,126,.06);
-    --skeleton-a: #22303f;
-    --skeleton-b: #30414f;
-    --bubble-bg: #1a2332;
-    color-scheme: dark;
-  }
-  html { scrollbar-gutter: stable; }
-  body { background: var(--body-bg); }
-  html.dark body { color: #d4e0dc; }
-  body::before {
-    content: ''; position: fixed; inset: 0;
-    background-image:
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none; z-index: 0;
-  }
-  .toggle-track { transition: background-color .2s; }
-  .toggle-thumb { transition: transform .2s; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-  .fade-in { animation: fadeIn .35s ease; }
-  @keyframes mascotOut { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(40px) scale(.7); } }
-  @keyframes mascotIn  { from { opacity:0; transform:translateY(40px) scale(.7); } to { opacity:1; transform:translateY(0) scale(1); } }
-  .mascot-out { animation: mascotOut .3s ease forwards; }
-  .mascot-in  { animation: mascotIn  .3s ease forwards; }
-  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .pulse-dot { animation: pulse-dot 1.2s infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner { animation: spin .7s linear infinite; }
-  /* status pill */
-  .pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:500; white-space:nowrap; }
-  .pill::before { content:''; width:5px; height:5px; border-radius:50%; }
-  .pill-ok   { background:rgba(5,150,105,.12); color:#059669; }  .pill-ok::before   { background:#059669; }
-  .pill-wait { background:rgba(217,119,6,.12); color:#d97706; }  .pill-wait::before { background:#d97706; }
-  .pill-reject { background:rgba(220,38,38,.12); color:#dc2626; } .pill-reject::before { background:#dc2626; }
-  .pill-pend { background:rgba(185,142,114,.12); color:#b98e72; }  .pill-pend::before { background:#b98e72; }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
-  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-  /* 스켈레톤 시머 */
-  @keyframes shimmer {
-    0% { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
-  }
-  .skeleton {
-    background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 37%, var(--skeleton-a) 63%);
-    background-size: 800px 100%;
-    animation: shimmer 1.6s ease infinite;
-    border-radius: 6px;
-  }
-
-  /* 버튼 로딩 시머 */
-  @keyframes btn-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .btn-loading {
-    background-image: linear-gradient(90deg, rgba(45,138,126,.85) 0%, rgba(45,138,126,1) 40%, rgba(75,168,156,.95) 50%, rgba(45,138,126,1) 60%, rgba(45,138,126,.85) 100%) !important;
-    background-size: 200% 100%;
-    animation: btn-shimmer 1.8s ease infinite;
-  }
-
-  /* 헤더 아이콘 전환 — 고정 크기 박스 */
-  .header-icon-wrap { position:relative; width:48px; height:48px; overflow:visible; border-radius:12px; flex-shrink:0; contain:layout size; }
-  .header-icon-wrap img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
-  .header-icon-wrap img.icon-hidden { opacity:0; pointer-events:none; }
-  .header-icon-wrap img.icon-visible { opacity:1; }
-  #headerSmail.icon-visible { transform:scale(1.3); }
-  #headerDance.icon-visible { transform:scale(3.5); }
-  #headerLoading.icon-visible { transform:scale(1.75); }
-
-  /* 세그먼트 컨트롤 */
-  .seg-item { cursor:pointer; text-align:center; }
-  .seg-label {
-    display:block; padding:6px 0; border-radius:6px; font-size:13px; font-weight:500;
-    color:#6e7f7b; transition: all .15s ease;
-  }
-  .seg-item:hover .seg-label { color:#47635f; }
-  .seg-item input:checked + .seg-label {
-    background:#fff; color:#2d8a7e; font-weight:600;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
-  }
-  html.dark .seg-item input:checked + .seg-label {
-    background: var(--card-bg); color:#2d8a7e;
-  }
-
-  /* 메시지 박스 말풍선 꼬리 */
-  #msgBoxBubble::before {
-    content:''; position:absolute; left:-8px; bottom:0;
-    width:0; height:0;
-    border-right:8px solid var(--bubble-bg);
-    border-top:8px solid transparent;
-  }
-  #msgBoxBubble::after {
-    content:''; position:absolute; left:-10px; bottom:-1px;
-    width:0; height:0;
-    border-right:10px solid var(--bubble-color, #2d8a7e);
-    border-top:10px solid transparent;
-    z-index:-1;
-  }
-  #confirmBubble::before {
-    content:''; position:absolute; left:-8px; bottom:0;
-    width:0; height:0;
-    border-right:8px solid var(--bubble-bg);
-    border-top:8px solid transparent;
-  }
-  #confirmBubble::after {
-    content:''; position:absolute; left:-10px; bottom:-1px;
-    width:0; height:0;
-    border-right:10px solid var(--bubble-color, #2d8a7e);
-    border-top:10px solid transparent;
-    z-index:-1;
-  }
-
-  /* 모바일 카드 뷰 */
-  .record-card { display:none; }
-  @media(max-width:640px) {
-    .record-table-wrap { display:none !important; }
-    .record-card { display:block; }
-  }
-
-  /* ─── 다크모드 오버라이드 ─── */
-  html.dark .text-\[\#47635f\] { color: #d4e0dc !important; }
-  html.dark .text-\[\#6e7f7b\] { color: #8b9e99 !important; }
-  html.dark .text-\[\#aab5b2\] { color: #6e7f7b !important; }
-  html.dark .bg-white { background-color: var(--card-bg) !important; }
-  html.dark .bg-\[\#fff7ee\] { background-color: var(--body-bg) !important; }
-  html.dark .bg-\[\#ccc\] { background-color: #30414f !important; }
-  html.dark .border-\[\#ccebe2\] { border-color: rgb(var(--c-border)) !important; }
-  html.dark header[class*="sticky"] { background: var(--header-bg) !important; }
-  html.dark #authScreen { background: var(--body-bg) !important; }
-  html.dark input, html.dark select, html.dark textarea { color-scheme: dark; }
-  html.dark input::placeholder { color: rgba(139,158,153,.6) !important; }
-  html.dark .pill-ok { background: rgba(5,150,105,.2); }
-  html.dark .pill-wait { background: rgba(217,119,6,.2); }
-  html.dark .pill-reject { background: rgba(220,38,38,.2); }
-  html.dark .pill-pend { background: rgba(185,142,114,.2); }
-  html.dark .bg-\[\#47635f\] { background-color: #2d8a7e !important; }
-  html.dark .border-\[\#ccebe2\] { border-color: rgb(var(--c-border)) !important; }
-  html.dark .hover\:bg-\[\#e2f5ef\]:hover { background-color: rgb(var(--c-surface2)) !important; }
-
-
-</style>
 </head>
 <body class="font-sans text-[#47635f] min-h-screen relative">
 
@@ -213,7 +53,7 @@ tailwind.config = {
     <!-- 브랜딩 -->
     <div class="text-center mb-8">
       <img id="mascotImg" src="../img/preview-full-256.png" alt="QuickLogin" class="w-16 h-16 mx-auto mb-4 object-contain">
-      <h1 class="text-lg font-bold">HelpDesk+ <span class="text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></h1>
+      <h1 class="text-2xl font-bold"><span class="brand-name">엠로생활</span> <span class="text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></h1>
       <div class="mt-2 inline-flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5">
         <svg class="w-3.5 h-3.5 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
         <span class="text-[13px] text-accent font-medium">Bizplay 아이디로 로그인하면 돼!</span>
@@ -261,7 +101,7 @@ tailwind.config = {
     <!-- 시스템 안내 -->
     <div class="mt-6 border-t" style="border-color:rgba(204,235,226,0.5); font-size:11px; color:rgba(110,127,123,0.6);">
       <p class="mb-2 leading-relaxed text-center">
-        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라(GAS)라 느려.. 어쩔수 없지</span><br>
+        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라(GAS)라 느려..</span><br>
         <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">시스템 초기라 오류가 있을 수 있어!</span>
       </p>
       <div class="bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
@@ -281,7 +121,7 @@ tailwind.config = {
           <img id="headerLoading" src="../img/dance2.gif" alt="loading" class="icon-hidden">
         </div>
         <div>
-          <div class="text-[15px] font-bold leading-tight">HelpDesk+ <span class="text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></div>
+          <div class="text-xl font-bold leading-tight"><span class="brand-name">엠로생활</span> <span class="text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></div>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
@@ -435,7 +275,7 @@ tailwind.config = {
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="text-sm font-semibold group-hover:text-accent transition">이전 기록 불러오기</div>
-                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">기존에 신청했던 교육 정보를 가져와서 빠르게 재신청하자</div>
+                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">이전 교육 정보로 빠르게 신청하자</div>
                   </div>
                 </div>
               </button>
@@ -447,7 +287,7 @@ tailwind.config = {
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="text-sm font-semibold group-hover:text-accent transition">신규 작성</div>
-                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">새로운 교육을 처음부터 입력하자</div>
+                    <div class="text-[11px] text-[#6e7f7b] mt-0.5">템플릿으로 빠르게 신청하자</div>
                   </div>
                 </div>
               </button>
@@ -1095,7 +935,7 @@ function renderRecords() {
       <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
       <td class="px-4 py-3 text-center"><span class="pill ${pillClass}">${escapeHtml(status || '-')}</span></td>
       <td class="px-4 py-3 text-center">
-        <button onclick="showRecommendInfo(this)" title="동료에게 추천" class="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent/10 transition text-base leading-none">🤝</button>
+        <button onclick="showRecommendInfo(this)" title="동료에게 추천" class="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent/10 transition text-base leading-none">💚</button>
       </td>
     `;
     body.appendChild(tr);
@@ -1106,7 +946,7 @@ function renderRecords() {
     card.innerHTML = `
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-semibold flex-1">${escapeHtml(title)}</span>
-        <button onclick="event.stopPropagation();showRecommendInfo(this)" title="동료에게 추천" class="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent/10 transition text-sm leading-none ml-1">🤝</button>
+        <button onclick="event.stopPropagation();showRecommendInfo(this)" title="동료에게 추천" class="inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-accent/10 transition text-sm leading-none ml-1">💚</button>
         <span class="pill ${pillClass} ml-1">${escapeHtml(status || '-')}</span>
       </div>
       <div class="flex items-center justify-between text-xs text-[#6e7f7b]">
@@ -1408,7 +1248,7 @@ window.wizardSelectType = function(type) {
   if (type === 'edu') {
     const sessionRaw = localStorage.getItem('bizplay_session');
     if (!sessionRaw) {
-      showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad');
+      showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad', document.getElementById('wizPanel1'));
       return;
     }
     wizardGoTo(2);

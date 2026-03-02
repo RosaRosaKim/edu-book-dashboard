@@ -1,24 +1,3 @@
-<style>
-  /* 기안문서 카드 — light */
-  .draft-bg-ok { background: #f6fdf7; }
-  .draft-bg-reject { background: #fff8f8; }
-  .draft-bg-progress { background: #f5faff; }
-  .draft-bg-default { background: #ffffff; }
-  .draft-bar-ok { background: #4caf50; }
-  .draft-bar-reject { background: #ef5350; }
-  .draft-bar-progress { background: #42a5f5; }
-  .draft-bar-default { background: #aab5b2; }
-  /* 기안문서 카드 — dark */
-  html.dark .draft-bg-ok { background: #1a2a22; }
-  html.dark .draft-bg-reject { background: #2a1a1a; }
-  html.dark .draft-bg-progress { background: #1a222a; }
-  html.dark .draft-bg-default { background: var(--card-bg); }
-  html.dark .draft-bar-ok { background: #2e7d32; }
-  html.dark .draft-bar-reject { background: #c62828; }
-  html.dark .draft-bar-progress { background: #1565c0; }
-  html.dark .draft-bar-default { background: #4a5a56; }
-</style>
-
 <div class="fade-in">
   <div class="bg-surface border border-border rounded-2xl overflow-hidden">
     <div id="draftsCards" class="p-3 space-y-3"></div>
@@ -64,10 +43,10 @@ async function fetchDraftList() {
     if (data.status === 'success') {
       renderDraftList(data.draftList || []);
     } else {
-      window.showToast(data.message || '기안문서 조회 실패', 'angry');
+      window.showToast(data.message || '기안문서 조회 실패', 'angry', cards);
     }
   } catch (err) {
-    window.showToast('기안문서 조회 실패: ' + err.message, 'angry');
+    window.showToast('기안문서 조회 실패: ' + err.message, 'angry', cards);
   } finally {
     if (loading) loading.classList.add('hidden');
     if (window.hideLoading) window.hideLoading();

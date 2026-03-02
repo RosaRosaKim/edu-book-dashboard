@@ -34,7 +34,10 @@
       "WebFetch(domain:approval.appplay.co.kr)",
       "WebFetch(domain:www.bizplay.co.kr)",
       "Bash(wc:*)",
-      "Bash(do wc:*)"
+      "Bash(do wc:*)",
+      "Bash(test:*)",
+      "Bash(mkdir:*)",
+      "WebFetch(domain:guide.ncloud-docs.com)"
     ]
   }
 }

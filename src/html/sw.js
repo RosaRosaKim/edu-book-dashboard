@@ -1,4 +1,4 @@
-const CACHE_NAME = 'helpdesk-v1';
+const CACHE_NAME = 'emro-life-v2';
 const PRE_CACHE = [
   './dev-edu-book-dashboard.html',
   '../img/preview-full-256.png',

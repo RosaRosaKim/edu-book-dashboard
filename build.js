@@ -5,9 +5,10 @@ const CleanCSS = require('clean-css');
 const { minify: minifyHTML } = require('html-minifier-terser');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
-const SRC_DIR = 'html';
+const SRC_DIR = 'src/html';
 const DIST_DIR = 'dist';
-const IMG_DIR = 'img';
+const IMG_DIR = 'src/img';
+const CSS_DIR = 'src/css';
 
 async function buildFile(inputFile, outputFile) {
   console.log(`\n========== Building ${inputFile} ==========`);
@@ -16,14 +17,23 @@ async function buildFile(inputFile, outputFile) {
 
   // ── Replace GAS dev deployment URL with prod URL (before obfuscation) ──
   const clasp = JSON.parse(fs.readFileSync('.clasp.json', 'utf-8'));
-  if (clasp.devDeploymentId && clasp.deploymentId) {
-    const devUrl = `https://script.google.com/macros/s/${clasp.devDeploymentId}/exec`;
+  if (clasp.deploymentId) {
     const prodUrl = `https://script.google.com/macros/s/${clasp.deploymentId}/exec`;
-    html = html.replace(new RegExp(devUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), prodUrl);
+    // HEAD deployment URL → prod
+    if (clasp.headDeploymentId) {
+      const headUrl = `https://script.google.com/macros/s/${clasp.headDeploymentId}/exec`;
+      html = html.replace(new RegExp(headUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), prodUrl);
+    }
+    // Legacy dev deployment URL → prod
+    if (clasp.devDeploymentId) {
+      const devUrl = `https://script.google.com/macros/s/${clasp.devDeploymentId}/exec`;
+      html = html.replace(new RegExp(devUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), prodUrl);
+    }
   }
 
   // ── Replace dev paths before obfuscation (so JS string literals are also replaced) ──
   html = html.replace(/\.\.\/img\//g, 'img/');
+  html = html.replace(/\.\.\/css\//g, 'css/');
   html = html.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
   html = html.replace(/dev-admin-dashboard\.html/g, 'admin-dashboard.html');
 
@@ -151,8 +161,9 @@ function validate(label, output, checks) {
 async function buildModule(inputFile, outputFile) {
   console.log(`\n--- Module: ${path.basename(inputFile)} ---`);
   let html = fs.readFileSync(inputFile, 'utf-8');
-  // ── Replace image paths before obfuscation ──
+  // ── Replace dev paths before obfuscation ──
   html = html.replace(/\.\.\/img\//g, 'img/');
+  html = html.replace(/\.\.\/css\//g, 'css/');
   const $ = cheerio.load(html, { decodeEntities: false });
 
   // ── Process inline <script> blocks: console 삭제 + 난독화 ──
@@ -293,9 +304,23 @@ async function build() {
   // 4. 이미지 복사
   if (fs.existsSync(IMG_DIR)) {
     console.log(`\n========== Copying ${IMG_DIR}/ ==========`);
-    copyDirSync(IMG_DIR, path.join(DIST_DIR, IMG_DIR));
+    copyDirSync(IMG_DIR, path.join(DIST_DIR, 'img'));
     const imgCount = fs.readdirSync(IMG_DIR).length;
-    console.log(`  ${imgCount} files → ${DIST_DIR}/${IMG_DIR}/`);
+    console.log(`  ${imgCount} files → ${DIST_DIR}/img/`);
+  }
+
+  // 4-1. CSS 복사
+  if (fs.existsSync(CSS_DIR)) {
+    console.log(`\n========== Copying ${CSS_DIR}/ ==========`);
+    copyDirSync(CSS_DIR, path.join(DIST_DIR, 'css'));
+    const cssFiles = fs.readdirSync(CSS_DIR).filter(f => f.endsWith('.css'));
+    const cleanCSS = new CleanCSS({ level: 2 });
+    cssFiles.forEach(f => {
+      const fp = path.join(DIST_DIR, 'css', f);
+      const minified = cleanCSS.minify(fs.readFileSync(fp, 'utf-8'));
+      if (minified.styles) fs.writeFileSync(fp, minified.styles, 'utf-8');
+    });
+    console.log(`  ${cssFiles.length} files → ${DIST_DIR}/css/ (minified)`);
   }
 
   // 5. PWA 파일 복사 (html/ → dist/ 경로 보정)
