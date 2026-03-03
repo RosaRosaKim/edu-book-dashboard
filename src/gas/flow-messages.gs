@@ -39,7 +39,7 @@ var FLOW_MSG = {
     return {
       content: '밥값은 회사가, 결재는 내가! 🍚',
       link: FLOW_LINK.CARD,
-      previewTitle: '밥카결재하자'
+      previewTitle: '밥카결재하는날'
     };
   },
   // #5 밥카 미결재 리마인더
@@ -47,7 +47,7 @@ var FLOW_MSG = {
     return {
       content: '아직 밥카 결재 안한 것 같아...',
       link: FLOW_LINK.CARD,
-      previewTitle: '밥카결재하자'
+      previewTitle: '밥카결재해야해'
     };
   },
   // #6 밥카 잔액 알림
@@ -55,7 +55,7 @@ var FLOW_MSG = {
     return {
       content: '밥카 잔액: ' + _fmtMoney(remain) + '원 / ' + _fmtMoney(budget) + '원 (사용 ' + _fmtMoney(used) + '원, ' + count + '건)',
       link: FLOW_LINK.CARD,
-      previewTitle: '잔액알림'
+      previewTitle: '밥카잔액알려줌'
     };
   }
 };
