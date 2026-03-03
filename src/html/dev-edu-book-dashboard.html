@@ -143,8 +143,6 @@ tailwind.config = {
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">📋 기안문서</button>
       <button id="tabBtnBoard" onclick="switchTab('board')"
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💬 게시판</button>
-      <button id="tabBtnExpense" onclick="switchTab('expense')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40">🚧 지출결의</button>
     </div>
   </header>
 
@@ -398,8 +396,6 @@ tailwind.config = {
       <!-- ─── 방문록 ─── -->
       <div id="tabPanelBoard" class="hidden"><div id="boardContainer"></div></div><!-- /tabPanelBoard -->
 
-      <!-- ─── 지출결의 (Coming Soon) ─── -->
-      <div id="tabPanelExpense" class="hidden"><div id="expenseContainer"></div></div><!-- /tabPanelExpense -->
 
 
     </div>
@@ -486,8 +482,8 @@ tailwind.config = {
 <script>
 /* ─── 탭 전환 ─── */
 window.switchTab = async function(tabId) {
-  const tabs = ['edu', 'card', 'draft', 'board', 'expense'];
-  const comingSoon = ['expense'];
+  const tabs = ['edu', 'card', 'draft', 'board'];
+  const comingSoon = [];
   const activeClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';
   const inactiveClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap';
   const activeGrayClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-[#aab5b2] text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
@@ -516,7 +512,6 @@ window.switchTab = async function(tabId) {
     await window._loadModule('edu-board.html', 'boardContainer');
     if (window.loadBoard) window.loadBoard();
   }
-  if (tabId === 'expense') window._loadModule('edu-expense.html', 'expenseContainer');
   if (tabId === 'edu') {
     if (window.updateRemainDisplay) window.updateRemainDisplay();
     if (window.refreshEduSession) window.refreshEduSession();
