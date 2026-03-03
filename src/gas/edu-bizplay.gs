@@ -738,34 +738,37 @@ function handleBizplayDraft(adminRow, e) {
   // 브라우저와 동일한 포맷: 부서수신(KIND=4) + 개인승인(KIND=2) 모두 포함
   if (p.procGb === '2' && session.cachedApprLine && session.cachedApprLine.length > 0) {
     draftJson.STS_REC = session.cachedApprLine.map(function(rec) {
+      var gb = rec.APPR_USER_GB || '2';
       var kind = rec.APPRLINE_KIND || '2';
-      var deptCd = rec.APPR_DEPT_CD || '';
-      var deptNm = rec.APPR_DEPT_NM || '';
-      if (kind === '4') {
+      var deptCd = rec.APPR_DEPT_CD || rec.DEPT_CD || '';
+      var deptNm = rec.APPR_DEPT_NM || rec.DEPT_NM || '';
+      var userDeptCd = rec.APPR_USER_DEPT_CD || deptCd;
+      var userDeptNm = rec.APPR_USER_DEPT_NM || deptNm;
+      if (gb === '1' || kind === '4') {
         // 부서수신: DEPT_CD/DEPT_NM + APPR_USER_DEPT_CD/NM 모두 동일 값
         return {
-          APPR_ORD: 0,
+          APPR_ORD: rec.APPR_ORD || 0,
           APPR_DEPT_CD: deptCd,
           APPR_DEPT_NM: deptNm,
           DEPT_CD: deptCd,
           DEPT_NM: deptNm,
-          APPR_USER_DEPT_CD: deptCd,
-          APPR_USER_DEPT_NM: deptNm,
-          APPRLINE_KIND: '4',
+          APPR_USER_DEPT_CD: userDeptCd,
+          APPR_USER_DEPT_NM: userDeptNm,
+          APPRLINE_KIND: kind === '4' ? '4' : rec.APPRLINE_KIND || '4',
           APPR_USER_GB: '1',
           RECENT_SAVE_YN: 'Y',
           BOTTOM_FIXED_YN: 'N'
         };
       } else {
-        // 개인승인: APPR_USER_DEPT_CD/NM 사용
+        // 개인승인 (Bizplay spec: APPR_USER_ID, APPR_USER_DEPT_CD/NM 필수)
         return {
           APPR_ORD: rec.APPR_ORD || '0',
           APPR_USER_ID: rec.APPR_USER_ID || '',
           APPR_USER_NM: rec.APPR_USER_NM || '',
-          APPR_USER_DEPT_CD: deptCd,
-          APPR_USER_DEPT_NM: deptNm,
+          APPR_USER_DEPT_CD: userDeptCd,
+          APPR_USER_DEPT_NM: userDeptNm,
           APPR_USER_POS_NM: rec.APPR_USER_POS_NM || '',
-          APPRLINE_KIND: '2',
+          APPRLINE_KIND: kind,
           APPR_USER_GB: '2',
           RECENT_SAVE_YN: 'Y',
           BOTTOM_FIXED_YN: 'N'
@@ -773,6 +776,7 @@ function handleBizplayDraft(adminRow, e) {
       }
     });
     debug.stsRecCount = draftJson.STS_REC.length;
+    debug.stsRecSample = draftJson.STS_REC.length > 0 ? draftJson.STS_REC[0] : null;
   }
   var draftPayload = '_JSON_=' + encodeURIComponent(JSON.stringify(draftJson));
 
@@ -1266,22 +1270,31 @@ function handleBizplayApprLine(adminRow, e) {
     if (!Array.isArray(paperRec)) paperRec = [];
     if (!Array.isArray(userRec)) userRec = [];
 
-    // USER_REC → 결재선 항목 (APPRLINE_KIND=2): DEPT_NM을 APPR_USER_NM/APPR_DEPT_NM에 매핑
+    // USER_REC는 결재선 메타데이터(라인 이름 등)만 포함 — 실제 결재자는 PAPER_APPRLINE_REC에 있음
+    // USER_REC 중 실제 결재자 정보가 있는 항목만 추가 (메타데이터 제외)
     var apprLine = [];
+    if (userRec.length > 0) {
+      debug.rawUserRecFirstKeys = Object.keys(userRec[0]).join(',');
+      debug.rawUserRecFirst = JSON.stringify(userRec[0]).substring(0, 500);
+    }
     userRec.forEach(function(r) {
-      apprLine.push({
-        APPR_ORD: r.APPR_ORD || '1',
-        APPRLINE_KIND: r.APPRLINE_KIND || '2',
-        APPR_USER_NM: r.APPR_USER_NM || r.DEPT_NM || '',
-        APPR_USER_POS_NM: r.APPR_USER_POS_NM || r.APPRLINE_KIND_NM || '',
-        APPR_DEPT_NM: r.DEPT_NM || r.APPR_DEPT_NM || '',
-        APPR_USER_GB: '2',
-        APPRLINE_SEQ_NO: r.APPRLINE_SEQ_NO || ''
-      });
+      // 메타데이터 레코드 제외: APPR_USER_ID/APPR_USER_NM/APPR_USER_GB 모두 없으면 스킵
+      if (!r.APPR_USER_ID && !r.APPR_USER_NM && !r.APPR_USER_GB) return;
+      if (r.APPRLINE_KIND === '9') return;
+      apprLine.push(r); // 원본 그대로 추가 (PAPER_APPRLINE_REC와 동일 구조)
     });
-    // PAPER_APPRLINE_REC → 양식 기본 (부서수신/참조 등): 그대로 추가
+    // PAPER_APPRLINE_REC → 실제 결재자 + 부서수신 데이터
+    if (paperRec.length > 0) {
+      debug.rawPaperRecFirstKeys = Object.keys(paperRec[0]).join(',');
+      debug.rawPaperRecFirst = JSON.stringify(paperRec[0]).substring(0, 500);
+    }
     paperRec.forEach(function(r) {
-      apprLine.push(r);
+      if (r.APPRLINE_KIND === '9') return;
+      // 빈 항목 제외: 부서명도 사용자명도 없는 경우
+      var hasUser = r.APPR_USER_ID || (r.APPR_USER_NM && r.APPR_USER_NM.trim());
+      var hasDept = r.APPR_DEPT_CD || (r.APPR_DEPT_NM && r.APPR_DEPT_NM.trim());
+      if (!hasUser && !hasDept) return;
+      apprLine.push(r); // 원본 그대로 추가
     });
 
     // fallback: 둘 다 비어있으면 기존 키 탐색

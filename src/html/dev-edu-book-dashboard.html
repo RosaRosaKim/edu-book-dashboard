@@ -433,11 +433,10 @@ tailwind.config = {
 <!-- 확인 다이얼로그 -->
 <div id="confirmBox" class="fixed inset-0 z-[60]" style="display:none;">
   <div class="absolute inset-0 bg-black/30" id="confirmOverlay"></div>
-  <div id="confirmInner" class="fixed z-[61] flex items-end gap-0">
-    <img id="confirmImg" src="../img/smail.png" alt="" class="w-16 h-16 object-contain shrink-0 self-end translate-y-1">
-    <div id="confirmBubble" class="relative border-2 border-accent rounded-2xl rounded-bl-none px-5 py-4 shadow-xl max-w-[280px] mb-8"
+  <div id="confirmInner" class="fixed z-[61] pointer-events-none transition-all duration-300 opacity-0" style="transform-origin:left center;transform:scale(.9);">
+    <div id="confirmBubble" class="pointer-events-auto relative border-2 border-accent rounded-2xl px-5 py-4 shadow-xl max-w-[280px]"
       style="background:var(--bubble-bg);--bubble-color:#2d8a7e;">
-      <div id="confirmText" class="text-sm text-[#47635f] font-medium leading-snug mb-4"></div>
+      <div id="confirmText" class="text-sm text-[#47635f] font-medium leading-snug mb-3"></div>
       <div class="flex gap-2 justify-end">
         <button id="confirmNo" class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface-2 text-[#6e7f7b] border border-border hover:brightness-95 transition cursor-pointer">아니</button>
         <button id="confirmYes" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">응</button>
@@ -1186,6 +1185,9 @@ window.showRecommendInfo = showRecommendInfo;
  */
 window.showConfirm = function(msg, anchorEl) {
   return new Promise(resolve => {
+    // 진행중인 토스트 숨김
+    dismissToast();
+
     const box = $('confirmBox');
     const inner = $('confirmInner');
     const text = $('confirmText');
@@ -1196,25 +1198,30 @@ window.showConfirm = function(msg, anchorEl) {
     text.textContent = msg;
     box.style.display = '';
 
-    // 위치 계산
-    if (anchorEl) {
-      const rect = anchorEl.getBoundingClientRect();
-      const innerW = 340;
-      let left = rect.left + rect.width / 2 - innerW / 2;
-      left = Math.max(12, Math.min(left, window.innerWidth - innerW - 12));
-      let top = rect.top - 100;
-      if (top < 12) top = rect.bottom + 8;
-      inner.style.left = left + 'px';
-      inner.style.top = top + 'px';
+    // 위치: 헤더 마스코트 옆 (showToast와 동일)
+    const mascot = $('headerSmail');
+    if (mascot) {
+      const rect = mascot.getBoundingClientRect();
+      inner.style.left = (rect.right + 6) + 'px';
+      inner.style.top = Math.max(8, rect.top + rect.height / 2 - 24) + 'px';
     } else {
-      inner.style.left = '50%';
-      inner.style.top = '50%';
-      inner.style.transform = 'translate(-50%, -50%)';
+      inner.style.left = '60px';
+      inner.style.top = '16px';
     }
+    inner.style.transform = 'scale(.9)';
+
+    // 등장 애니메이션
+    requestAnimationFrame(() => {
+      inner.classList.remove('opacity-0');
+      inner.classList.add('opacity-100');
+      inner.style.transform = 'scale(1)';
+    });
 
     function close(val) {
-      box.style.display = 'none';
-      inner.style.transform = '';
+      inner.classList.remove('opacity-100');
+      inner.classList.add('opacity-0');
+      inner.style.transform = 'scale(.9)';
+      setTimeout(() => { box.style.display = 'none'; }, 200);
       btnYes.removeEventListener('click', onYes);
       btnNo.removeEventListener('click', onNo);
       overlay.removeEventListener('click', onNo);
