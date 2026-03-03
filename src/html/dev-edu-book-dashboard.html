@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>if(localStorage.getItem('darkMode')==='true')document.documentElement.classList.add('dark');</script>
-<title>엠로생활</title>
+<title>BizFlow</title>
 <link rel="icon" type="image/x-icon" href="../img/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="../img/favicon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
@@ -53,7 +53,7 @@ tailwind.config = {
     <!-- 브랜딩 -->
     <div class="text-center mb-8">
       <img id="mascotImg" src="../img/preview-full-256.png" alt="QuickLogin" class="w-16 h-16 mx-auto mb-4 object-contain">
-      <h1 class="text-2xl font-bold"><span class="brand-name">엠로<span class="brand-sub">생활</span></span> <span class="text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></h1>
+      <h1 class="text-2xl font-bold"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span class="text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></h1>
       <div class="mt-2 inline-flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5">
         <svg class="w-3.5 h-3.5 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
         <span class="text-[13px] text-accent font-medium">Bizplay 아이디로 로그인하면 돼!</span>
@@ -121,7 +121,7 @@ tailwind.config = {
           <img id="headerLoading" src="../img/dance2.gif" alt="loading" class="icon-hidden">
         </div>
         <div>
-          <div class="text-xl font-bold leading-tight"><span class="brand-name">엠로<span class="brand-sub">생활</span></span> <span class="text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></div>
+          <div class="text-xl font-bold leading-tight"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span class="text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle">BETA</span></div>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
@@ -145,8 +145,6 @@ tailwind.config = {
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💬 게시판</button>
       <button id="tabBtnExpense" onclick="switchTab('expense')"
         class="px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40">🚧 지출결의</button>
-      <button id="tabBtnTimesheet" onclick="switchTab('timesheet')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40">🚧 타임시트</button>
     </div>
   </header>
 
@@ -403,8 +401,6 @@ tailwind.config = {
       <!-- ─── 지출결의 (Coming Soon) ─── -->
       <div id="tabPanelExpense" class="hidden"><div id="expenseContainer"></div></div><!-- /tabPanelExpense -->
 
-      <!-- ─── 타임시트 (Coming Soon) ─── -->
-      <div id="tabPanelTimesheet" class="hidden"><div id="timesheetContainer"></div></div><!-- /tabPanelTimesheet -->
 
     </div>
 
@@ -490,8 +486,8 @@ tailwind.config = {
 <script>
 /* ─── 탭 전환 ─── */
 window.switchTab = async function(tabId) {
-  const tabs = ['edu', 'card', 'draft', 'board', 'expense', 'timesheet'];
-  const comingSoon = ['expense', 'timesheet'];
+  const tabs = ['edu', 'card', 'draft', 'board', 'expense'];
+  const comingSoon = ['expense'];
   const activeClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';
   const inactiveClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap';
   const activeGrayClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-[#aab5b2] text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
@@ -521,7 +517,6 @@ window.switchTab = async function(tabId) {
     if (window.loadBoard) window.loadBoard();
   }
   if (tabId === 'expense') window._loadModule('edu-expense.html', 'expenseContainer');
-  if (tabId === 'timesheet') window._loadModule('edu-timesheet.html', 'timesheetContainer');
   if (tabId === 'edu') {
     if (window.updateRemainDisplay) window.updateRemainDisplay();
     if (window.refreshEduSession) window.refreshEduSession();

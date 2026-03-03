@@ -1,6 +1,6 @@
 {
-  "name": "엠로생활",
-  "short_name": "엠로생활",
+  "name": "BizFlow",
+  "short_name": "BizFlow",
   "start_url": "./dev-edu-book-dashboard.html",
   "display": "standalone",
   "background_color": "#fff7ee",
