@@ -53,9 +53,17 @@ var FLOW_MSG = {
   // #6 밥카 잔액 알림
   cardDailyBalance: function(remain, budget, used, count) {
     return {
-      content: '밥카 잔액: ' + _fmtMoney(remain) + '원 / ' + _fmtMoney(budget) + '원 (사용 ' + _fmtMoney(used) + '원, ' + count + '건)',
+      content: '밥카 잔액: ' + _fmtMoney(remain) + '원 / ' + _fmtMoney(budget) + '원',
       link: FLOW_LINK.CARD,
       previewTitle: '밥카잔액알려줌'
+    };
+  },
+  // #7 밥카 초과 사용 환불 안내
+  cardRefund: function(overAmount, periodLabel) {
+    return {
+      content: periodLabel + ' 밥카 한도 초과분 ' + _fmtMoney(overAmount) + '원을 환불해 줘.\n\n🏦 신한은행 100-023-136929 (주)엠로',
+      link: FLOW_LINK.CARD,
+      previewTitle: '왜케 많이 먹었어..'
     };
   }
 };

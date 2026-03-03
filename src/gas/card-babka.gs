@@ -50,6 +50,7 @@ function handleUpdateCardAlarm(adminRow, e) {
 function sendBabCardAlarm() {
   sendCardAlarmDay15();
   sendCardAlarmReminder();
+  sendCardRefundAlert();
   sendCardDailyBalance();
 }
 
@@ -119,6 +120,120 @@ function _sendCardAlarm(msg) {
       Logger.log('[밥카알림] 발송 실패 - ' + knoxId + ': ' + e.message);
     }
   }
+}
+
+/**
+ * 매월 첫 영업일: 직전 종료 기간 초과분 환불 안내
+ * 예) 3월 첫 영업일 → 1/15~2/14 기간 초과분 체크
+ */
+function sendCardRefundAlert() {
+  var now = new Date();
+  if (!_isFirstBizDayOfMonth(now)) return;
+
+  // 직전 종료 기간 계산: (M-2)월 15일 ~ (M-1)월 14일
+  var m = now.getMonth(), y = now.getFullYear();
+  var prevStart = new Date(y, m - 2, 15);
+  var prevEnd = new Date(y, m - 1, 14);
+  var fmt = function(dt) {
+    return '' + dt.getFullYear() + ('0' + (dt.getMonth() + 1)).slice(-2) + ('0' + dt.getDate()).slice(-2);
+  };
+  var fromDt = fmt(prevStart);
+  var toDt = fmt(prevEnd);
+  var budget = _calcCardBudgetForPeriod(fromDt, toDt);
+
+  var periodLabel = prevStart.getFullYear() + '.' + ('0' + (prevStart.getMonth() + 1)).slice(-2) + '.' + ('0' + prevStart.getDate()).slice(-2)
+    + ' ~ ' + prevEnd.getFullYear() + '.' + ('0' + (prevEnd.getMonth() + 1)).slice(-2) + '.' + ('0' + prevEnd.getDate()).slice(-2);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var data = mgmtSheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = data[i][0];
+    var alarmOn = data[i][CARD_ALARM_COL - 1];
+    var encPw = data[i][CARD_DAILY_COL - 1];
+    if (!knoxId || alarmOn !== 'Y' || !encPw) continue;
+
+    try {
+      var userId = knoxId + '@emro.co.kr';
+      var password = _decryptPw(encPw);
+      var loginResult = _bizplayLoginCore(userId, password);
+      if (loginResult.error || !loginResult.webankCookies) {
+        Logger.log('[환불알림] 로그인 실패 - ' + knoxId);
+        continue;
+      }
+
+      var result = _callWebankApi(loginResult.webankCookies, fromDt, toDt);
+      if (result.expired || result.error) {
+        Logger.log('[환불알림] 조회 실패 - ' + knoxId);
+        continue;
+      }
+
+      var transportKeywords = ['티머니 버스', '티머니 지하철'];
+      var usedSum = 0;
+      (result.records || []).forEach(function(r) {
+        var merchant = (r.merchant || '').trim();
+        if (transportKeywords.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+        usedSum += Number(r.cost) || 0;
+      });
+
+      var remain = budget - usedSum;
+      if (remain < 0) {
+        var msg = FLOW_MSG.cardRefund(Math.abs(remain), periodLabel);
+        sendFlowMsg(knoxId, msg);
+        Logger.log('[환불알림] 발송 완료 - ' + knoxId + ': 초과 ' + Math.abs(remain) + '원');
+      } else {
+        Logger.log('[환불알림] 초과 없음 - ' + knoxId);
+      }
+    } catch (ex) {
+      Logger.log('[환불알림] 예외 - ' + knoxId + ': ' + ex.message);
+    }
+  }
+}
+
+/** 오늘이 해당월 1일부터 첫 번째 영업일인지 판별 */
+function _isFirstBizDayOfMonth(date) {
+  var y = date.getFullYear(), m = date.getMonth();
+  var holidays = _loadHolidays(y);
+  for (var d = 1; d <= 10; d++) {
+    var check = new Date(y, m, d);
+    var dow = check.getDay();
+    if (dow === 0 || dow === 6) continue;
+    if (_isHolidayFromList(check, holidays)) continue;
+    return _sameDate(check, date);
+  }
+  return false;
+}
+
+/** 특정 기간의 영업일 기반 예산 계산 */
+function _calcCardBudgetForPeriod(fromDt, toDt) {
+  var start = _parseDateStr(fromDt);
+  var end = _parseDateStr(toDt);
+  var holidaySet = {};
+  var years = {};
+  years[start.getFullYear()] = true;
+  years[end.getFullYear()] = true;
+  for (var y in years) {
+    try {
+      var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + y + '.json', { muteHttpExceptions: true });
+      if (resp.getResponseCode() === 200) {
+        var hdata = JSON.parse(resp.getContentText());
+        for (var k in hdata) holidaySet[k] = true;
+      }
+    } catch (e) {}
+    holidaySet[y + '-05-01'] = true;
+  }
+  var bizDays = 0;
+  var d = new Date(start);
+  while (d <= end) {
+    var dow = d.getDay();
+    var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+    var dd = ('0' + d.getDate()).slice(-2);
+    var dateStr = d.getFullYear() + '-' + mm + '-' + dd;
+    if (dow !== 0 && dow !== 6 && !holidaySet[dateStr]) bizDays++;
+    d.setDate(d.getDate() + 1);
+  }
+  return bizDays * 10000;
 }
 
 /* ═══════════════ 리마인더 헬퍼 ═══════════════ */

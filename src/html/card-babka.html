@@ -68,14 +68,14 @@
   <div class="bg-surface border border-border rounded-2xl p-5">
     <div class="flex justify-between items-end flex-wrap gap-3 mb-4">
       <div>
-        <div class="text-[10px] text-[#6e7f7b] mb-1">사용 금액</div>
-        <div class="font-mono text-3xl font-semibold" id="cardUsedAmount">0원</div>
-        <div class="text-xs text-[#6e7f7b] mt-1" id="cardUsedSub"></div>
+        <div class="text-[10px] text-[#6e7f7b] mb-1">남은 잔액</div>
+        <div class="font-mono text-3xl font-semibold text-[#47635f]" id="cardRemainAmount">0원</div>
+        <div class="text-xs text-[#6e7f7b] mt-0.5" id="cardBudgetLabel">다음 초기화까지 <span class="font-mono" id="cardResetDays">-</span>일</div>
       </div>
       <div class="text-right">
-        <div class="text-[10px] text-[#6e7f7b]">남은 잔액</div>
-        <div class="font-mono text-lg font-semibold text-[#47635f]" id="cardRemainAmount">0원</div>
-        <div class="text-xs text-[#6e7f7b] mt-0.5" id="cardBudgetLabel">다음 초기화까지 <span class="font-mono" id="cardResetDays">-</span>일</div>
+        <div class="text-[10px] text-[#6e7f7b]">사용 금액</div>
+        <div class="font-mono text-lg font-semibold" id="cardUsedAmount">0원</div>
+        <div class="text-xs text-[#6e7f7b] mt-1" id="cardUsedSub"></div>
       </div>
     </div>
     <!-- 기간 표시 -->
@@ -166,6 +166,13 @@
         <div class="min-w-0 flex-1">
           <span class="text-[12px] font-medium">미결재 리마인드</span>
           <span class="text-[11px] text-[#6e7f7b] ml-1.5">15일+3영업일에 올린 중식대 결재가 없을때</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 bg-surface-2 rounded-xl px-3.5 py-2.5">
+        <span class="text-base leading-none">🏦</span>
+        <div class="min-w-0 flex-1">
+          <span class="text-[12px] font-medium">초과분 환불 안내</span>
+          <span class="text-[11px] text-[#6e7f7b] ml-1.5">매월 첫 영업일에 한도 초과 시</span>
         </div>
       </div>
     </div>
