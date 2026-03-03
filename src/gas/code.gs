@@ -187,6 +187,13 @@ const doGet = (e) => {
     return handleBizplayDraftList(adminRow, e);
   }
 
+  // [기능 7c] Bizplay 기안문서 상세 조회
+  if (action === "bizplayDraftDetail" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBizplayDraftDetail(adminRow, e);
+  }
+
   // [기능 7] Bizplay 임시저장 (교육 신청서)
   if (action === "bizplayDraft" && token) {
     const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);

@@ -272,6 +272,44 @@ Response: {RSLT_CD:"0000", RSLT_MSG:"..."}
 - `_encryptPw(plain)` / `_decryptPw(cipher)`: XOR 암호화 (`ENCRYPT_SECRET` 키 SHA-256) + Base64
 - H열에 저장된 Bizplay PW는 암호화 상태
 
+## 기안문서 조회 (handleBizplayDraftList / handleBizplayDraftDetail)
+
+### 목록 조회 — `appr_r007.jct`
+
+```
+POST https://approval.appplay.co.kr/appr_r007.jct
+Payload: _JSON_={PTL_ID, CHNL_ID, USE_INTT_ID, DRAFT_USER_ID, ST_DRAFT_DATE, EN_DRAFT_DATE, PG_NO, PG_PER_CNT, ...}
+Response: { REC: [{APPR_SEQ_NO, PAPER_SEQ_NO, APPR_SUBJ, DOC_NO, APPR_STS_NM, DRAFT_DTTM, TOT_AMT, COMM, ...}] }
+```
+
+- 최근 3개월 기안문서 15건 조회
+- `APPR_STS_NM`: 결재 상태 (완료, 결재진행, 반송 등)
+- `COMM`: 결재의견 존재 플래그 ("1" = 있음)
+
+### 상세 조회 — `appr_r011.jct`
+
+```
+POST https://approval.appplay.co.kr/appr_r011.jct
+Payload: _JSON_={PTL_ID, CHNL_ID, USE_INTT_ID, APPR_SEQ_NO, PAPER_SEQ_NO}
+Response: { APPR_SUBJ, APPR_CONT(HTML), DOC_NO, DRAFT_DTTM, TOT_AMT, ... }
+```
+
+- `APPR_CONT`: 문서 본문 HTML (Bizplay 에디터 출력, 인라인 스타일 포함)
+- `APPR_STS_NM`은 r011 응답에 없음 → 목록 데이터(`_draftMap`)에서 병합
+
+### 결재의견 조회 — `appr_opinion_r001.jct`
+
+```
+POST https://approval.appplay.co.kr/appr_opinion_r001.jct
+Payload: _JSON_={PTL_ID, CHNL_ID, USE_INTT_ID, APPR_SEQ_NO}
+Response: { APPR_OPINION_REC: [{USER_NM, DVSN_NM, RSPT_NM, OPINION, OPINION_DATE, OPINION_TIME}] }
+```
+
+- `OPINION`: 결재의견 본문 텍스트
+- `OPINION_DATE`: yyyyMMdd, `OPINION_TIME`: HHmm
+- 반송/반려 시 반려 사유가 이 API를 통해 조회됨
+- GAS에서 r011 호출 후 추가로 호출하여 `detail.opinions[]`에 병합
+
 ---
 
 # 비즈플레이 원본 소스 참조

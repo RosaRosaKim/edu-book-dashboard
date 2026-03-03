@@ -758,6 +758,7 @@ function _callWebankApi(webankCookies, fromDt, toDt) {
   var records = (data.REC || []).map(function(r) {
     return {
       date: _fmtApvDt(r.APV_DT, r.APV_TM),
+      rawDate: r.APV_DT || '',
       merchant: r.MEST_NM || '',
       cost: Math.round(Number(r.BUY_SUM) || 0),
       category: r.CARD_TPBZ_NM || '',

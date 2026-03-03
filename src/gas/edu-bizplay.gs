@@ -1036,6 +1036,160 @@ function handleBizplayDraftList(adminRow, e) {
   }
 }
 
+/* ═══════════════ 기안문서 상세 조회 ═══════════════ */
+
+function handleBizplayDraftDetail(adminRow, e) {
+  const propKey = 'bizplay_' + adminRow[ADMIN_COL.KNOX_ID];
+  const rawSession = PropertiesService.getScriptProperties().getProperty(propKey);
+  if (!rawSession) return createResponse({ error: "NO_SESSION", message: "Bizplay 로그인이 필요해." });
+
+  var session = JSON.parse(rawSession);
+  var debug = {};
+  var apprSeqNo = e.parameter.apprSeqNo || '';
+  var paperSeqNo = e.parameter.paperSeqNo || '';
+
+  if (!apprSeqNo) return createResponse({ status: 'fail', message: 'APPR_SEQ_NO 누락' });
+
+  // ── SSO 획득 (세션 재사용 30분 → 실패 시 PW로 fresh SSO) ──
+  var ssoResult = _getApprovalSso(session, adminRow);
+  if (ssoResult.error) return createResponse({ error: ssoResult.error, message: "비밀번호 저장 후 다시 로그인해줘." });
+
+  // ── r011 API 호출 ──
+  function callR011(sso) {
+    var ff = sso.formFields || {};
+    var useInttId = ff.USE_INTT_ID || session.useInttId || sso.useInttId || '';
+
+    var r011Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+      PTL_ID: ff.PTL_ID || 'PTL_3',
+      CHNL_ID: ff.CHNL_ID || 'CHNL_1',
+      USE_INTT_ID: useInttId,
+      APPR_SEQ_NO: apprSeqNo,
+      PAPER_SEQ_NO: paperSeqNo
+    }));
+
+    var resp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_r011.jct', {
+      method: 'post',
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Cookie': sso.approvalCookies,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
+      },
+      payload: r011Payload,
+      muteHttpExceptions: true
+    });
+
+    return { respText: resp.getContentText(), httpStatus: resp.getResponseCode() };
+  }
+
+  // ── 1차 시도 (세션 재사용) ──
+  var sso = ssoResult.sso;
+  debug.sso = sso.debug;
+
+  if (sso.error) return createResponse({ status: 'fail', message: sso.error, debug: debug });
+  if (!sso.approvalCookies) return createResponse({ status: 'fail', message: 'Approval SSO 실패. 다시 로그인해줘.', debug: debug });
+
+  try {
+    var result = callR011(sso);
+    debug.httpStatus = result.httpStatus;
+    debug.respLen = result.respText.length;
+
+    var body;
+    try { body = JSON.parse(result.respText); } catch (pe) { body = null; }
+
+    // 세션 만료 에러 → PW로 fresh SSO 재시도
+    if (body && body.COMMON_HEAD && body.COMMON_HEAD.ERROR === true) {
+      var errMsg = body.COMMON_HEAD.MESSAGE || '';
+      if (errMsg.includes('로그아웃') || errMsg.includes('세션') || errMsg.includes('만료')) {
+        debug.retry = true;
+        debug.retryReason = errMsg;
+        sso = _retryApprovalSso(session, adminRow);
+
+        if (!sso || sso.error || !sso.approvalCookies) {
+          var failMsg = ssoResult.noPw ? '세션이 만료됐어. 비밀번호 저장 후 다시 로그인해줘.' : (sso && sso.error ? sso.error : 'SSO 재시도 실패');
+          return createResponse({ status: 'fail', message: failMsg, debug: debug });
+        }
+        debug.ssoRetry = sso.debug;
+
+        result = callR011(sso);
+        debug.retryHttpStatus = result.httpStatus;
+        debug.retryRespLen = result.respText.length;
+        try { body = JSON.parse(result.respText); } catch (pe) { body = null; }
+      }
+    }
+
+    _saveApprovalSession(propKey, session, sso);
+
+    if (!body) {
+      debug.respHead = result.respText.substring(0, 500);
+      return createResponse({ status: 'fail', message: '기안문서 상세 응답 파싱 실패', debug: debug });
+    }
+
+    debug.respKeys = Object.keys(body).join(',');
+
+    if (body.COMMON_HEAD && body.COMMON_HEAD.ERROR === true) {
+      debug.errorMsg = body.COMMON_HEAD.MESSAGE;
+      return createResponse({ status: 'fail', message: body.COMMON_HEAD.MESSAGE || '기안문서 상세 조회 실패', debug: debug });
+    }
+
+    // 주요 필드 추출
+    var detail = {
+      APPR_SUBJ: body.APPR_SUBJ || '',
+      APPR_CONT: body.APPR_CONT || '',
+      DOC_NO: body.DOC_NO || body.APPR_NO || '',
+      DRAFT_DATE: body.DRAFT_DTTM || body.DRAFT_DATE || '',
+      APPR_STS_NM: body.APPR_STS_NM || body.PROC_NM || '',
+      TOT_AMT: body.TOT_AMT || '',
+      REJECT_REMARK: body.REJECT_REMARK || body.RET_RSLT || body.APPR_REMARK || body.RETURN_REASON || ''
+    };
+
+    debug.respKeys = Object.keys(body).join(',');
+
+    // ── 결재의견 조회 (appr_opinion_r001.jct) ──
+    var _ff = sso.formFields || {};
+    var _uid = _ff.USE_INTT_ID || session.useInttId || sso.useInttId || '';
+    try {
+      var opPayload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+        PTL_ID: _ff.PTL_ID || 'PTL_3', CHNL_ID: _ff.CHNL_ID || 'CHNL_1',
+        USE_INTT_ID: _uid, APPR_SEQ_NO: apprSeqNo
+      }));
+      var opResp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_opinion_r001.jct', {
+        method: 'post', contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+        headers: {
+          'User-Agent': BROWSER_UA, 'Cookie': sso.approvalCookies,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
+        },
+        payload: opPayload, muteHttpExceptions: true
+      });
+      var opBody = JSON.parse(opResp.getContentText());
+      var opRec = opBody.APPR_OPINION_REC || [];
+      if (Array.isArray(opRec)) {
+        detail.opinions = opRec.map(function(rec) {
+          var d = rec.OPINION_DATE || '';
+          var t = rec.OPINION_TIME || '';
+          var dt = '';
+          if (d.length >= 8) dt = d.substring(0,4) + '-' + d.substring(4,6) + '-' + d.substring(6,8);
+          if (t.length >= 4) dt += ' ' + t.substring(0,2) + ':' + t.substring(2,4);
+          return {
+            name: rec.USER_NM || '',
+            dept: rec.DVSN_NM || '',
+            pos: rec.RSPT_NM || '',
+            opinion: rec.OPINION || '',
+            date: dt
+          };
+        });
+      }
+    } catch(e) { debug.opinionErr = e.message; }
+
+    return createResponse({ status: 'success', detail: detail, debug: debug });
+  } catch (err) {
+    debug.exception = err.message;
+    return createResponse({ error: 'DRAFT_DETAIL_ERROR', message: err.message, debug: debug });
+  }
+}
+
 /* ═══════════════ 결재라인 조회 ═══════════════ */
 
 function handleBizplayApprLine(adminRow, e) {

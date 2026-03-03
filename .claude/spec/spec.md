@@ -17,6 +17,8 @@
 | `html/edu-bizplay.html` | Bizplay 교육 신청서 임시저장 모듈 |
 | `html/card-babka.html` | 법인카드(밥카) 모듈 |
 | `html/edu-board.html` | 익명 게시판 모듈 (정렬, 페이지네이션, 관리자 답변) |
+| `html/edu-draft.html` | 기안문서 모듈 (목록, 상세, 결재의견) |
+| `css/draft.css` | 기안문서 전용 스타일 (카드 상태색, 본문 파싱, 리스트/코드) |
 | `html/manifest.json` | PWA 매니페스트 |
 | `html/sw.js` | Service Worker (네트워크 우선 + 캐시 폴백) |
 | `gas/code.gs` | GAS 백엔드 (라우터 + 자동 알림 트리거) |
@@ -59,6 +61,8 @@
 | 게시판 글쓰기 | `?action=boardWrite&token={UUID}&content={텍스트}` | `{status:"success"}` | 익명, 1~200자 |
 | 게시판 반응 | `?action=boardReact&token={UUID}&postId={ID}&type={like/dislike}` | `{status,likes,dislikes,myReaction}` | 좋아요/싫어요 토글 |
 | 게시판 답변 | `?action=boardReply&token={UUID}&postId={ID}&reply={텍스트}` | `{status,reply}` | 관리자 전용, 1~200자 |
+| 기안문서 목록 | `?action=bizplayDraftList&token={UUID}` | `{status,draftList[]}` | 최근 3개월, Bizplay r007 프록시 |
+| 기안문서 상세 | `?action=bizplayDraftDetail&token={UUID}&apprSeqNo={NO}&paperSeqNo={NO}` | `{status,detail}` | r011 + 결재의견(appr_opinion_r001) |
 
 ### 데이터 조회 응답 구조
 
@@ -159,8 +163,7 @@
 | 교육비 | 잔액 요약 + 알람 토글 + 신청 내역 + Bizplay 임시저장 |
 | 밥카 | 법인카드 잔액 요약 + 결재/잔액 알림 토글 + 사용내역 + TOP5 통계 + 결재(임시저장/상신) |
 | 게시판 | 익명 글쓰기 + 좋아요/싫어요 + 최신순/인기순 정렬 + 페이지네이션 + 관리자 답변 |
-| 지출결의 | (예정, opacity-40) |
-| 타임시트 | (예정, opacity-40) |
+| 기안문서 | 기안 목록(최근 3개월) + 상세 보기(HTML 파싱) + 결재의견 표시 |
 
 ### D. 다크모드
 
@@ -248,7 +251,9 @@
 7. `cardApproval`: 밥카 결재 제출 (임시저장/결재요청)
 8. `sendBalanceInfo`: 관리자 → 사용자 잔액 Flow 발송
 9. `boardList` / `boardWrite` / `boardReact` / `boardReply`: 게시판 CRUD
-10. `token` 기본 조회: 교육+도서 병합 + 본인 내역 + 관리자 통계 + Bizplay 자동 세션 복원
+10. `bizplayDraftList`: 기안문서 목록 조회 (r007 프록시)
+11. `bizplayDraftDetail`: 기안문서 상세 조회 (r011 + 결재의견 r001)
+12. `token` 기본 조회: 교육+도서 병합 + 본인 내역 + 관리자 통계 + Bizplay 자동 세션 복원
 
 **`onSpreadsheetChange(e)` — 자동 알림 트리거:**
 - 교육/도서 신청서 "완료" 변경 감지 → 알람 동의 사용자에게 Flow 발송
@@ -536,15 +541,68 @@ GAS 백엔드 배포:
 - `replyPost` 성공 시 `_allPosts` 로컬 업데이트 후 재렌더
 - `window._isAdmin`: 대시보드 로그인 시 설정되는 전역 플래그
 
-## 15. 메시지 톤 & 스타일
+## 15. 기안문서 탭 — `html/edu-draft.html`
+
+### 기능 개요
+- Bizplay 전자결재 기안문서 목록 조회 + 상세 보기 + 결재의견 표시
+- 최근 3개월 기안문서를 카드 리스트로 표시, 클릭 시 상세 내용 렌더링
+
+### UI 구성
+
+**목록 뷰:**
+- 상태별 카드 색상: 완료/승인(초록), 반송/반려(빨강), 진행중(파랑), 기본(회색)
+- 좌측 상태 바(3px) + 배경색 + 문서번호/제목/기안일/최종결재자
+- `_draftMap` 로컬 캐시로 목록 데이터를 상세 뷰에 전달
+
+**상세 뷰:**
+- 헤더: 문서번호, 제목, 기안일, 상태 배지, 금액
+- 결재의견 (본문 상단): 반송/반려 시 빨간색, 일반 의견은 파란색 카드
+  - 의견자 이름, 부서/직급 배지, 날짜, 의견 본문
+- 본문 HTML: `parseDraftHtml()` 함수로 파싱
+
+### HTML 파싱 (`parseDraftHtml`)
+
+**결의서 문서 (cardbill/expreport):**
+- 전용 카드 UI로 변환 (기존 로직 유지)
+
+**일반 문서 (`_parseGenericDoc`):**
+- 모든 HTML 속성 제거 (colspan/rowspan만 보존)
+- base64 이미지 제거
+- 테이블 → 카드 UI 변환 (`_tblToCards`)
+  - 멀티-로우 헤더 감지 (rowspan/colspan 그리드 알고리즘)
+  - 데이터 행 → 번호 배지 + key-value flex 카드
+  - 합계 행 자동 감지 (하단 bold/합계 텍스트)
+- 빈 요소 제거
+- ★ 섹션 헤더 자동 감지 → `.draft-section-hdr` 클래스 적용
+
+### Bizplay API
+
+| API | 용도 | 주요 파라미터 |
+|-----|------|--------------|
+| `appr_r007.jct` | 기안문서 목록 | ST/EN_DRAFT_DATE, PG_NO, PG_PER_CNT |
+| `appr_r011.jct` | 기안문서 상세 | APPR_SEQ_NO, PAPER_SEQ_NO |
+| `appr_opinion_r001.jct` | 결재의견 조회 | APPR_SEQ_NO |
+
+**결재의견 응답 (`APPR_OPINION_REC[]`):**
+- `USER_NM`: 의견자 이름
+- `DVSN_NM`: 부서명
+- `RSPT_NM`: 직급명
+- `OPINION`: 의견 본문
+- `OPINION_DATE` + `OPINION_TIME`: 작성 일시 (yyyyMMdd + HHmm)
+
+### CSS (`css/draft.css`)
+- 상태별 카드 배경/바 색상 (light + dark)
+- `.draft-content` 스코핑: 테이블, 리스트, 코드, 헤딩, ★ 섹션 헤더
+- Bizplay 에디터 고정폭 컨테이너 무력화 (`width: auto !important`)
+- 반응형 테이블 (border-collapse, auto table-layout)
+
+## 16. 메시지 톤 & 스타일
 
 - **전체 반말 모드**: 프로젝트 내 모든 사용자 대상 메시지(UI 텍스트, 에러 메시지, 알림, 토스트 등)는 반말로 작성
   - 예: "로그인이 필요합니다" → "로그인이 필요해", "재로그인 해주세요" → "재로그인 해줘", "완료되었습니다" → "완료됐어"
 - 존댓말(~합니다, ~습니다, ~해주세요 등) 사용 금지
 - 코드 주석, 스펙 문서 등 개발자 대상 텍스트는 해당 없음
 
-## 16. 추후 구현 예정 아이디어
+## 17. 추후 구현 예정 아이디어
 
 - 동료 교육 추천 기능 (🤝 버튼 → 동료 Bizplay 임시저장으로 전송) — UI만 구현, "곧 추가될 기능" 안내 표시 중
-- **지출결의 탭:** 야근식대, 교육비, 휴일근무수당 자동 신청
-- **타임시트 탭:** 진심모드, 대충모드
