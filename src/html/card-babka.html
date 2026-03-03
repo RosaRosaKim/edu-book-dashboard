@@ -1,6 +1,13 @@
 <style>
-@keyframes star-pop { 0%{transform:scale(1)} 50%{transform:scale(1.5)} 100%{transform:scale(1)} }
-@keyframes star-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+@keyframes like-pop { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+.rate-like, .rate-dislike { display:inline-flex; align-items:center; gap:3px; padding:3px 10px; border-radius:9999px; cursor:pointer; font-size:10px; font-weight:700; letter-spacing:.2px; border:none; transition:all .15s; }
+.rate-like { background:rgba(5,150,105,.13); color:#059669; }
+.rate-like:hover { background:rgba(5,150,105,.22); }
+.rate-like.rate-active-like { background:#059669; color:#fff; box-shadow:0 1px 4px rgba(5,150,105,.3); }
+.rate-dislike { background:rgba(220,38,38,.10); color:#dc2626; }
+.rate-dislike:hover { background:rgba(220,38,38,.20); }
+.rate-dislike.rate-active-dislike { background:#dc2626; color:#fff; box-shadow:0 1px 4px rgba(220,38,38,.3); }
+.rate-like span, .rate-dislike span { font-size:11px; line-height:1; }
 .naver-map-link {
   display:inline-flex; align-items:center; gap:3px;
   padding:2px 8px 2px 6px; border-radius:9999px;
@@ -434,6 +441,25 @@
   /* ─── 맛집 평점 ─── */
 
   /** 평점 데이터 로드 (records 로드 직후 자동 호출) */
+  // 구형(avg) → 신형(likes/dislikes) 변환
+  function normalizeRatings(raw) {
+    const result = {};
+    for (const m in raw) {
+      const r = raw[m];
+      if (r.likes !== undefined) {
+        result[m] = r;
+      } else {
+        result[m] = {
+          likes: r.myRating > 0 ? 1 : 0,
+          dislikes: r.myRating > 0 ? Math.max(0, (r.count || 0) - 1) : (r.count || 0),
+          count: r.count || 0,
+          myRating: r.myRating > 0 ? 1 : -1
+        };
+      }
+    }
+    return result;
+  }
+
   async function fetchRatings() {
     if (cardRatingsCache) return;
 
@@ -442,7 +468,7 @@
       const url = window.API_URL + '?action=cardRatings&token=' + encodeURIComponent(token);
       const data = await window.gasFetch(url);
       if (data.status === 'success') {
-        cardRatingsCache = data.ratings || {};
+        cardRatingsCache = normalizeRatings(data.ratings || {});
         renderCardDashboard();
       }
     } catch (e) {
@@ -469,41 +495,48 @@
 
     const ratings = cardRatingsCache || {};
 
-    // 평점이 있는 식당 (avg 내림차순)
-    const rated = Object.keys(ratings).filter(m => ratings[m] && ratings[m].avg > 0);
-    rated.sort((a, b) => (ratings[b].avg - ratings[a].avg));
+    // 평가가 있는 식당
+    const rated = Object.keys(ratings).filter(m => ratings[m] && ratings[m].count > 0);
 
     if (rated.length === 0) {
-      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl py-10 text-center text-[#6e7f7b] text-sm">아직 맛집 평가가 없어.<br><span class="text-xs opacity-60 mt-1 inline-block">사용내역에서 ⭐별점을 남겨봐!</span></div>';
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl py-10 text-center text-[#6e7f7b] text-sm">아직 맛집 평가가 없어.<br><span class="text-xs opacity-60 mt-1 inline-block">사용내역에서 추천/비추 평가를 남겨봐!</span></div>';
       return;
     }
 
-    const maxAvg = Math.max(...rated.map(m => ratings[m].avg || 0), 1);
-    const starColors = ['#d97706', '#e8a317', '#f0b429', '#f5c842', '#fad960'];
+    // 좋아요율 내림차순 정렬
+    rated.sort((a, b) => {
+      const rateA = ratings[a].count > 0 ? ratings[a].likes / ratings[a].count : 0;
+      const rateB = ratings[b].count > 0 ? ratings[b].likes / ratings[b].count : 0;
+      if (rateB !== rateA) return rateB - rateA;
+      return (ratings[b].likes || 0) - (ratings[a].likes || 0);
+    });
 
     let html = '<div class="bg-surface border border-border rounded-2xl p-5">';
-    html += '<div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">맛집 평점 랭킹</div>';
+    html += '<div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">맛집 평가 랭킹</div>';
     html += '<div class="space-y-4">';
 
     rated.forEach((name, i) => {
       const r = ratings[name];
-      const pct = maxAvg > 0 ? Math.max((r.avg / maxAvg) * 100, 4) : 0;
-      const color = starColors[Math.min(i, starColors.length - 1)];
+      const likes = r.likes || 0;
+      const dislikes = r.dislikes || 0;
+      const total = likes + dislikes;
+      const likePct = total > 0 ? Math.round((likes / total) * 100) : 0;
+      const barColor = likePct >= 70 ? '#059669' : likePct >= 40 ? '#d97706' : '#dc2626';
       const mapQuery = encodeURIComponent(name);
       const mapUrl = 'https://map.naver.com/v5/search/' + mapQuery;
 
       html += `
         <div>
           <div class="flex items-center gap-2.5 mb-1.5">
-            <span class="text-xs font-bold w-5 shrink-0 text-center" style="color:${color}">⭐</span>
+            <span class="text-[9px] font-bold w-5 shrink-0 text-center" style="color:${barColor}">${likePct >= 70 ? '♥' : likePct >= 40 ? '―' : '✕'}</span>
             <span class="text-sm font-medium truncate flex-1">${escapeHtml(name)}</span>
-            <span class="text-[10px] text-[#d97706] font-medium shrink-0">${r.avg}점 · ${r.count}명</span>
+            <span class="text-[10px] font-medium shrink-0" style="color:${barColor}">${likePct}% · ${total}명</span>
             <a href="${mapUrl}" target="_blank" rel="noopener" class="naver-map-link" title="네이버지도 검색"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>지도</a>
           </div>
           <div class="flex items-center gap-2.5">
             <span class="w-5 shrink-0"></span>
             <div class="flex-1 h-2.5 bg-surface-2 rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-700" style="width:${pct}%;background:${color}"></div>
+              <div class="h-full rounded-full transition-all duration-700" style="width:${likePct}%;background:${barColor}"></div>
             </div>
           </div>
         </div>`;
@@ -513,53 +546,37 @@
     wrap.innerHTML = html;
   }
 
-  /** SVG 별 5개 렌더링 (클릭 가능) */
-  function renderStars(merchant, myRating, avg) {
-    let html = '';
-    for (let i = 1; i <= 5; i++) {
-      let color;
-      if (myRating >= i) {
-        color = '#d97706'; // 금색 (내 평가)
-      } else if (avg >= i) {
-        color = '#d9770640'; // 연한 금색 (평균)
-      } else {
-        color = '#d1d5db'; // 회색
-      }
-      const escapedMerchant = merchant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      html += `<svg data-merchant="${escapedMerchant}" data-star="${i}" onclick="window._rateRestaurant('${escapedMerchant}', ${i})" class="card-star w-4 h-4 cursor-pointer hover:scale-125 transition" viewBox="0 0 24 24" fill="${color}"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
-    }
-    return html;
+  /** 좋아요/싫어요 버튼 렌더링 */
+  function renderLikeDislike(merchant, myRating) {
+    const esc = merchant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const likeActive = myRating === 1 ? ' rate-active-like' : '';
+    const dislikeActive = myRating === 0 ? ' rate-active-dislike' : '';
+    return `<button class="rate-like${likeActive}" onclick="window._rateRestaurant('${esc}',1)" title="추천">⭐ 추천</button>` +
+           `<button class="rate-dislike${dislikeActive}" onclick="window._rateRestaurant('${esc}',0)" title="비추천">💩 비추</button>`;
   }
 
-  /** 별점 등록/수정 (팝 + 펄스 애니메이션) */
+  /** 좋아요/싫어요 등록 (팝 애니메이션) */
   window._rateRestaurant = async function(merchant, rating) {
     if (!cardRatingsCache) cardRatingsCache = {};
 
-    // 1. 즉시 DOM 애니메이션 (재렌더 없이)
-    document.querySelectorAll('.card-star').forEach(svg => {
-      if (svg.dataset.merchant !== merchant) return;
-      const s = Number(svg.dataset.star);
-      const path = svg.querySelector('path');
-      // 색상 즉시 변경
-      path.setAttribute('fill', s <= rating ? '#d97706' : '#d1d5db');
-      // 클릭한 별: 팝
-      if (s === rating) {
-        svg.style.animation = 'none';
-        svg.offsetHeight;
-        svg.style.animation = 'star-pop .3s ease-out';
-      }
-      // 채워진 별: 300ms 후 펄스 시작
-      if (s <= rating) {
-        setTimeout(() => { svg.style.animation = 'star-pulse .8s ease-in-out infinite'; }, 300);
-      } else {
-        svg.style.animation = '';
+    // 1. 즉시 DOM 애니메이션
+    document.querySelectorAll('.rate-like, .rate-dislike').forEach(btn => {
+      const onclick = btn.getAttribute('onclick') || '';
+      if (!onclick.includes(merchant.replace(/'/g, "\\'"))) return;
+      btn.classList.remove('rate-active-like', 'rate-active-dislike');
+      if (rating === 1 && btn.title === '추천') {
+        btn.classList.add('rate-active-like');
+        btn.style.animation = 'like-pop .3s ease-out';
+      } else if (rating === 0 && btn.title === '비추천') {
+        btn.classList.add('rate-active-dislike');
+        btn.style.animation = 'like-pop .3s ease-out';
       }
     });
 
-    // 2. 캐시 업데이트 (DOM은 이미 반영됨)
+    // 2. 캐시 업데이트
     const prev = cardRatingsCache[merchant] ? { ...cardRatingsCache[merchant] } : null;
     if (!cardRatingsCache[merchant]) {
-      cardRatingsCache[merchant] = { avg: rating, count: 1, myRating: rating };
+      cardRatingsCache[merchant] = { likes: rating === 1 ? 1 : 0, dislikes: rating === 0 ? 1 : 0, count: 1, myRating: rating };
     } else {
       cardRatingsCache[merchant].myRating = rating;
     }
@@ -572,12 +589,13 @@
         + '&rating=' + rating;
       const data = await window.gasFetch(url);
       if (data.status === 'success') {
-        cardRatingsCache[merchant] = { avg: data.avg, count: data.count, myRating: data.myRating };
-        window.showToast(merchant + ' ' + '⭐'.repeat(rating), 'smail');
+        const norm = normalizeRatings({ [merchant]: data });
+        cardRatingsCache[merchant] = norm[merchant];
+        window.showToast(merchant + ' ' + (rating === 1 ? '추천!' : '비추천'), 'smail');
       } else {
         if (prev) cardRatingsCache[merchant] = prev;
         else delete cardRatingsCache[merchant];
-        window.showToast('평점 저장에 실패했어.', 'sad');
+        window.showToast('평가 저장에 실패했어.', 'sad');
       }
     } catch (e) {
       if (prev) cardRatingsCache[merchant] = prev;
@@ -585,7 +603,7 @@
       window.showToast('서버 연결에 실패했어.', 'sad');
     }
 
-    // 4. 완료: 펄스 멈추고 최종 렌더
+    // 4. 최종 렌더
     renderCardDashboard();
   };
 
@@ -736,7 +754,7 @@
       const amt = Number(r.cost) || 0;
       const merchant = r.merchant || '-';
       const date = r.date || '';
-      const rInfo = ratings[merchant] || { avg: 0, count: 0, myRating: 0 };
+      const rInfo = ratings[merchant] || { likes: 0, dislikes: 0, count: 0, myRating: -1 };
 
       const tr = document.createElement('tr');
       tr.className = 'border-b border-border/80';
@@ -745,7 +763,7 @@
         <td class="px-4 py-3 text-sm text-[#6e7f7b] whitespace-nowrap">${escapeHtml(date)}</td>
         <td class="px-4 py-3 text-sm">
           <div>${escapeHtml(merchant)}</div>
-          <div class="flex items-center gap-0.5 mt-1">${renderStars(merchant, rInfo.myRating, rInfo.avg)}</div>
+          <div class="flex items-center gap-0.5 mt-1">${renderLikeDislike(merchant, rInfo.myRating)}</div>
         </td>
         <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
       `;
@@ -761,11 +779,11 @@
         <div class="flex items-center justify-between mb-1">
           <span class="text-sm font-semibold truncate flex-1 mr-2">${escapeHtml(merchant)}</span>
           <div class="flex items-center gap-1.5 shrink-0">
-            ${rInfo.count > 0 ? `<span class="text-[10px] text-[#d97706]">${rInfo.avg}</span>` : ''}
+            ${rInfo.myRating === 1 ? '<span class="text-[9px] font-semibold text-[#059669]">⭐ 추천</span>' : rInfo.myRating === 0 ? '<span class="text-[9px] font-semibold text-[#dc2626]">💩 비추</span>' : ''}
             <a href="${mapUrl}" target="_blank" rel="noopener" class="naver-map-link" title="네이버지도 검색"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>지도</a>
           </div>
         </div>
-        <div class="flex items-center gap-0.5 mb-2">${renderStars(merchant, rInfo.myRating, rInfo.avg)}</div>
+        <div class="flex items-center gap-0.5 mb-2">${renderLikeDislike(merchant, rInfo.myRating)}</div>
         <div class="flex items-center justify-between text-xs text-[#6e7f7b]">
           <span>${escapeHtml(date)}</span>
           <span class="font-mono font-medium text-[#47635f]">${formatMoney(amt)}원</span>

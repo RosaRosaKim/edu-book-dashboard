@@ -420,15 +420,12 @@ tailwind.config = {
   </main>
 </div>
 
-<!-- 메시지 박스 -->
-<div id="msgBox" class="fixed z-50 pointer-events-none transition-all duration-300 opacity-0 scale-90" style="display:none;">
-  <div class="pointer-events-auto flex items-end gap-0">
-    <img id="msgBoxImg" src="../img/smail.png" alt="" class="w-16 h-16 object-contain shrink-0 self-end translate-y-1">
-    <div id="msgBoxBubble" class="relative border-2 border-accent rounded-2xl rounded-bl-none px-4 py-2.5 shadow-xl max-w-[260px] mb-8" style="background:var(--bubble-bg)">
-      <div id="msgBoxText" class="text-sm text-[#47635f] font-medium leading-snug"></div>
-      <div id="msgBoxDismiss" class="hidden flex justify-end mt-2">
-        <button onclick="dismissToast()" class="px-4 py-1.5 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">응</button>
-      </div>
+<!-- 메시지 박스 (마스코트 말풍선) -->
+<div id="msgBox" class="fixed z-50 pointer-events-none transition-all duration-300 opacity-0" style="display:none;transform-origin:left center;transform:scale(.9);">
+  <div id="msgBoxBubble" class="pointer-events-auto relative border-2 border-accent rounded-2xl px-4 py-2.5 shadow-xl max-w-[280px]" style="background:var(--bubble-bg)">
+    <div id="msgBoxText" class="text-sm text-[#47635f] font-medium leading-snug"></div>
+    <div id="msgBoxDismiss" class="hidden flex justify-end mt-2">
+      <button onclick="dismissToast()" class="px-4 py-1.5 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">응</button>
     </div>
   </div>
 </div>
@@ -1103,19 +1100,17 @@ function showToast(msg, mood, anchorEl, opts) {
   opts = opts || {};
 
   const box = $('msgBox');
-  const img = $('msgBoxImg');
   const text = $('msgBoxText');
   const bubble = $('msgBoxBubble');
   const dismissBtn = $('msgBoxDismiss');
 
-  // 이미지 & 색상
+  // 색상
   const config = {
-    smail: { src: '../img/smail.png', color: '#2d8a7e', border: '#2d8a7e' },
-    sad:   { src: '../img/sad.png',   color: '#d97706', border: '#d97706' },
-    angry: { src: '../img/angry.png', color: '#dc2626', border: '#dc2626' }
+    smail: { color: '#2d8a7e', border: '#2d8a7e' },
+    sad:   { color: '#d97706', border: '#d97706' },
+    angry: { color: '#dc2626', border: '#dc2626' }
   };
   const c = config[mood] || config.smail;
-  img.src = c.src;
   bubble.style.borderColor = c.border;
   bubble.style.setProperty('--bubble-color', c.border);
   if (opts.html) text.innerHTML = msg;
@@ -1130,34 +1125,35 @@ function showToast(msg, mood, anchorEl, opts) {
     dismissBtn.classList.remove('flex');
   }
 
-  // 위치: anchorEl 근처 또는 화면 하단 중앙
+  // 위치: 항상 헤더 마스코트 아래
   box.style.display = '';
-  box.classList.remove('opacity-0', 'scale-90');
-  box.classList.add('opacity-100', 'scale-100');
+  box.style.position = 'fixed';
+  box.style.bottom = '';
 
-  if (anchorEl) {
-    const rect = anchorEl.getBoundingClientRect();
-    const boxW = 320;
-    let left = rect.left + rect.width / 2 - boxW / 2;
-    left = Math.max(12, Math.min(left, window.innerWidth - boxW - 12));
-    box.style.position = 'fixed';
-    box.style.left = left + 'px';
-    box.style.top = Math.max(8, rect.top - 80) + 'px';
-    box.style.bottom = '';
-    box.style.transform = '';
+  const mascot = $('headerSmail');
+  if (mascot) {
+    const rect = mascot.getBoundingClientRect();
+    box.style.left = (rect.right + 6) + 'px';
+    box.style.top = Math.max(8, rect.top + rect.height / 2 - 18) + 'px';
+    box.style.transform = 'scale(.9)';
   } else {
-    box.style.position = 'fixed';
-    box.style.left = '50%';
-    box.style.top = '';
-    box.style.bottom = '24px';
-    box.style.transform = 'translateX(-50%)';
+    box.style.left = '60px';
+    box.style.top = '16px';
+    box.style.transform = 'scale(.9)';
   }
+
+  requestAnimationFrame(() => {
+    box.classList.remove('opacity-0');
+    box.classList.add('opacity-100');
+    box.style.transform = 'scale(1)';
+  });
 
   clearTimeout(msgBoxTimer);
   if (!opts.dismiss) {
     msgBoxTimer = setTimeout(() => {
-      box.classList.remove('opacity-100', 'scale-100');
-      box.classList.add('opacity-0', 'scale-90');
+      box.classList.remove('opacity-100');
+      box.classList.add('opacity-0');
+      box.style.transform = 'scale(.9)';
       setTimeout(() => { box.style.display = 'none'; }, 300);
     }, 2800);
   }
@@ -1166,8 +1162,9 @@ window.showToast = showToast;
 
 function dismissToast() {
   const box = $('msgBox');
-  box.classList.remove('opacity-100', 'scale-100');
-  box.classList.add('opacity-0', 'scale-90');
+  box.classList.remove('opacity-100');
+  box.classList.add('opacity-0');
+  box.style.transform = 'scale(.9)';
   setTimeout(() => { box.style.display = 'none'; }, 300);
 }
 window.dismissToast = dismissToast;

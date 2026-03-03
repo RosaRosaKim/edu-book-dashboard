@@ -1254,17 +1254,28 @@ function _parseEaprUserInfo(html) {
 
 /**
  * 맛집평가 시트 자동 생성 (없으면 헤더 삽입)
+ * 기존 별점(2~5) → 좋아요(1) 자동 변환
  */
 function ensureRatingSheet(ss) {
   var sheet = ss.getSheetByName(SHEET_NAME.RATING);
-  if (sheet) return sheet;
-  sheet = ss.insertSheet(SHEET_NAME.RATING);
-  sheet.appendRow(['사용처', 'knoxId', '평점', '날짜']);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME.RATING);
+    sheet.appendRow(['사용처', 'knoxId', '평점', '날짜']);
+    return sheet;
+  }
+  // 기존 별점(2~5) → 좋아요(1) 변환
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var score = Number(data[i][2]);
+    if (score >= 2 && score <= 5) {
+      sheet.getRange(i + 1, 3).setValue(1);
+    }
+  }
   return sheet;
 }
 
 /**
- * 전체 평점 집계 + 내 평점 반환
+ * 전체 좋아요/싫어요 집계 + 내 평가 반환
  * action=cardRatings&token={UUID}
  */
 function handleCardRatings(adminRow, e) {
@@ -1273,25 +1284,26 @@ function handleCardRatings(adminRow, e) {
   var sheet = ensureRatingSheet(ss);
   var data = sheet.getDataRange().getValues();
 
-  var ratings = {}; // { merchant: { sum, count, myRating } }
+  var ratings = {}; // { merchant: { likes, dislikes, myRating } }
   for (var i = 1; i < data.length; i++) {
     var merchant = String(data[i][0]).trim();
     var rater = String(data[i][1]).trim();
-    var score = Number(data[i][2]) || 0;
-    if (!merchant || score < 1 || score > 5) continue;
+    var score = Number(data[i][2]);
+    if (!merchant || isNaN(score) || score < 0) continue;
 
-    if (!ratings[merchant]) ratings[merchant] = { sum: 0, count: 0, myRating: 0 };
-    ratings[merchant].sum += score;
-    ratings[merchant].count++;
-    if (rater === knoxId) ratings[merchant].myRating = score;
+    if (!ratings[merchant]) ratings[merchant] = { likes: 0, dislikes: 0, myRating: -1 };
+    if (score > 0) ratings[merchant].likes++;
+    else ratings[merchant].dislikes++;
+    if (rater === knoxId) ratings[merchant].myRating = score > 0 ? 1 : 0;
   }
 
   var result = {};
   for (var m in ratings) {
     var r = ratings[m];
     result[m] = {
-      avg: Math.round((r.sum / r.count) * 10) / 10,
-      count: r.count,
+      likes: r.likes,
+      dislikes: r.dislikes,
+      count: r.likes + r.dislikes,
       myRating: r.myRating
     };
   }
@@ -1300,16 +1312,16 @@ function handleCardRatings(adminRow, e) {
 }
 
 /**
- * 평점 저장/수정
- * action=cardRate&token={UUID}&merchant={name}&rating={1~5}
+ * 좋아요/싫어요 저장/수정
+ * action=cardRate&token={UUID}&merchant={name}&rating={1=좋아요, 0=싫어요}
  */
 function handleCardRate(adminRow, e) {
   var knoxId = String(adminRow[ADMIN_COL.KNOX_ID]);
   var merchant = (e.parameter.merchant || '').trim();
-  var rating = Number(e.parameter.rating) || 0;
+  var rating = Number(e.parameter.rating);
 
   if (!merchant) return createResponse({ error: 'MISSING_MERCHANT' });
-  if (rating < 1 || rating > 5) return createResponse({ error: 'INVALID_RATING' });
+  if (rating !== 0 && rating !== 1) return createResponse({ error: 'INVALID_RATING' });
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ensureRatingSheet(ss);
@@ -1334,19 +1346,22 @@ function handleCardRate(adminRow, e) {
 
   // 해당 음식점 집계 반환
   var allData = sheet.getDataRange().getValues();
-  var sum = 0, count = 0;
+  var likes = 0, dislikes = 0;
   for (var j = 1; j < allData.length; j++) {
     if (String(allData[j][0]).trim() === merchant) {
-      var s = Number(allData[j][2]) || 0;
-      if (s >= 1 && s <= 5) { sum += s; count++; }
+      var s = Number(allData[j][2]);
+      if (!isNaN(s) && s >= 0) {
+        if (s > 0) likes++; else dislikes++;
+      }
     }
   }
 
   return createResponse({
     status: 'success',
     merchant: merchant,
-    avg: count > 0 ? Math.round((sum / count) * 10) / 10 : 0,
-    count: count,
+    likes: likes,
+    dislikes: dislikes,
+    count: likes + dislikes,
     myRating: rating
   });
 }

@@ -47,7 +47,7 @@ var FLOW_MSG = {
     return {
       content: '아직 밥카 결재 안한 것 같아...',
       link: FLOW_LINK.CARD,
-      previewTitle: '밥카결재해야해'
+      previewTitle: '밥카결재 마지막날'
     };
   },
   // #6 밥카 잔액 알림

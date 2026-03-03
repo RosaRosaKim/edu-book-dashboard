@@ -145,7 +145,7 @@ function _postCardHtml(p) {
     '<div class="text-xs text-[#aab5b2] mb-2">' + formatDate(p.date) + '</div>' +
     '<div class="flex items-center gap-2">' +
       '<button id="likeBtn-' + p.id + '" class="board-react-btn' + likeActive + '" onclick="reactPost(\'' + p.id + '\',\'like\',this)">' +
-        '<span style="font-size:14px">💚</span> 좋아요 <span>' + p.likes + '</span></button>' +
+        '<span style="font-size:14px">👍</span> 좋아요 <span>' + p.likes + '</span></button>' +
       '<button id="dislikeBtn-' + p.id + '" class="board-react-btn' + dislikeActive + '" onclick="reactPost(\'' + p.id + '\',\'dislike\',this)">' +
         '<span style="font-size:14px">👎</span> 싫어요 <span>' + p.dislikes + '</span></button>' +
     '</div>';
@@ -301,7 +301,7 @@ async function reactPost(id, type, btnEl) {
       var dislikeBtn = document.getElementById('dislikeBtn-' + id);
       if (likeBtn) {
         likeBtn.className = 'board-react-btn' + (data.myReaction === 'like' ? ' active-like' : '');
-        likeBtn.innerHTML = '<span style="font-size:14px">💚</span> 좋아요 <span>' + data.likes + '</span>';
+        likeBtn.innerHTML = '<span style="font-size:14px">👍</span> 좋아요 <span>' + data.likes + '</span>';
         likeBtn.disabled = false;
       }
       if (dislikeBtn) {

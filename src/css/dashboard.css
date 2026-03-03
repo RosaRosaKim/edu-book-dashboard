@@ -24,18 +24,20 @@ html.dark .seg-item input:checked + .seg-label {
   background: var(--card-bg); color:#2d8a7e;
 }
 
-/* 메시지 박스 말풍선 꼬리 */
+/* 메시지 박스 말풍선 꼬리 (← 마스코트 방향) */
 #msgBoxBubble::before {
-  content:''; position:absolute; left:-8px; bottom:0;
+  content:''; position:absolute; left:-7px; top:12px;
   width:0; height:0;
   border-right:8px solid var(--bubble-bg);
-  border-top:8px solid transparent;
+  border-top:5px solid transparent;
+  border-bottom:5px solid transparent;
 }
 #msgBoxBubble::after {
-  content:''; position:absolute; left:-10px; bottom:-1px;
+  content:''; position:absolute; left:-10px; top:11px;
   width:0; height:0;
   border-right:10px solid var(--bubble-color, #2d8a7e);
-  border-top:10px solid transparent;
+  border-top:6px solid transparent;
+  border-bottom:6px solid transparent;
   z-index:-1;
 }
 #confirmBubble::before {
