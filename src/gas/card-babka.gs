@@ -1103,12 +1103,22 @@ function handleCardApproval(adminRow, e) {
     // 결재요청 시: bizplayApprLine에서 저장한 APPRLINE_SEQ_NO를 r010에 전달
     var savedApprLineSeqNo = '';
     var savedApprLineRaw = null;
+    var modifiedApprLine = null;
     if (!isTemp) {
+      // 수정된 결재라인 파라미터 확인
+      var modifiedParam = e.parameter.modifiedApprLine || '';
+      if (modifiedParam) {
+        try {
+          modifiedApprLine = JSON.parse(modifiedParam);
+          debug.modifiedApprLineCount = modifiedApprLine.length;
+        } catch (mpe) { debug.modifiedApprLineParseFail = mpe.message; }
+      }
+
       var alProp = PropertiesService.getScriptProperties().getProperty(propKey + '_cardApprLine');
       if (alProp) {
         try {
           savedApprLineRaw = JSON.parse(alProp);
-          // APPRLINE_SEQ_NO 추출 (첫 번째 비-0 값)
+          // APPRLINE_SEQ_NO 추출 (첫 번째 비-0 값) — 항상 원본에서 추출
           savedApprLineRaw.forEach(function(r) {
             if (!savedApprLineSeqNo && r.APPRLINE_SEQ_NO && r.APPRLINE_SEQ_NO !== '0') {
               savedApprLineSeqNo = r.APPRLINE_SEQ_NO;
@@ -1116,6 +1126,12 @@ function handleCardApproval(adminRow, e) {
           });
           debug.savedApprLineSeqNo = savedApprLineSeqNo;
         } catch (pe) { debug.alPropParseFail = pe.message; }
+      }
+
+      // 수정된 결재라인이 있으면 savedApprLineRaw를 대체
+      if (modifiedApprLine && modifiedApprLine.length > 0) {
+        savedApprLineRaw = modifiedApprLine;
+        debug.usingModifiedApprLine = true;
       }
     }
 
@@ -1126,24 +1142,17 @@ function handleCardApproval(adminRow, e) {
       RCPT_REC: rcptRec,
       CARD_REC: rcptRec
     };
-    // 결재요청: APPRLINE_SEQ_NO + 결재라인 REC를 r010에 전달 (브라우저와 동일 형식)
-    if (savedApprLineSeqNo) {
+    // 밥카 결재라인 고정: APPRLINE_SEQ_NO + REC 하드코딩
+    if (!isTemp) {
+      r010Json.APPRLINE_SEQ_NO = savedApprLineSeqNo || '84768443';
+      r010Json.REC = [
+        { APPR_ORD: '1', APPR_USER_GB: '1', APPRLINE_KIND: '2', RECENT_SAVE_YN: 'Y', BOTTOM_FIXED_YN: 'N', DEPT_CD: '19', DEPT_NM: '재무그룹' },
+        { APPR_ORD: '0', APPR_USER_GB: '1', APPRLINE_KIND: '4', RECENT_SAVE_YN: 'Y', BOTTOM_FIXED_YN: 'N', DEPT_CD: '157', DEPT_NM: '관리그룹' }
+      ];
+      debug.r010SentSeqNo = r010Json.APPRLINE_SEQ_NO;
+      debug.r010SentREC = r010Json.REC;
+    } else if (savedApprLineSeqNo) {
       r010Json.APPRLINE_SEQ_NO = savedApprLineSeqNo;
-    }
-    if (!isTemp && savedApprLineRaw && savedApprLineRaw.length > 0) {
-      // 브라우저와 동일한 최소 필드만 전달 (7개)
-      r010Json.REC = savedApprLineRaw.map(function(r) {
-        return {
-          APPR_ORD: r.APPR_ORD || '0',
-          APPR_USER_GB: r.APPR_USER_GB || '1',
-          APPRLINE_KIND: r.APPRLINE_KIND || '2',
-          RECENT_SAVE_YN: r.RECENT_SAVE_YN || 'Y',
-          BOTTOM_FIXED_YN: r.BOTTOM_FIXED_YN || 'N',
-          DEPT_CD: r.DEPT_CD || r.APPR_DEPT_CD || '',
-          DEPT_NM: r.DEPT_NM || r.APPR_DEPT_NM || ''
-        };
-      });
-      debug.r010ApprLineRec = r010Json.REC;
     }
 
     var r010Payload = '_JSON_=' + encodeURIComponent(JSON.stringify(r010Json));
@@ -1164,7 +1173,7 @@ function handleCardApproval(adminRow, e) {
     debug.r010BodyLen = r010Body.length;
     var r010Data;
     try { r010Data = JSON.parse(r010Body); } catch (pe) { r010Data = null; }
-    debug.r010Result = r010Data ? { RSLT_CD: r010Data.RSLT_CD, RSLT_MSG: r010Data.RSLT_MSG, hasApprLine: !!(r010Data.APPRLINE_REC && r010Data.APPRLINE_REC.length > 0) } : r010Body.substring(0, 1000);
+    debug.r010Result = r010Data ? { RSLT_CD: r010Data.RSLT_CD, RSLT_MSG: r010Data.RSLT_MSG, hasApprLine: !!(r010Data.APPRLINE_REC && r010Data.APPRLINE_REC.length > 0), APPRLINE_REC: r010Data.APPRLINE_REC } : r010Body.substring(0, 1000);
 
     if (!r010Data || r010Data.RSLT_CD !== '0000') {
       debug.r010Full = r010Body.substring(0, 2000);

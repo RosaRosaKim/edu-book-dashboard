@@ -180,6 +180,13 @@ const doGet = (e) => {
     return handleBizplayApprLine(adminRow, e);
   }
 
+  // [기능 7a-2] Bizplay 사원 검색 (결재라인 수정용)
+  if (action === "bizplaySearchUser" && token) {
+    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
+    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    return handleBizplaySearchUser(adminRow, e);
+  }
+
   // [기능 7b] Bizplay 기안문서 목록 조회
   if (action === "bizplayDraftList" && token) {
     const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);

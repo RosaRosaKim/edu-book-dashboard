@@ -1482,3 +1482,160 @@ function handleBizplayApprLine(adminRow, e) {
     return createResponse({ error: 'APPR_LINE_ERROR', message: err.message, debug: debug });
   }
 }
+
+/* ═══════════════ 사원 검색 (결재라인 수정용) ═══════════════ */
+
+/**
+ * com_empl_r002.jct 검색 시도 헬퍼
+ * @param {string} cookies - 쿠키 문자열
+ * @param {string} searchWord - 검색어
+ * @param {object} debug - 디버그 객체 (필드 추가됨)
+ * @param {string} prefix - 디버그 키 접두사
+ * @param {string} [domain] - 검색 도메인 (기본: emplinfo.appplay.co.kr)
+ * @returns {object|null} createResponse 결과 또는 null (실패)
+ */
+function _tryEmplSearch(cookies, searchWord, debug, prefix, domain) {
+  domain = domain || 'emplinfo.appplay.co.kr';
+  var payload = '_JSON_=' + encodeURIComponent(JSON.stringify({ SRCH_WORD: searchWord, LNGG_DSNC: 'KR' }));
+  try {
+    var resp = UrlFetchApp.fetch('https://' + domain + '/com_empl_r002.jct', {
+      method: 'post', contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+      headers: { 'User-Agent': BROWSER_UA, 'Cookie': cookies, 'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://' + domain + '/com_empl_02.act' },
+      payload: payload, muteHttpExceptions: true
+    });
+    var text = resp.getContentText();
+    debug[prefix + '_status'] = resp.getResponseCode();
+    debug[prefix + '_len'] = text.length;
+
+    var body;
+    try { body = JSON.parse(text); } catch (pe) { return null; }
+
+    if (body && body.RSLT_CD === '0000') {
+      var emplRec = body.EMPL_REC || body.REC || [];
+      if (!Array.isArray(emplRec)) emplRec = [];
+      var seen = {};
+      var results = [];
+      emplRec.forEach(function(r) {
+        var uid = r.USER_ID || '';
+        if (!uid || seen[uid]) return;
+        seen[uid] = true;
+        results.push({
+          APPR_USER_ID: uid, APPR_USER_NM: r.FLNM || '',
+          APPR_USER_POS_NM: r.RSPT_NM || '', APPR_DEPT_CD: r.DVSN_CD || '',
+          APPR_DEPT_NM: r.DVSN_NM || ''
+        });
+      });
+      debug[prefix + '_raw'] = emplRec.length;
+      debug[prefix + '_count'] = results.length;
+      return createResponse({ status: 'success', results: results, debug: debug });
+    }
+    debug[prefix + '_head'] = (text || '').substring(0, 200);
+  } catch (err) { debug[prefix + '_err'] = err.message; }
+  return null;
+}
+
+/**
+ * Bizplay 사원 검색 프록시
+ * action=bizplaySearchUser&token={UUID}&searchWord={이름}
+ *
+ * 전략 순서:
+ * A) approval 도메인에서 직접 com_empl_r002.jct 호출
+ * B) dtl 초기화 → apprline_list_0007.act 로드 → emplinfo iframe/gate URL 추출 → SSO → 검색
+ * C) fresh login → emplinfo gate.act 직접 시도
+ * D) com_empl_02.act에 approval 쿠키로 접근 → 검색
+ */
+function handleBizplaySearchUser(adminRow, e) {
+  var searchWord = e.parameter.searchWord || '';
+  if (!searchWord || searchWord.length < 2) {
+    return createResponse({ error: 'INVALID_PARAM', message: '검색어는 2자 이상 입력해줘.' });
+  }
+
+  var propKey = 'bizplay_' + adminRow[ADMIN_COL.KNOX_ID];
+  var rawSession = PropertiesService.getScriptProperties().getProperty(propKey);
+  if (!rawSession) return createResponse({ error: 'NO_SESSION', message: 'Bizplay 로그인이 필요해.' });
+
+  var session = JSON.parse(rawSession);
+  var debug = {};
+
+  // approval SSO 세션 확보
+  var ssoResult = _getApprovalSso(session, adminRow);
+  if (ssoResult.error) return createResponse({ error: ssoResult.error, message: '비밀번호 저장 후 다시 로그인해줘.' });
+
+  var sso = ssoResult.sso;
+  debug.sso = sso.debug;
+  if (!sso.approvalCookies) return createResponse({ status: 'fail', message: 'Approval SSO 실패', debug: debug });
+
+  _saveApprovalSession(propKey, session, sso);
+
+  var ff = sso.formFields || session.formFields || {};
+  var useInttId = ff.USE_INTT_ID || session.useInttId || sso.useInttId || '';
+
+  // ──── emplinfo 세션 초기화 (com_empl_01.js 분석 기반) ────
+  // 1. com_empl_01.act → JSESSIONID 획득
+  // 2. com_empl_r001.jct → SECR_KEY 인증 (세션에 사용자 등록)
+  // 3. com_empl_02.act → SES_EMPL_01 세션 생성
+  // 4. com_empl_r002.jct → 검색
+
+  var secrKey = session.emplInfoSecrKey || '76a4ed5c-462b-29c7-70d0-64de2a6d2496';
+
+  var empl01Payload = 'USE_INTT_ID=' + encodeURIComponent(useInttId)
+    + '&USER_ID=' + encodeURIComponent(session.userId)
+    + '&SECR_KEY=' + encodeURIComponent(secrKey)
+    + '&POP_OPT=A&EMPL_DSNC=U&POP_TYPE=A&LNGG_DSNC=DF'
+    + '&POST_CALLBACK_PAGE=' + encodeURIComponent('https://approval.appplay.co.kr/appr/appr_callback_empl2.act');
+
+  try {
+    // Step 1: com_empl_01.act (JSESSIONID 획득)
+    var empl01 = fetchWithCookies('https://emplinfo.appplay.co.kr/com_empl_01.act', '', {
+      method: 'post', contentType: 'application/x-www-form-urlencoded',
+      payload: empl01Payload
+    });
+    var emplCookies = empl01.cookies;
+    debug.empl01 = empl01.response.getResponseCode();
+
+    // Step 2: com_empl_r001.jct (인증키 검증)
+    var r001Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+      USE_INTT_ID: useInttId, POP_OPT: 'A', SECR_KEY: secrKey,
+      EMPL_DSNC: 'U', USER_ID: session.userId, LNGG_DSNC: 'DF'
+    }));
+    var r001Resp = UrlFetchApp.fetch('https://emplinfo.appplay.co.kr/com_empl_r001.jct', {
+      method: 'post', contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+      headers: { 'User-Agent': BROWSER_UA, 'Cookie': emplCookies,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://emplinfo.appplay.co.kr/com_empl_01.act' },
+      payload: r001Payload, muteHttpExceptions: true
+    });
+    emplCookies = mergeCookies(emplCookies, extractCookies(r001Resp));
+
+    var r001Body;
+    try { r001Body = JSON.parse(r001Resp.getContentText()); } catch (pe) { r001Body = null; }
+    debug.r001 = r001Body ? r001Body.RSLT_CD : 'fail';
+
+    if (!r001Body || r001Body.RSLT_CD !== '0000') {
+      debug.r001_msg = r001Body ? r001Body.RSLT_MSG || r001Body.COMMON_HEAD.MESSAGE : 'parse error';
+      return createResponse({ status: 'fail', message: '인증키 검증 실패', debug: debug });
+    }
+
+    // Step 3: com_empl_02.act (SES_EMPL_01 세션 생성)
+    var empl02Payload = 'SECR_KEY=' + encodeURIComponent(secrKey)
+      + '&USE_INTT_ID=' + encodeURIComponent(useInttId)
+      + '&POP_OPT=A&EMPL_DSNC=U&POP_TYPE=A&LNGG_DSNC=DF'
+      + '&USER_ID=' + encodeURIComponent(session.userId)
+      + '&_callback_fn=&LNGG_DSNC=DF'
+      + '&POST_CALLBACK_PAGE=' + encodeURIComponent('https://approval.appplay.co.kr/appr/appr_callback_empl2.act');
+    var empl02 = fetchWithCookies('https://emplinfo.appplay.co.kr/com_empl_02.act', emplCookies, {
+      method: 'post', contentType: 'application/x-www-form-urlencoded',
+      payload: empl02Payload
+    });
+    emplCookies = empl02.cookies;
+    debug.empl02 = empl02.response.getResponseCode();
+
+    // Step 4: 검색
+    var r = _tryEmplSearch(emplCookies, searchWord, debug, 'result');
+    if (r) return r;
+
+  } catch (e1) { debug.empl_err = e1.message; }
+
+  return createResponse({ status: 'fail', message: '사원 검색 실패', debug: debug });
+}

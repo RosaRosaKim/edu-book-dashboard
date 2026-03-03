@@ -1042,33 +1042,24 @@
       const token = localStorage.getItem('token');
       const selParam = '&selectedRecords=' + encodeURIComponent(JSON.stringify(selectedRecords));
 
-      // === 결재요청: 결재라인 먼저 조회 → 팝업 → 전체 플로우 실행 ===
+      // === 결재요청: 하드코딩된 결재라인으로 팝업 → 전체 플로우 실행 ===
       if (!isTemp) {
-        setLoading('결재라인 조회 중...');
-        const urlApprLine = window.API_URL + '?action=bizplayApprLine&token=' + encodeURIComponent(token) + '&paperSeqNo=101';
-        console.log('[card] 결재라인 조회 시작');
-        const apprLineData = await window.gasFetch(urlApprLine);
-        console.log('[card] 결재라인 응답:', JSON.stringify(apprLineData).substring(0, 2000));
-        if (apprLineData.debug) console.log('[card] apprLine debug:', JSON.stringify(apprLineData.debug));
+        // 밥카 결재라인 고정: 결재=재무그룹, 참조=관리그룹
+        const fixedApprLine = [
+          { APPR_ORD: '1', APPRLINE_KIND: '2', APPR_USER_GB: '1', APPR_USER_NM: '', DEPT_NM: '재무그룹', DEPT_CD: '19' },
+          { APPR_ORD: '0', APPRLINE_KIND: '4', APPR_USER_GB: '1', APPR_USER_NM: '', APPR_DEPT_CD: '157', APPR_DEPT_NM: '관리그룹' }
+        ];
 
-        if (apprLineData.status !== 'success' || !apprLineData.apprLine || apprLineData.apprLine.length === 0) {
-          if (apprLineData.error === 'SESSION_EXPIRED' || apprLineData.error === 'NO_SESSION') {
-            window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
-          } else {
-            window.showToast('결재라인 정보가 없습니다.', 'sad', anchorBtn);
-          }
-          return;
-        }
-
-        // 결재라인 팝업 표시
+        // 결재라인 팝업 표시 (읽기전용 확인)
         resetBtn();
-        const confirmed = await window.showApprLinePopup(apprLineData.apprLine);
-        if (!confirmed) return;
+        const apprResult = await window.showApprLinePopup(fixedApprLine);
+        if (!apprResult) return;
 
         // 확인 후 전체 플로우 실행 (webank 세션 유지를 위해 한번에)
         setLoading('결재 제출 중...');
+        const modifiedParam = '&modifiedApprLine=' + encodeURIComponent(JSON.stringify(apprResult));
         const urlApprove = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
-          + '&mode=approve' + selParam;
+          + '&mode=approve' + selParam + modifiedParam;
         console.log('[card] 결재 제출 시작, 건수:', selectedRecords.length);
         const data = await window.gasFetch(urlApprove);
         console.log('[card] 결재 응답:', JSON.stringify(data).substring(0, 2000));

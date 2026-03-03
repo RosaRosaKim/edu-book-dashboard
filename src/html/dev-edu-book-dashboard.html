@@ -437,13 +437,35 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- 결재라인 확인 팝업 -->
+<!-- 결재라인 확인/수정 팝업 -->
 <div id="apprLineBox" class="fixed inset-0 z-[60]" style="display:none;">
   <div class="absolute inset-0 bg-black/30" id="apprLineOverlay"></div>
   <div class="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[61] max-w-sm mx-auto">
     <div class="bg-white border-2 border-accent rounded-2xl p-5 shadow-xl" style="background:var(--bubble-bg);">
-      <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">결재라인 확인</div>
-      <div id="apprLineContent" class="space-y-0 max-h-[50vh] overflow-y-auto"></div>
+      <!-- 헤더: 제목 + 수정 토글 -->
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px]">결재라인 확인</div>
+        <button id="apprLineEditToggle" class="text-[10px] font-semibold px-2 py-1 rounded-lg border border-accent/30 text-accent hover:bg-accent/10 transition cursor-pointer">수정</button>
+      </div>
+      <!-- 편집 뷰 -->
+      <div id="apprLineEditView">
+        <div id="apprLineContent" class="space-y-0 max-h-[50vh] overflow-y-auto"></div>
+        <div id="apprLineAddBtnWrap" class="hidden mt-2">
+          <button id="apprLineAddBtn" class="w-full py-2 text-xs font-semibold rounded-lg border-2 border-dashed border-accent/30 text-accent hover:bg-accent/5 transition cursor-pointer">+ 결재자 추가</button>
+        </div>
+      </div>
+      <!-- 검색 뷰 -->
+      <div id="apprLineSearchView" class="hidden">
+        <div class="flex items-center gap-2 mb-3">
+          <button id="apprLineSearchBack" class="shrink-0 text-sm text-accent font-semibold hover:underline cursor-pointer">&larr; 돌아가기</button>
+          <input id="apprLineSearchInput" type="text" placeholder="이름으로 검색 (2자 이상)"
+            class="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+        </div>
+        <div id="apprLineSearchResults" class="space-y-1.5 max-h-[40vh] overflow-y-auto"></div>
+        <div id="apprLineSearchLoading" class="hidden flex items-center justify-center gap-2 py-4 text-xs text-[#aab5b2]"><svg class="w-4 h-4 spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>검색 중...</div>
+        <div id="apprLineSearchEmpty" class="hidden text-center py-4 text-xs text-[#aab5b2]">검색 결과가 없습니다.</div>
+      </div>
+      <!-- 하단 버튼 -->
       <div class="flex gap-2 justify-end mt-4">
         <button id="apprLineCancel" class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface-2 text-[#6e7f7b] border border-border hover:brightness-95 transition cursor-pointer">취소</button>
         <button id="apprLineSubmit" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">결재요청</button>
