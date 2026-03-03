@@ -1103,15 +1103,19 @@ function showToast(msg, mood, anchorEl, opts) {
   const bubble = $('msgBoxBubble');
   const dismissBtn = $('msgBoxDismiss');
 
-  // 색상
+  // mood별 색상 (테두리 + 파스텔 배경 + 텍스트)
+  const isDark = document.documentElement.classList.contains('dark');
   const config = {
-    smail: { color: '#2d8a7e', border: '#2d8a7e' },
-    sad:   { color: '#d97706', border: '#d97706' },
-    angry: { color: '#dc2626', border: '#dc2626' }
+    smail: { border: '#2d8a7e', bg: isDark ? '#1a2f2b' : '#eef8f6', text: '#2b6b62' },
+    sad:   { border: '#d97706', bg: isDark ? '#2f2816' : '#fef6e8', text: '#92600a' },
+    angry: { border: '#dc2626', bg: isDark ? '#2f1a1a' : '#fef0f0', text: '#a82020' }
   };
   const c = config[mood] || config.smail;
   bubble.style.borderColor = c.border;
+  bubble.style.background = c.bg;
   bubble.style.setProperty('--bubble-color', c.border);
+  bubble.style.setProperty('--bubble-bg', c.bg);
+  text.style.color = c.text;
   if (opts.html) text.innerHTML = msg;
   else text.textContent = msg;
 
@@ -1204,6 +1208,10 @@ window.showConfirm = function(msg, anchorEl) {
       const rect = mascot.getBoundingClientRect();
       inner.style.left = (rect.right + 6) + 'px';
       inner.style.top = Math.max(8, rect.top + rect.height / 2 - 24) + 'px';
+      // 마스코트 주목 애니메이션
+      mascot.classList.remove('mascot-nudge');
+      void mascot.offsetWidth; // reflow로 애니메이션 재시작
+      mascot.classList.add('mascot-nudge');
     } else {
       inner.style.left = '60px';
       inner.style.top = '16px';
@@ -1221,6 +1229,7 @@ window.showConfirm = function(msg, anchorEl) {
       inner.classList.remove('opacity-100');
       inner.classList.add('opacity-0');
       inner.style.transform = 'scale(.9)';
+      if (mascot) mascot.classList.remove('mascot-nudge');
       setTimeout(() => { box.style.display = 'none'; }, 200);
       btnYes.removeEventListener('click', onYes);
       btnNo.removeEventListener('click', onNo);
