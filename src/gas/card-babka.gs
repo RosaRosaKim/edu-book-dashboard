@@ -2,7 +2,7 @@
  * 밥카(법인카드 중식대) 모듈
  * - 밥카 알람 수신 설정 (웹페이지관리 시트 G열 + H열)
  * - 통합 트리거 sendBabCardAlarm (매일 오전 10~11시)
- *   → 15일 첫 영업일 알림, 3번째 영업일 미결재 리마인더, 매 영업일 잔액 알림
+ *   → 14일 첫 영업일 알림, 3번째 영업일 미결재 리마인더, 매 영업일 잔액 알림
  *
  * code.gs의 doGet에서 호출:
  *   handleUpdateCardAlarm(adminRow, e)
@@ -18,8 +18,11 @@ var CARD_ALARM_COL = 7; // 1-based: G열
 /** 웹페이지관리 시트 암호화된 Bizplay PW 컬럼 (H열 = index 7) */
 var CARD_DAILY_COL = 8; // 1-based: H열
 
-/** 웹페이지관리 시트 밥카 자동결재 모드 컬럼 (I열 = index 8) */
-var CARD_AUTO_MODE_COL = 9; // 1-based: I열  값: off, alarm, draft, submit
+/** 웹페이지관리 시트 Bizplay ID 컬럼 (I열 = index 8) */
+var BIZPLAY_ID_COL = 9; // 1-based: I열
+
+/** 웹페이지관리 시트 밥카 자동결재 모드 컬럼 (J열 = index 9) */
+var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 
 /** AES 암호화 키 (SHA-256 → 32바이트 AES-CBC 키) */
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
@@ -79,8 +82,8 @@ function handleUpdateCardAutoMode(adminRow, e) {
 
 /**
  * 밥카 통합 알림 트리거 (매일 오전 10~11시)
- * 1) 15일 첫 영업일: 전원 결재 안내
- * 2) 15일부터 3번째 영업일: 미상신자 리마인더
+ * 1) 14일 첫 영업일: 전원 결재 안내
+ * 2) 14일부터 3번째 영업일: 미상신자 리마인더
  * 3) 매 영업일: 잔액 알림
  */
 function sendBabCardAlarm() {
@@ -92,7 +95,7 @@ function sendBabCardAlarm() {
 
 /**
  * 밥카 자동결재/알람 처리 (15일 첫 영업일)
- * I열 cardAutoMode별 분기:
+ * J열 cardAutoMode별 분기:
  *   off/빈값 → 스킵
  *   alarm   → Flow 알람만 발송
  *   draft   → 자동 임시저장
@@ -180,7 +183,7 @@ function _processAutoMode(knoxId, encPw, mode) {
 
 /**
  * 미결재 리마인드 스마트 알림 (매일 오전 트리거)
- * 15일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
+ * 14일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
  * 트리거 설정: 시간 기반 트리거 → 매일 오전 9~10시
  */
 function sendCardAlarmReminder() {
@@ -193,6 +196,7 @@ function sendCardAlarmReminder() {
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
+    var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
     var alarmOn = data[i][CARD_ALARM_COL - 1]; // G열: 밥카 Flow 알람
     var encPw = data[i][CARD_DAILY_COL - 1]; // H열: 암호화된 PW
 
@@ -203,8 +207,9 @@ function sendCardAlarmReminder() {
       continue;
     }
 
+    var bizUserId = (bizplayId || knoxId) + '@emro.co.kr';
     try {
-      if (_checkUserHasCardDraft(knoxId, encPw)) {
+      if (_checkUserHasCardDraft(bizUserId, encPw)) {
         Logger.log('[리마인더] 스킵(상신완료) - ' + knoxId);
         continue;
       }
@@ -267,12 +272,13 @@ function sendCardRefundAlert() {
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0];
+    var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
     var alarmOn = data[i][CARD_ALARM_COL - 1];
     var encPw = data[i][CARD_DAILY_COL - 1];
     if (!knoxId || alarmOn !== 'Y' || !encPw) continue;
 
     try {
-      var userId = knoxId + '@emro.co.kr';
+      var userId = (bizplayId || knoxId) + '@emro.co.kr';
       var password = _decryptPw(encPw);
       var loginResult = _bizplayLoginCore(userId, password);
       if (loginResult.error || !loginResult.webankCookies) {
@@ -355,11 +361,11 @@ function _calcCardBudgetForPeriod(fromDt, toDt) {
 
 /* ═══════════════ 리마인더 헬퍼 ═══════════════ */
 
-/** 오늘이 해당월 15일부터 첫 번째 영업일인지 판별 */
+/** 오늘이 해당월 14일부터 첫 번째 영업일인지 판별 */
 function _isFirstBizDayFrom15(date) {
   var y = date.getFullYear(), m = date.getMonth();
   var holidays = _loadHolidays(y);
-  for (var d = 15; d <= 31; d++) {
+  for (var d = 14; d <= 31; d++) {
     var check = new Date(y, m, d);
     if (check.getMonth() !== m) break;
     var dow = check.getDay();
@@ -370,12 +376,12 @@ function _isFirstBizDayFrom15(date) {
   return false;
 }
 
-/** 오늘이 해당월 15일부터 세어 3번째 영업일인지 판별 */
+/** 오늘이 해당월 14일부터 세어 3번째 영업일인지 판별 */
 function _isCardAlarmDay(date) {
   var y = date.getFullYear(), m = date.getMonth();
   var holidays = _loadHolidays(y);
   var bizDayCount = 0;
-  for (var d = 15; d <= 31; d++) {
+  for (var d = 14; d <= 31; d++) {
     var check = new Date(y, m, d);
     if (check.getMonth() !== m) break;
     var dow = check.getDay();
@@ -416,8 +422,8 @@ function _sameDate(a, b) {
  * 사용자가 이미 "지출결의서(법인카드)"를 상신했는지 확인
  * approval SSO → r007 기안문서 목록 조회 → PAPER_NM 매칭
  */
-function _checkUserHasCardDraft(knoxId, encPw) {
-  var userId = knoxId + '@emro.co.kr';
+function _checkUserHasCardDraft(bizUserId, encPw) {
+  var userId = bizUserId;
   var password = _decryptPw(String(encPw));
 
   // approval SSO 획득
@@ -598,13 +604,14 @@ function sendCardDailyBalance() {
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
-    var dailyAlarm = data[i][CARD_ALARM_COL - 1]; // I열: 잔액알림 수신여부
-    var encPw = data[i][CARD_DAILY_COL - 1]; // J열: 암호화된 PW
+    var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
+    var dailyAlarm = data[i][CARD_ALARM_COL - 1]; // G열: 잔액알림 수신여부
+    var encPw = data[i][CARD_DAILY_COL - 1]; // H열: 암호화된 PW
 
     if (!knoxId || dailyAlarm !== 'Y' || !encPw) continue;
 
     try {
-      var userId = knoxId + '@emro.co.kr';
+      var userId = (bizplayId || knoxId) + '@emro.co.kr';
       var password = _decryptPw(encPw);
 
       // 로그인 → webank 쿠키 획득
@@ -665,6 +672,41 @@ function _isHolidayServer(date) {
     Logger.log('[잔액알림] 공휴일 API 실패: ' + e.message);
     return false;
   }
+}
+
+/** 오늘부터 마감일(14일)까지 남은 출근일 수 (오늘 포함, 주말+공휴일 제외) */
+function _calcRemainingBizDays() {
+  var period = _getCardQueryPeriod();
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var end = _parseDateStr(period.to);
+
+  var holidaySet = {};
+  var years = {};
+  years[today.getFullYear()] = true;
+  years[end.getFullYear()] = true;
+  for (var y in years) {
+    try {
+      var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + y + '.json', { muteHttpExceptions: true });
+      if (resp.getResponseCode() === 200) {
+        var data = JSON.parse(resp.getContentText());
+        for (var k in data) holidaySet[k] = true;
+      }
+    } catch (e) {}
+    holidaySet[y + '-05-01'] = true;
+  }
+
+  var bizDays = 0;
+  var d = new Date(today);
+  while (d <= end) {
+    var dow = d.getDay();
+    var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+    var dd = ('0' + d.getDate()).slice(-2);
+    var dateStr = d.getFullYear() + '-' + mm + '-' + dd;
+    if (dow !== 0 && dow !== 6 && !holidaySet[dateStr]) bizDays++;
+    d.setDate(d.getDate() + 1);
+  }
+  return bizDays;
 }
 
 /** 현재 기간 영업일 수 기반 예산 계산 (공휴일+근로자의날 제외) */

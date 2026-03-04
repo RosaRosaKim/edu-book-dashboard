@@ -28,7 +28,7 @@ const BOOK_COL = {
 function colFor(row) { return row._reqType === '도서' ? BOOK_COL : DATA_COL; }
 
 const ADMIN_COL = {
-  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, DEPT: 4, NAME: 5
+  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, DEPT: 4, NAME: 5, BIZPLAY_ID: 8  // I열 = index 8
 };
 
 /**
@@ -61,16 +61,18 @@ const doGet = (e) => {
     if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; }); allApplyData.push(...d); }
     if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; }); allApplyData.push(...d); }
 
-    let used = 0;
+    let used = 0, pending = 0;
     allApplyData.forEach(row => {
       const c = colFor(row);
-      if (String(row[c.KNOX_ID]) === targetKnoxId && row[c.STATUS] === "완료") {
-        used += Number(row[c.COST]) || 0;
-      }
+      if (String(row[c.KNOX_ID]) !== targetKnoxId) return;
+      const status = String(row[c.STATUS]);
+      const cost = Number(row[c.COST]) || 0;
+      if (status === "완료") used += cost;
+      else if (status.includes("대기") || status.includes("진행")) pending += cost;
     });
 
     const remain = LIMIT_BUDGET - used;
-    sendFlowMsg(targetKnoxId, FLOW_MSG.balanceInfo(used, remain, LIMIT_BUDGET));
+    sendFlowMsg(targetKnoxId, FLOW_MSG.balanceInfo(used, remain, LIMIT_BUDGET, pending));
     return createResponse({ status: "success" });
   }
 
@@ -107,22 +109,22 @@ const doGet = (e) => {
     const bizPwd = e.parameter.bizPwd;
     if (!bizUserId || !bizPwd) return createResponse({ error: "MISSING_PARAMS" });
 
-    // knoxId = @ 앞부분
-    const knoxId = bizUserId.split('@')[0];
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.KNOX_ID] === knoxId);
-    if (rowIndex === -1) return createResponse({ status: "error", message: "등록되지 않은 사번이야." });
+    const bizplayId = bizUserId.split('@')[0]; // @ 앞부분
 
+    // 1) Bizplay 서버 인증 먼저 수행
     try {
       var result = _bizplayLoginCore(bizUserId, bizPwd);
       if (result.error) return createResponse({ status: 'fail', message: result.error });
+    } catch (err) {
+      return createResponse({ error: 'BIZPLAY_ERROR', message: err.message });
+    }
 
-      // UUID 토큰 발급/조회 (기존 verify 로직과 동일)
-      const row = adminData[rowIndex];
-      const uuid = row[ADMIN_COL.UUID] || Utilities.getUuid();
-      adminSheet.getRange(rowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
+    // 2) I열(BIZPLAY_ID)에서 매핑된 Knox ID 검색
+    const mappedRowIndex = adminData.findIndex(row => String(row[ADMIN_COL.BIZPLAY_ID]).trim() === bizplayId);
 
-      // Bizplay 세션 ScriptProperties에 저장 (기존 handleBizplayLogin과 동일)
-      var sessionData = {
+    if (mappedRowIndex === -1) {
+      // 매핑 없음 → Flow 인증 필요. Bizplay 세션을 임시 저장
+      var tempSessionData = {
         bizplayCookies: result.bizplayCookies,
         approvalCookies: result.approvalCookies || '',
         webankCookies: result.webankCookies || '',
@@ -135,35 +137,167 @@ const doGet = (e) => {
         loginTime: new Date().toISOString()
       };
       PropertiesService.getScriptProperties().setProperty(
-        'bizplay_' + knoxId,
-        JSON.stringify(sessionData)
+        'bizplay_temp_' + bizplayId,
+        JSON.stringify(tempSessionData)
       );
-
-      // 비밀번호 저장 (잔액알림 등에 활용)
-      const savePw = e.parameter.savePw;
-      if (savePw === 'true') {
-        adminSheet.getRange(rowIndex + 1, 8).setValue(_encryptPw(bizPwd)); // H열: Bizplay PW
-      } else {
-        adminSheet.getRange(rowIndex + 1, 8).setValue(''); // H열 클리어 (자동로그인 해제)
-      }
-
-      return createResponse({
-        status: 'success',
-        token: uuid,
-        userName: result.userName,
-        ssoComplete: result.ssoComplete,
-        session: {
-          userId: bizUserId,
-          userName: result.userName,
-          deptCd: result.deptCd || '',
-          deptNm: result.deptNm || '',
-          deptShort: result.deptShort || ''
-        },
-        debug: result.debug
-      });
-    } catch (err) {
-      return createResponse({ error: 'BIZPLAY_ERROR', message: err.message });
+      return createResponse({ status: 'needVerify', userName: result.userName });
     }
+
+    // 3) 매핑 있음 → 해당 행의 Knox ID로 세션 생성
+    const knoxId = adminData[mappedRowIndex][ADMIN_COL.KNOX_ID];
+    const row = adminData[mappedRowIndex];
+    const uuid = row[ADMIN_COL.UUID] || Utilities.getUuid();
+    adminSheet.getRange(mappedRowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
+
+    var sessionData = {
+      bizplayCookies: result.bizplayCookies,
+      approvalCookies: result.approvalCookies || '',
+      webankCookies: result.webankCookies || '',
+      userId: bizUserId,
+      userName: result.userName,
+      deptCd: result.deptCd || '',
+      deptNm: result.deptNm || '',
+      deptShort: result.deptShort || '',
+      useInttId: result.useInttId || '',
+      loginTime: new Date().toISOString()
+    };
+    PropertiesService.getScriptProperties().setProperty(
+      'bizplay_' + knoxId,
+      JSON.stringify(sessionData)
+    );
+
+    // 비밀번호 저장 (잔액알림 등에 활용)
+    const savePw = e.parameter.savePw;
+    if (savePw === 'true') {
+      adminSheet.getRange(mappedRowIndex + 1, 8).setValue(_encryptPw(bizPwd)); // H열: Bizplay PW
+    } else {
+      adminSheet.getRange(mappedRowIndex + 1, 8).setValue(''); // H열 클리어 (자동로그인 해제)
+    }
+
+    return createResponse({
+      status: 'success',
+      token: uuid,
+      userName: result.userName,
+      ssoComplete: result.ssoComplete,
+      session: {
+        userId: bizUserId,
+        userName: result.userName,
+        deptCd: result.deptCd || '',
+        deptNm: result.deptNm || '',
+        deptShort: result.deptShort || ''
+      },
+      debug: result.debug
+    });
+  }
+
+  // [기능 12-2] Flow 인증번호 발송
+  if (action === "sendFlowVerifyCode") {
+    const bizplayId = e.parameter.bizplayId;
+    const knoxId = e.parameter.knoxId;
+    if (!bizplayId || !knoxId) return createResponse({ error: "MISSING_PARAMS" });
+
+    // Knox ID가 A열에 존재하는지 확인 (없으면 신규 등록 예정이므로 통과)
+    const knoxRowIndex = adminData.findIndex(row => String(row[ADMIN_COL.KNOX_ID]).trim() === knoxId);
+
+    // 6자리 랜덤 인증번호 생성
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+
+    // ScriptProperties에 저장 (5분 만료)
+    const verifyData = {
+      code: code,
+      knoxId: knoxId,
+      knoxRowIndex: knoxRowIndex,
+      expiry: new Date().getTime() + 5 * 60 * 1000
+    };
+    PropertiesService.getScriptProperties().setProperty(
+      'verify_' + bizplayId,
+      JSON.stringify(verifyData)
+    );
+
+    // Flow로 인증번호 발송
+    sendFlowMsg(knoxId, FLOW_MSG.verifyCode(code));
+
+    return createResponse({ status: 'success' });
+  }
+
+  // [기능 12-3] Flow 인증번호 검증
+  if (action === "verifyFlowCode") {
+    const bizplayId = e.parameter.bizplayId;
+    const knoxId = e.parameter.knoxId;
+    const code = e.parameter.code;
+    if (!bizplayId || !knoxId || !code) return createResponse({ error: "MISSING_PARAMS" });
+
+    // ScriptProperties에서 인증 데이터 조회
+    const verifyRaw = PropertiesService.getScriptProperties().getProperty('verify_' + bizplayId);
+    if (!verifyRaw) return createResponse({ status: 'fail', message: '인증번호를 먼저 받아줘.' });
+
+    const verifyData = JSON.parse(verifyRaw);
+
+    // 만료 확인
+    if (new Date().getTime() > verifyData.expiry) {
+      PropertiesService.getScriptProperties().deleteProperty('verify_' + bizplayId);
+      return createResponse({ status: 'fail', message: '인증번호가 만료됐어. 다시 받아줘.' });
+    }
+
+    // 코드 + knoxId 일치 확인
+    if (verifyData.code !== code || verifyData.knoxId !== knoxId) {
+      return createResponse({ status: 'fail', message: '인증번호가 틀렸어.' });
+    }
+
+    // 인증 성공 → 인증 데이터 삭제
+    PropertiesService.getScriptProperties().deleteProperty('verify_' + bizplayId);
+
+    // Knox ID가 웹페이지관리에 있는지 확인, 없으면 새 행 추가
+    let rowIndex = verifyData.knoxRowIndex;
+    if (rowIndex === -1) {
+      // 신규 사용자: 웹페이지관리에 행 추가 (A~I열)
+      const newRow = ['', '', '', '', '', '', '', '', ''];
+      newRow[ADMIN_COL.KNOX_ID] = knoxId;    // A열
+      newRow[ADMIN_COL.BIZPLAY_ID] = bizplayId; // I열
+      adminSheet.appendRow(newRow);
+      rowIndex = adminSheet.getLastRow() - 1; // 0-based index
+    } else {
+      // 기존 사용자: I열에 Bizplay ID 기록
+      adminSheet.getRange(rowIndex + 1, ADMIN_COL.BIZPLAY_ID + 1).setValue(bizplayId);
+    }
+
+    // adminData 새로 읽기 (행 추가 후)
+    const freshAdminData = adminSheet.getDataRange().getValues();
+    const adminRow = freshAdminData[rowIndex];
+
+    // UUID 발급
+    const uuid = adminRow[ADMIN_COL.UUID] || Utilities.getUuid();
+    adminSheet.getRange(rowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
+
+    // Bizplay 세션: temp → 정식 이동
+    const props = PropertiesService.getScriptProperties();
+    const tempRaw = props.getProperty('bizplay_temp_' + bizplayId);
+    if (tempRaw) {
+      props.setProperty('bizplay_' + knoxId, tempRaw);
+      props.deleteProperty('bizplay_temp_' + bizplayId);
+    }
+
+    // 비밀번호 저장
+    const savePw = e.parameter.savePw;
+    const bizPwd = e.parameter.bizPwd;
+    if (savePw === 'true' && bizPwd) {
+      adminSheet.getRange(rowIndex + 1, 8).setValue(_encryptPw(bizPwd)); // H열
+    }
+
+    // 세션 정보 구성
+    const tempSession = tempRaw ? JSON.parse(tempRaw) : {};
+    return createResponse({
+      status: 'success',
+      token: uuid,
+      userName: tempSession.userName || '',
+      session: {
+        userId: tempSession.userId || (bizplayId + '@emro.co.kr'),
+        userName: tempSession.userName || '',
+        deptCd: tempSession.deptCd || '',
+        deptNm: tempSession.deptNm || '',
+        deptShort: tempSession.deptShort || ''
+      }
+    });
   }
 
   // [기능 6] Bizplay 로그인 프록시 (SSO 전체 흐름)
@@ -426,7 +560,8 @@ const doGet = (e) => {
         (new Date() - new Date(existing.loginTime || 0)) > 3600000;
       if (needLogin) {
         try {
-          const bizUserId = currentKnoxId + '@emro.co.kr';
+          const savedBizplayId = String(adminRow[ADMIN_COL.BIZPLAY_ID] || '').trim();
+          const bizUserId = (savedBizplayId || currentKnoxId) + '@emro.co.kr';
           const bizPwd = _decryptPw(String(encPw));
           const loginPayload = '_JSON_=' + encodeURIComponent(JSON.stringify({
             USER_ID: bizUserId, PWD: bizPwd,
@@ -619,7 +754,7 @@ function sendFlowGAS(userId, content, previewLink, previewTitle) {
   const reqData = { BOT_ID: 'helpdesk', RCVR_USER_ID: fullUserId, PREVIEW_TTL: previewTitle || '교육비 알림' };
   if (previewLink) {
     reqData.PREVIEW_CNTN = content;
-    reqData.PREVIEW_LINK = previewLink;
+    reqData.PREVIEW_LINK = previewLink.includes('?') ? previewLink : previewLink + '?';
   } else {
     reqData.CNTN = content;
   }
