@@ -1026,6 +1026,11 @@
   /* ─── 슬라이딩 인디케이터 유틸 ─── */
   function _moveSlider(container, sliderId, activeBtn) {
     if (!container || !activeBtn) return;
+    // hidden→visible 직후 레이아웃 미완성 시 다음 프레임 재시도
+    if (activeBtn.offsetWidth === 0) {
+      requestAnimationFrame(function() { _moveSlider(container, sliderId, activeBtn); });
+      return;
+    }
     var slider = document.getElementById(sliderId);
     if (!slider) {
       slider = document.createElement('div');
