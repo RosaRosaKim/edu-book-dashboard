@@ -730,21 +730,34 @@
            `<button class="rate-dislike${dislikeActive}" onclick="window._rateRestaurant('${esc}',0)" title="비추천">💩 비추 ${dislikes || 0}</button>`;
   }
 
-  /** 좋아요/싫어요 등록 (팝 애니메이션) */
+  /** 좋아요/싫어요 등록 (팝 애니메이션 + 스피너) */
+  let _rateInProgress = false;
   window._rateRestaurant = async function(merchant, rating) {
+    if (_rateInProgress) return;
+    _rateInProgress = true;
     if (!cardRatingsCache) cardRatingsCache = {};
 
-    // 1. 즉시 DOM 애니메이션
+    const SPINNER_SVG = '<svg class="spinner" style="width:14px;height:14px;vertical-align:middle" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+
+    // 1. 즉시 DOM 애니메이션 + 클릭된 버튼에 스피너
+    const targetBtns = [];
     document.querySelectorAll('.rate-like, .rate-dislike').forEach(btn => {
       const onclick = btn.getAttribute('onclick') || '';
       if (!onclick.includes(merchant.replace(/'/g, "\\'"))) return;
+      targetBtns.push(btn);
+      btn.disabled = true;
+      btn.style.pointerEvents = 'none';
       btn.classList.remove('rate-active-like', 'rate-active-dislike');
       if (rating === 1 && btn.title === '추천') {
         btn.classList.add('rate-active-like');
         btn.style.animation = 'like-pop .3s ease-out';
+        btn.dataset.origHtml = btn.innerHTML;
+        btn.innerHTML = SPINNER_SVG + ' 추천';
       } else if (rating === 0 && btn.title === '비추천') {
         btn.classList.add('rate-active-dislike');
         btn.style.animation = 'like-pop .3s ease-out';
+        btn.dataset.origHtml = btn.innerHTML;
+        btn.innerHTML = SPINNER_SVG + ' 비추';
       }
     });
 
@@ -778,7 +791,8 @@
       window.showToast('서버 연결에 실패했어.', 'sad');
     }
 
-    // 4. 최종 렌더
+    // 4. 스피너 해제 + 최종 렌더
+    _rateInProgress = false;
     renderCardDashboard();
   };
 
