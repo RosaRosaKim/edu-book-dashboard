@@ -65,6 +65,14 @@ var FLOW_MSG = {
       link: FLOW_LINK.CARD,
       previewTitle: '왜케 많이 먹었어..'
     };
+  },
+  // #8 BizFlow 인증번호
+  verifyCode: function(code) {
+    return {
+      content: 'BizFlow 인증번호: ' + code + '\n\n5분 내에 입력해줘.',
+      link: FLOW_LINK.DASHBOARD,
+      previewTitle: 'BizFlow 인증번호'
+    };
   }
 };
 

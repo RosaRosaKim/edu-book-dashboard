@@ -61,10 +61,10 @@ tailwind.config = {
     </div>
 
     <!-- Bizplay 로그인 -->
-    <div>
+    <div id="authBizplayForm">
       <div class="space-y-2 mb-3">
         <div class="relative">
-          <input id="authBizId" type="text" name="bizplay-auth-id" autocomplete="username" placeholder="사번"
+          <input id="authBizId" type="text" name="bizplay-auth-id" autocomplete="username" placeholder="Bizplay 아이디"
             oninput="this.value=this.value.replace(/@.*$/g,'')"
             class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6e7f7b] font-mono pointer-events-none">@emro.co.kr</span>
@@ -96,6 +96,38 @@ tailwind.config = {
       <button id="authInstallBtn" onclick="handlePwaInstall()" class="hidden w-full mt-2 h-10 rounded-lg border border-[#47635f]/20 text-[#47635f]/50 text-xs hover:brightness-95 transition flex items-center justify-center gap-1.5">
         ⬇️ 앱 설치
       </button>
+    </div>
+
+    <!-- Flow 인증 단계 (최초 1회, Bizplay ID ↔ Knox ID 매핑) -->
+    <div id="authFlowVerify" class="hidden">
+      <div class="space-y-2 mb-3">
+        <div class="text-sm text-[#47635f] font-medium mb-1">Flow 인증</div>
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <input id="authKnoxId" type="text" placeholder="Flow ID"
+              oninput="this.value=this.value.replace(/@.*$/g,'')"
+              class="w-full bg-surface-2 border border-border rounded-lg pl-3 pr-[6.5rem] py-3 text-sm font-mono text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6e7f7b] font-mono pointer-events-none">@emro.co.kr</span>
+          </div>
+          <button id="authSendCodeBtn" onclick="sendVerifyCode()"
+            class="shrink-0 px-4 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+            인증번호 받기
+          </button>
+        </div>
+        <div id="authCodeSection" class="hidden space-y-2">
+          <div class="flex gap-2">
+            <input id="authFlowCode" type="text" placeholder="인증번호 6자리" maxlength="6"
+              onkeydown="if(event.key==='Enter') verifyFlowCode()"
+              class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-3 text-sm font-mono text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60 tracking-[0.3em] text-center">
+            <button id="authVerifyBtn" onclick="verifyFlowCode()"
+              class="shrink-0 px-4 py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+              인증
+            </button>
+          </div>
+          <p class="text-xs text-[#6e7f7b]">Flow로 인증번호를 보냈어. 5분 내에 입력해줘!</p>
+        </div>
+      </div>
+      <div id="authFlowError" class="text-danger text-xs mt-2 hidden"></div>
     </div>
 
     <!-- 시스템 안내 -->
@@ -708,6 +740,11 @@ function showDashboard() {
 }
 
 /* ═══════════════ Bizplay 로그인 ═══════════════ */
+// Flow 인증용 임시 저장
+let _pendingBizplayId = '';
+let _pendingBizPwd = '';
+let _pendingSavePw = false;
+
 window.authBizplayLogin = async function() {
   const rawId = $('authBizId').value.trim();
   const bizPwd = $('authBizPwd').value;
@@ -749,6 +786,16 @@ window.authBizplayLogin = async function() {
 
       showDashboard();
       loadDashboard();
+    } else if (data.status === 'needVerify') {
+      // Bizplay 인증 성공, Flow 인증 필요
+      _pendingBizplayId = rawId;
+      _pendingBizPwd = bizPwd;
+      _pendingSavePw = savePw;
+      // Bizplay 로그인 폼 숨기고 Flow 인증 폼 표시
+      $('authBizplayForm').classList.add('hidden');
+      $('authFlowVerify').classList.remove('hidden');
+      localStorage.setItem('bizplay_id', rawId);
+      localStorage.setItem('bizplay_cred', btoa(unescape(encodeURIComponent(bizId + '\n' + bizPwd))));
     } else {
       const el = $('authBizError');
       el.textContent = data.message || data.error || '로그인 실패';
@@ -762,6 +809,85 @@ window.authBizplayLogin = async function() {
     setBtnLoading(btn, false, '🚀 로그인');
     $('authBizGif').classList.add('hidden');
     mascotShow();
+  }
+};
+
+/* ═══════════════ Flow 인증번호 발송 ═══════════════ */
+window.sendVerifyCode = async function() {
+  const knoxId = $('authKnoxId').value.trim();
+  if (!knoxId) {
+    const el = $('authFlowError');
+    el.textContent = 'Flow ID 입력해줘.';
+    el.classList.remove('hidden');
+    return;
+  }
+
+  const btn = $('authSendCodeBtn');
+  setBtnLoading(btn, true, '발송 중...');
+  $('authFlowError').classList.add('hidden');
+
+  try {
+    const url = `${API_URL}?action=sendFlowVerifyCode&bizplayId=${encodeURIComponent(_pendingBizplayId)}&knoxId=${encodeURIComponent(knoxId)}`;
+    const data = await gasFetch(url);
+
+    if (data.status === 'success') {
+      $('authCodeSection').classList.remove('hidden');
+      $('authFlowCode').focus();
+    } else {
+      const el = $('authFlowError');
+      el.textContent = data.message || data.error || '인증번호 발송 실패';
+      el.classList.remove('hidden');
+    }
+  } catch (err) {
+    const el = $('authFlowError');
+    el.textContent = '네트워크 오류: ' + err.message;
+    el.classList.remove('hidden');
+  } finally {
+    setBtnLoading(btn, false, '인증번호 받기');
+  }
+};
+
+/* ═══════════════ Flow 인증번호 검증 ═══════════════ */
+window.verifyFlowCode = async function() {
+  const knoxId = $('authKnoxId').value.trim();
+  const code = $('authFlowCode').value.trim();
+  if (!code) {
+    const el = $('authFlowError');
+    el.textContent = '인증번호를 입력해줘.';
+    el.classList.remove('hidden');
+    return;
+  }
+
+  const btn = $('authVerifyBtn');
+  setBtnLoading(btn, true, '인증 중...');
+  $('authFlowError').classList.add('hidden');
+
+  try {
+    const bizId = _pendingBizplayId.replace(/@.*$/, '') + '@emro.co.kr';
+    const url = `${API_URL}?action=verifyFlowCode&bizplayId=${encodeURIComponent(_pendingBizplayId)}&knoxId=${encodeURIComponent(knoxId)}&code=${encodeURIComponent(code)}&savePw=${_pendingSavePw}&bizPwd=${encodeURIComponent(_pendingBizPwd)}`;
+    const data = await gasFetch(url);
+
+    if (data.status === 'success' && data.token) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem('auth_method', 'bizplay');
+
+      if (data.session) {
+        localStorage.setItem('bizplay_session', JSON.stringify(data.session));
+      }
+
+      showDashboard();
+      loadDashboard();
+    } else {
+      const el = $('authFlowError');
+      el.textContent = data.message || data.error || '인증 실패';
+      el.classList.remove('hidden');
+    }
+  } catch (err) {
+    const el = $('authFlowError');
+    el.textContent = '네트워크 오류: ' + err.message;
+    el.classList.remove('hidden');
+  } finally {
+    setBtnLoading(btn, false, '인증');
   }
 };
 
