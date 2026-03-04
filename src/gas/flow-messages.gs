@@ -61,7 +61,7 @@ var FLOW_MSG = {
     return {
       content: '밥카 잔액: ' + _fmtMoney(remain) + '원 (남은 출근일 ' + remainDays + '일)\n일평균잔액 ' + _fmtMoney(dailyAvg) + '원' + comment,
       link: FLOW_LINK.CARD,
-      previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 밥카잔액'
+      previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 잔액 ' + _fmtMoney(remain) + '원'
     };
   },
   // #7 밥카 초과 사용 환불 안내
