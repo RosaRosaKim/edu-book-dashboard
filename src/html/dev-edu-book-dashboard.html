@@ -232,7 +232,6 @@ tailwind.config = {
       </div>
       <!-- 신청 내역 스켈레톤 -->
       <div>
-        <div class="skeleton w-16 h-3 mb-3"></div>
         <div class="bg-surface border border-border rounded-2xl p-4 space-y-3">
           <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div><div class="skeleton w-12 h-5 rounded-full"></div></div>
           <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div><div class="skeleton w-12 h-5 rounded-full"></div></div>
@@ -297,12 +296,12 @@ tailwind.config = {
             <button onclick="setAlarmValue(true)"  id="alarmBtnOn"
               class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
-              수신
+              보내
             </button>
             <button onclick="setAlarmValue(false)" id="alarmBtnOff"
               class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 5.714 0m-5.714 0a3 3 0 1 1 5.714 0M3.688 15.772A8.966 8.966 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75c0 2.344.9 4.476 2.312 6.022M3.688 15.772A59.768 59.768 0 0 1 12 15c2.9 0 5.694.37 8.312 1.082M3.688 15.772c-1.18.451-2.318.98-3.438 1.578M21.312 15.772c.68.26 1.343.548 1.988.862M12 3.75V2.25m0 0L9.75 4.5M12 2.25l2.25 2.25"/></svg>
-              수신 안함
+              보내지마
             </button>
           </div>
 
@@ -421,7 +420,6 @@ tailwind.config = {
 
       <!-- 상세 내역 -->
       <section>
-        <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">신청 내역</div>
         <div id="recordsWrap" class="bg-surface border border-border rounded-2xl overflow-hidden max-h-[60vh] overflow-y-auto">
           <!-- 데스크탑: 테이블 -->
           <div class="overflow-x-auto record-table-wrap">
@@ -1234,7 +1232,7 @@ window.setAlarmValue = async function(newVal) {
       setAlarmBtnState(isOn);
       showToast('알람 설정 변경에 실패했어.', 'sad');
     } else {
-      showToast(newVal ? 'Flow 알람 수신이 켜졌어!' : 'Flow 알람 수신이 꺼졌어.', 'smail');
+      showToast(newVal ? 'Flow 알람 보내줄게!' : 'Flow 알람 안 보낼게.', 'smail');
       if (userInfo) userInfo.isAgreed = newVal;
     }
   } catch (e) {
@@ -1479,14 +1477,42 @@ window.showConfirm = function(msg, anchorEl) {
 
 /* ─── 간편 신청 패널 전환 ─── */
 window.wizardGoTo = function(panel) {
+  var activeEl = null;
   for (let i = 1; i <= 5; i++) {
     const el = $('wizPanel' + i);
     if (!el) continue;
-    el.classList.toggle('hidden', i !== panel);
+    if (i === panel) {
+      activeEl = el;
+    } else if (!el.classList.contains('hidden')) {
+      // 나가는 패널: 페이드아웃
+      el.style.transition = 'opacity .2s ease, transform .2s ease';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-8px)';
+      setTimeout(function() {
+        el.classList.add('hidden');
+        el.style.opacity = '';
+        el.style.transform = '';
+        el.style.transition = '';
+      }, 200);
+    }
   }
   if (panel === 3) renderWizardRecords();
   if (panel === 5) renderTemplateCards();
-  $('wizardSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 들어오는 패널: 페이드인
+  setTimeout(function() {
+    if (activeEl) {
+      activeEl.classList.remove('hidden');
+      activeEl.style.opacity = '0';
+      activeEl.style.transform = 'translateY(8px)';
+      requestAnimationFrame(function() {
+        activeEl.style.transition = 'opacity .25s ease, transform .25s ease';
+        activeEl.style.opacity = '1';
+        activeEl.style.transform = 'translateY(0)';
+        setTimeout(function() { activeEl.style.transition = ''; activeEl.style.transform = ''; }, 250);
+      });
+    }
+    $('wizardSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
 };
 
 window.wizardSelectType = function(type) {
