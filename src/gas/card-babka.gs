@@ -2,7 +2,7 @@
  * 밥카(법인카드 중식대) 모듈
  * - 밥카 알람 수신 설정 (웹페이지관리 시트 G열 + H열)
  * - 통합 트리거 sendBabCardAlarm (매일 오전 10~11시)
- *   → 15일 첫 영업일 알림, 3번째 영업일 미결재 리마인더, 매 영업일 잔액 알림
+ *   → 14일 첫 영업일 알림, 3번째 영업일 미결재 리마인더, 매 영업일 잔액 알림
  *
  * code.gs의 doGet에서 호출:
  *   handleUpdateCardAlarm(adminRow, e)
@@ -46,8 +46,8 @@ function handleUpdateCardAlarm(adminRow, e) {
 
 /**
  * 밥카 통합 알림 트리거 (매일 오전 10~11시)
- * 1) 15일 첫 영업일: 전원 결재 안내
- * 2) 15일부터 3번째 영업일: 미상신자 리마인더
+ * 1) 14일 첫 영업일: 전원 결재 안내
+ * 2) 14일부터 3번째 영업일: 미상신자 리마인더
  * 3) 매 영업일: 잔액 알림
  */
 function sendBabCardAlarm() {
@@ -57,7 +57,7 @@ function sendBabCardAlarm() {
   sendCardDailyBalance();
 }
 
-/** 15일부터 첫 번째 영업일: 전원 결재 안내 */
+/** 14일부터 첫 번째 영업일: 전원 결재 안내 */
 function sendCardAlarmDay15() {
   var now = new Date();
   if (!_isFirstBizDayFrom15(now)) return;
@@ -66,7 +66,7 @@ function sendCardAlarmDay15() {
 
 /**
  * 미결재 리마인드 스마트 알림 (매일 오전 트리거)
- * 15일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
+ * 14일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
  * 트리거 설정: 시간 기반 트리거 → 매일 오전 9~10시
  */
 function sendCardAlarmReminder() {
@@ -244,11 +244,11 @@ function _calcCardBudgetForPeriod(fromDt, toDt) {
 
 /* ═══════════════ 리마인더 헬퍼 ═══════════════ */
 
-/** 오늘이 해당월 15일부터 첫 번째 영업일인지 판별 */
+/** 오늘이 해당월 14일부터 첫 번째 영업일인지 판별 */
 function _isFirstBizDayFrom15(date) {
   var y = date.getFullYear(), m = date.getMonth();
   var holidays = _loadHolidays(y);
-  for (var d = 15; d <= 31; d++) {
+  for (var d = 14; d <= 31; d++) {
     var check = new Date(y, m, d);
     if (check.getMonth() !== m) break;
     var dow = check.getDay();
@@ -259,12 +259,12 @@ function _isFirstBizDayFrom15(date) {
   return false;
 }
 
-/** 오늘이 해당월 15일부터 세어 3번째 영업일인지 판별 */
+/** 오늘이 해당월 14일부터 세어 3번째 영업일인지 판별 */
 function _isCardAlarmDay(date) {
   var y = date.getFullYear(), m = date.getMonth();
   var holidays = _loadHolidays(y);
   var bizDayCount = 0;
-  for (var d = 15; d <= 31; d++) {
+  for (var d = 14; d <= 31; d++) {
     var check = new Date(y, m, d);
     if (check.getMonth() !== m) break;
     var dow = check.getDay();
