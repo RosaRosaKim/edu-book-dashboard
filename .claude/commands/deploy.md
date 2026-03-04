@@ -2,10 +2,11 @@
 
 ## 순서
 
-1. **GAS 배포**: `npx clasp push` → `npx clasp deploy -i AKfycby8_T37FXsohyVrIKStEIaV2DYenigsBb8WQ4OPI1FTroQRPCFZKOo5g7cdG9BfGqCO`
-2. **프론트엔드 배포**: `node deploy.js` (빌드 + GitHub Pages push)
+1. **소스 커밋 & 푸시**: 변경사항이 있으면 `git add -A` → `git commit` → `git push origin develop`
+2. **GAS 배포**: `npx clasp push` → `npx clasp deploy -i AKfycby8_T37FXsohyVrIKStEIaV2DYenigsBb8WQ4OPI1FTroQRPCFZKOo5g7cdG9BfGqCO`
+3. **프론트엔드 배포**: `node deploy.js` (빌드 + GitHub Pages push)
    - 빌드 실패 시 에러 원인을 분석하고 수정 후 재시도
-3. 배포 완료 후 버전 번호와 결과 요약 출력
+4. 배포 완료 후 버전 번호와 결과 요약 출력
 
 ## 주의사항
 - GAS deploy 버전 번호를 확인하여 출력

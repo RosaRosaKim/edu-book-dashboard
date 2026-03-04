@@ -775,7 +775,7 @@
 
     const fmtFull = d => d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
     $('cardPeriodLabel').textContent = fmtFull(currentPeriod.start) + ' ~ ' + fmtFull(currentPeriod.end);
-    $('cardBizDaysLabel').textContent = '(영업일 ' + bizDays + '일)';
+    $('cardBizDaysLabel').textContent = '(출근일 ' + bizDays + '일)';
 
     const now = new Date();
     let nextReset;
