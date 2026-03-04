@@ -186,7 +186,7 @@
       </div>
       <div>
         <div class="text-sm font-semibold">밥카 자동결재 모드</div>
-        <div class="text-[11px] text-[#6e7f7b]">매월 15일 첫 영업일에 자동 실행</div>
+        <div class="text-[11px] text-[#6e7f7b]">매월 14일+1영업일에 자동 실행</div>
       </div>
     </div>
     <div id="cardAutoModeOptions" class="space-y-2"></div>
@@ -1054,10 +1054,10 @@
 
   /* ─── 자동결재 모드 ─── */
   const AUTO_MODE_OPTIONS = [
-    { value: 'off',    label: '끔',          desc: '아무것도 안 함',               icon: '⏸️', needPw: false },
-    { value: 'alarm',  label: 'Flow 알람만', desc: '결재 안내 메시지만 보냄',     icon: '🔔', needPw: false },
-    { value: 'draft',  label: '임시저장',    desc: '자동으로 Bizplay에 임시저장', icon: '📝', needPw: true },
-    { value: 'submit', label: '결재요청',    desc: '자동으로 결재선에 상신',      icon: '🚀', needPw: true }
+    { value: 'off',    label: '끔',          desc: '아무것도 안 할게',               icon: '⏸️', needPw: false },
+    { value: 'alarm',  label: 'Flow 알람만', desc: '결재 안내 메시지만 보낼게',     icon: '🔔', needPw: false },
+    { value: 'draft',  label: '임시저장',    desc: '자동으로 Bizplay에 임시저장 후 메세지 보내줄게', icon: '📝', needPw: true },
+    { value: 'submit', label: '결재요청',    desc: '자동으로 결재요청 후 메세지 보내줄게',      icon: '🚀', needPw: true }
   ];
 
   function renderAutoModeOptions() {

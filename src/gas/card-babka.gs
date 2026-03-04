@@ -82,28 +82,28 @@ function handleUpdateCardAutoMode(adminRow, e) {
 
 /**
  * 밥카 통합 알림 트리거 (매일 오전 10~11시)
- * 1) 14일 첫 영업일: 전원 결재 안내
+ * 1) 14일+1영업일: 전원 결재 안내 + 자동결재
  * 2) 14일부터 3번째 영업일: 미상신자 리마인더
  * 3) 매 영업일: 잔액 알림
  */
 function sendBabCardAlarm() {
-  sendCardAlarmDay15();
+  sendCardAlarmDay14();
   sendCardAlarmReminder();
   sendCardRefundAlert();
   sendCardDailyBalance();
 }
 
 /**
- * 밥카 자동결재/알람 처리 (15일 첫 영업일)
+ * 밥카 자동결재/알람 처리 (14일+1영업일)
  * J열 cardAutoMode별 분기:
  *   off/빈값 → 스킵
  *   alarm   → Flow 알람만 발송
  *   draft   → 자동 임시저장
  *   submit  → 자동 결재요청
  */
-function sendCardAlarmDay15() {
+function sendCardAlarmDay14() {
   var now = new Date();
-  if (!_isFirstBizDayFrom15(now)) return;
+  if (!_isFirstBizDayFrom14(now)) return;
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
@@ -114,13 +114,13 @@ function sendCardAlarmDay15() {
     if (!knoxId) continue;
 
     var encPw = data[i][CARD_DAILY_COL - 1]; // H열
-    var autoMode = String(data[i][CARD_AUTO_MODE_COL - 1] || '').trim().toLowerCase(); // I열
+    var autoMode = String(data[i][CARD_AUTO_MODE_COL - 1] || '').trim().toLowerCase(); // J열
 
     if (!autoMode || autoMode === 'off') continue;
 
     if (autoMode === 'alarm') {
       try {
-        sendFlowMsg(knoxId, FLOW_MSG.cardDay15());
+        sendFlowMsg(knoxId, FLOW_MSG.cardDay14());
         Logger.log('[자동결재] alarm 발송 - ' + knoxId);
       } catch (e) {
         Logger.log('[자동결재] alarm 실패 - ' + knoxId + ': ' + e.message);
@@ -361,8 +361,8 @@ function _calcCardBudgetForPeriod(fromDt, toDt) {
 
 /* ═══════════════ 리마인더 헬퍼 ═══════════════ */
 
-/** 오늘이 해당월 14일부터 첫 번째 영업일인지 판별 */
-function _isFirstBizDayFrom15(date) {
+/** 오늘이 해당월 14일+1영업일인지 판별 (14일부터 첫 번째 영업일) */
+function _isFirstBizDayFrom14(date) {
   var y = date.getFullYear(), m = date.getMonth();
   var holidays = _loadHolidays(y);
   for (var d = 14; d <= 31; d++) {

@@ -610,7 +610,7 @@ const doGet = (e) => {
     } catch (nErr) { /* 시트 없으면 무시 */ }
 
     const resp = {
-      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[8] || 'off').trim().toLowerCase() },
+      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
       myHistory: myHistory,
       adminStats: adminStats,
       templates: templates,

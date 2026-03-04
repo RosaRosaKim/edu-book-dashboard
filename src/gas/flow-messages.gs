@@ -40,8 +40,8 @@ var FLOW_MSG = {
       previewTitle: '📖 교육비 잔액 안내'
     };
   },
-  // #4 밥카 결재 안내 (15일)
-  cardDay15: function() {
+  // #4 밥카 결재 안내 (14일+1영업일)
+  cardDay14: function() {
     return {
       content: '밥값은 회사가, 결재는 내가! \n 링크를 클릭하면 밥카메뉴에서 바로 결재할 수 있어',
       link: FLOW_LINK.CARD,
