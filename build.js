@@ -272,7 +272,7 @@ async function build() {
     ['cdn.tailwindcss.com', userOutput.includes('cdn.tailwindcss.com')],
     ['tailwind.config', userOutput.includes('tailwind.config')],
     ['onclick="loadDashboard()"', userOutput.includes('loadDashboard()')],
-    ['onclick="toggleAlarm()"', userOutput.includes('toggleAlarm()')],
+    ['setAlarmValue', userOutput.includes('setAlarmValue')],
     ['onclick="logout()"', userOutput.includes('logout()')],
   ]);
 
