@@ -264,8 +264,12 @@ tailwind.config = {
   </main>
 </div>
 
-<!-- 토스트 -->
-<div id="toast" class="fixed bottom-5 right-5 bg-surface border border-edu rounded-xl px-4 py-3 text-sm shadow-2xl z-50 transition-all duration-300 translate-y-24 opacity-0 pointer-events-none"></div>
+<!-- 메시지 박스 (마스코트 말풍선) -->
+<div id="msgBox" class="fixed z-50 pointer-events-none transition-all duration-300 opacity-0" style="display:none;transform-origin:left center;transform:scale(.9);">
+  <div id="msgBoxBubble" class="pointer-events-auto relative border-2 border-accent rounded-2xl px-4 py-2.5 shadow-xl max-w-[280px]" style="background:var(--bubble-bg)">
+    <div id="msgBoxText" class="text-sm text-[#47635f] font-medium leading-snug"></div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -818,16 +822,49 @@ function escapeAttr(str) {
   return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
+let msgBoxTimer = null;
 function showToast(msg, isError) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.style.borderColor = isError ? '#dc2626' : '#059669';
-  t.classList.remove('translate-y-24', 'opacity-0');
-  t.classList.add('translate-y-0', 'opacity-100');
-  setTimeout(() => {
-    t.classList.add('translate-y-24', 'opacity-0');
-    t.classList.remove('translate-y-0', 'opacity-100');
-  }, 2500);
+  const box = $('msgBox');
+  const text = $('msgBoxText');
+  const bubble = $('msgBoxBubble');
+
+  const isDark = document.documentElement.classList.contains('dark');
+  const c = isError
+    ? { border: '#dc2626', bg: isDark ? '#2f1a1a' : '#fef0f0', text: '#a82020' }
+    : { border: '#2d8a7e', bg: isDark ? '#1a2f2b' : '#eef8f6', text: '#2b6b62' };
+  bubble.style.borderColor = c.border;
+  bubble.style.background = c.bg;
+  bubble.style.setProperty('--bubble-color', c.border);
+  bubble.style.setProperty('--bubble-bg', c.bg);
+  text.style.color = c.text;
+  text.textContent = msg;
+
+  box.style.display = '';
+  box.style.position = 'fixed';
+  const mascot = $('headerSmail');
+  if (mascot) {
+    const rect = mascot.getBoundingClientRect();
+    box.style.left = (rect.right + 6) + 'px';
+    box.style.top = Math.max(8, rect.top + rect.height / 2 - 18) + 'px';
+  } else {
+    box.style.left = '60px';
+    box.style.top = '16px';
+  }
+  box.style.transform = 'scale(.9)';
+
+  requestAnimationFrame(() => {
+    box.classList.remove('opacity-0');
+    box.classList.add('opacity-100');
+    box.style.transform = 'scale(1)';
+  });
+
+  clearTimeout(msgBoxTimer);
+  msgBoxTimer = setTimeout(() => {
+    box.classList.remove('opacity-100');
+    box.classList.add('opacity-0');
+    box.style.transform = 'scale(.9)';
+    setTimeout(() => { box.style.display = 'none'; }, 300);
+  }, 2800);
 }
 
 /* ========== 월간 리포트 ========== */

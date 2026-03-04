@@ -5,15 +5,21 @@
  */
 
 var FLOW_LINK = {
-  DASHBOARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html',
-  CARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=card'
+  DASHBOARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=dashboard',
+       CARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=card'
 };
 
 var FLOW_MSG = {
   // #1 교육비 잔액 안내 (관리자→사용자)
-  balanceInfo: function(used, remain, limit) {
+  balanceInfo: function(used, remain, limit, pending) {
+    var lines = [
+      '- 사용 금액: ' + used.toLocaleString() + '원',
+    ];
+    if (pending > 0) lines.push('- 진행중 금액: ' + pending.toLocaleString() + '원');
+    lines.push('- 잔여 금액: ' + remain.toLocaleString() + '원');
+    lines.push('- 연간 한도: ' + limit.toLocaleString() + '원');
     return {
-      content: '- 사용 금액: ' + used.toLocaleString() + '원\n- 잔여 금액: ' + remain.toLocaleString() + '원\n- 연간 한도: ' + limit.toLocaleString() + '원',
+      content: lines.join('\n'),
       link: FLOW_LINK.DASHBOARD,
       previewTitle: '📚 교육비 잔액'
     };

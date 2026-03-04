@@ -9,6 +9,23 @@
 #headerDance.icon-visible { transform:scale(3.5); }
 #headerLoading.icon-visible { transform:scale(1.75); }
 
+/* 메시지 박스 말풍선 꼬리 (← 마스코트 방향) */
+#msgBoxBubble::before {
+  content:''; position:absolute; left:-7px; top:12px;
+  width:0; height:0;
+  border-right:8px solid var(--bubble-bg);
+  border-top:5px solid transparent;
+  border-bottom:5px solid transparent;
+}
+#msgBoxBubble::after {
+  content:''; position:absolute; left:-10px; top:11px;
+  width:0; height:0;
+  border-right:10px solid var(--bubble-color, #2d8a7e);
+  border-top:6px solid transparent;
+  border-bottom:6px solid transparent;
+  z-index:-1;
+}
+
 /* Tag */
 .tag-item {
   background: rgba(45,138,126,.1);

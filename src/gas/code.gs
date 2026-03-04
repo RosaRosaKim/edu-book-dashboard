@@ -61,16 +61,18 @@ const doGet = (e) => {
     if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; }); allApplyData.push(...d); }
     if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; }); allApplyData.push(...d); }
 
-    let used = 0;
+    let used = 0, pending = 0;
     allApplyData.forEach(row => {
       const c = colFor(row);
-      if (String(row[c.KNOX_ID]) === targetKnoxId && row[c.STATUS] === "완료") {
-        used += Number(row[c.COST]) || 0;
-      }
+      if (String(row[c.KNOX_ID]) !== targetKnoxId) return;
+      const status = String(row[c.STATUS]);
+      const cost = Number(row[c.COST]) || 0;
+      if (status === "완료") used += cost;
+      else if (status.includes("대기") || status.includes("진행")) pending += cost;
     });
 
     const remain = LIMIT_BUDGET - used;
-    sendFlowMsg(targetKnoxId, FLOW_MSG.balanceInfo(used, remain, LIMIT_BUDGET));
+    sendFlowMsg(targetKnoxId, FLOW_MSG.balanceInfo(used, remain, LIMIT_BUDGET, pending));
     return createResponse({ status: "success" });
   }
 
@@ -739,7 +741,7 @@ function sendFlowGAS(userId, content, previewLink, previewTitle) {
   const reqData = { BOT_ID: 'helpdesk', RCVR_USER_ID: fullUserId, PREVIEW_TTL: previewTitle || '교육비 알림' };
   if (previewLink) {
     reqData.PREVIEW_CNTN = content;
-    reqData.PREVIEW_LINK = previewLink;
+    reqData.PREVIEW_LINK = previewLink.includes('?') ? previewLink : previewLink + '?';
   } else {
     reqData.CNTN = content;
   }
