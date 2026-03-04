@@ -87,10 +87,14 @@ function handleUpdateCardAutoMode(adminRow, e) {
  * 3) 매 영업일: 잔액 알림
  */
 function sendBabCardAlarm() {
-  sendCardAlarmDay14();
-  sendCardAlarmReminder();
-  sendCardRefundAlert();
-  sendCardDailyBalance();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var adminData = mgmtSheet.getDataRange().getValues();
+
+  sendCardAlarmDay14(adminData);
+  sendCardAlarmReminder(adminData);
+  sendCardRefundAlert(adminData);
+  sendCardDailyBalance(adminData);
 }
 
 /**
@@ -101,13 +105,14 @@ function sendBabCardAlarm() {
  *   draft   → 자동 임시저장
  *   submit  → 자동 결재요청
  */
-function sendCardAlarmDay14() {
+function sendCardAlarmDay14(data) {
   var now = new Date();
   if (!_isFirstBizDayFrom14(now)) return;
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var data = mgmtSheet.getDataRange().getValues();
+  if (!data) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+  }
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0];
@@ -186,13 +191,14 @@ function _processAutoMode(knoxId, encPw, mode) {
  * 14일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
  * 트리거 설정: 시간 기반 트리거 → 매일 오전 9~10시
  */
-function sendCardAlarmReminder() {
+function sendCardAlarmReminder(data) {
   var now = new Date();
   if (!_isCardAlarmDay(now)) return;
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var data = mgmtSheet.getDataRange().getValues();
+  if (!data) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+  }
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
@@ -248,7 +254,7 @@ function _sendCardAlarm(msg) {
  * 매월 첫 영업일: 직전 종료 기간 초과분 환불 안내
  * 예) 3월 첫 영업일 → 1/15~2/14 기간 초과분 체크
  */
-function sendCardRefundAlert() {
+function sendCardRefundAlert(data) {
   var now = new Date();
   if (!_isFirstBizDayOfMonth(now)) return;
 
@@ -266,9 +272,10 @@ function sendCardRefundAlert() {
   var periodLabel = prevStart.getFullYear() + '.' + ('0' + (prevStart.getMonth() + 1)).slice(-2) + '.' + ('0' + prevStart.getDate()).slice(-2)
     + ' ~ ' + prevEnd.getFullYear() + '.' + ('0' + (prevEnd.getMonth() + 1)).slice(-2) + '.' + ('0' + prevEnd.getDate()).slice(-2);
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var data = mgmtSheet.getDataRange().getValues();
+  if (!data) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+  }
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0];
@@ -332,20 +339,7 @@ function _isFirstBizDayOfMonth(date) {
 function _calcCardBudgetForPeriod(fromDt, toDt) {
   var start = _parseDateStr(fromDt);
   var end = _parseDateStr(toDt);
-  var holidaySet = {};
-  var years = {};
-  years[start.getFullYear()] = true;
-  years[end.getFullYear()] = true;
-  for (var y in years) {
-    try {
-      var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + y + '.json', { muteHttpExceptions: true });
-      if (resp.getResponseCode() === 200) {
-        var hdata = JSON.parse(resp.getContentText());
-        for (var k in hdata) holidaySet[k] = true;
-      }
-    } catch (e) {}
-    holidaySet[y + '-05-01'] = true;
-  }
+  var holidaySet = _buildHolidaySet([start.getFullYear(), end.getFullYear()]);
   var bizDays = 0;
   var d = new Date(start);
   while (d <= end) {
@@ -396,12 +390,31 @@ function _isCardAlarmDay(date) {
 }
 
 /** 공휴일 JSON 로드 (1회 호출, 캐싱용) */
+var _holidayCache = {}; // 스크립트 실행 단위 캐시 (연도별)
+
+/** 복수 연도의 공휴일을 flat Object로 병합 (캐시 활용) */
+function _buildHolidaySet(years) {
+  var set = {};
+  var seen = {};
+  for (var i = 0; i < years.length; i++) {
+    var y = String(years[i]);
+    if (seen[y]) continue;
+    seen[y] = true;
+    var h = _loadHolidays(Number(y));
+    for (var k in h) set[k] = true;
+    set[y + '-05-01'] = true; // 근로자의 날
+  }
+  return set;
+}
+
 function _loadHolidays(year) {
+  var y = String(year);
+  if (_holidayCache[y]) return _holidayCache[y];
   try {
-    var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + year + '.json', { muteHttpExceptions: true });
-    if (resp.getResponseCode() !== 200) return {};
-    return JSON.parse(resp.getContentText());
-  } catch (e) { return {}; }
+    var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + y + '.json', { muteHttpExceptions: true });
+    _holidayCache[y] = (resp.getResponseCode() === 200) ? JSON.parse(resp.getContentText()) : {};
+  } catch (e) { _holidayCache[y] = {}; }
+  return _holidayCache[y];
 }
 
 /** 공휴일 목록에서 해당 날짜 체크 (근로자의 날 포함) */
@@ -592,15 +605,16 @@ function migratePasswords() {
  * 트리거 설정: 시간 기반 트리거 → 매일 오전 11시
  * 주말 + 공휴일(근로자의날 포함) 제외
  */
-function sendCardDailyBalance() {
+function sendCardDailyBalance(data) {
   var now = new Date();
   var dow = now.getDay();
   if (dow === 0 || dow === 6) return;
   if (_isHolidayServer(now)) return;
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var data = adminSheet.getDataRange().getValues();
+  if (!data) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+  }
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
@@ -655,23 +669,8 @@ function sendCardDailyBalance() {
 
 /** 공휴일 여부 체크 (holidays.hyunbin.page API + 근로자의 날) */
 function _isHolidayServer(date) {
-  var yyyy = date.getFullYear();
-  var mm = ('0' + (date.getMonth() + 1)).slice(-2);
-  var dd = ('0' + date.getDate()).slice(-2);
-  var dateStr = yyyy + '-' + mm + '-' + dd;
-
-  // 근로자의 날
-  if (mm === '05' && dd === '01') return true;
-
-  try {
-    var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + yyyy + '.json', { muteHttpExceptions: true });
-    if (resp.getResponseCode() !== 200) return false;
-    var holidays = JSON.parse(resp.getContentText());
-    return dateStr in holidays;
-  } catch (e) {
-    Logger.log('[잔액알림] 공휴일 API 실패: ' + e.message);
-    return false;
-  }
+  var holidays = _loadHolidays(date.getFullYear());
+  return _isHolidayFromList(date, holidays);
 }
 
 /** 오늘부터 마감일(14일)까지 남은 출근일 수 (오늘 포함, 주말+공휴일 제외) */
@@ -681,20 +680,7 @@ function _calcRemainingBizDays() {
   today.setHours(0, 0, 0, 0);
   var end = _parseDateStr(period.to);
 
-  var holidaySet = {};
-  var years = {};
-  years[today.getFullYear()] = true;
-  years[end.getFullYear()] = true;
-  for (var y in years) {
-    try {
-      var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + y + '.json', { muteHttpExceptions: true });
-      if (resp.getResponseCode() === 200) {
-        var data = JSON.parse(resp.getContentText());
-        for (var k in data) holidaySet[k] = true;
-      }
-    } catch (e) {}
-    holidaySet[y + '-05-01'] = true;
-  }
+  var holidaySet = _buildHolidaySet([today.getFullYear(), end.getFullYear()]);
 
   var bizDays = 0;
   var d = new Date(today);
@@ -715,22 +701,7 @@ function _calcCardBudget() {
   var start = _parseDateStr(period.from);
   var end = _parseDateStr(period.to);
 
-  // 기간에 걸치는 연도의 공휴일 로드
-  var holidaySet = {};
-  var years = {};
-  years[start.getFullYear()] = true;
-  years[end.getFullYear()] = true;
-  for (var y in years) {
-    try {
-      var resp = UrlFetchApp.fetch('https://holidays.hyunbin.page/' + y + '.json', { muteHttpExceptions: true });
-      if (resp.getResponseCode() === 200) {
-        var data = JSON.parse(resp.getContentText());
-        for (var k in data) holidaySet[k] = true;
-      }
-    } catch (e) {}
-    // 근로자의 날
-    holidaySet[y + '-05-01'] = true;
-  }
+  var holidaySet = _buildHolidaySet([start.getFullYear(), end.getFullYear()]);
 
   var bizDays = 0;
   var d = new Date(start);

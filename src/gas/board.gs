@@ -18,8 +18,10 @@ function handleBoardList(adminRow, e) {
     const dislikes = row[BOARD_COL.DISLIKES] ? String(row[BOARD_COL.DISLIKES]).split(',').filter(Boolean) : [];
 
     let myReaction = null;
-    if (likes.includes(token)) myReaction = 'like';
-    else if (dislikes.includes(token)) myReaction = 'dislike';
+    const likeSet = new Set(likes);
+    const dislikeSet = new Set(dislikes);
+    if (likeSet.has(token)) myReaction = 'like';
+    else if (dislikeSet.has(token)) myReaction = 'dislike';
 
     return {
       id: String(row[BOARD_COL.ID]),
@@ -106,11 +108,13 @@ function handleBoardReact(adminRow, e) {
 /**
  * 게시판 관리자 답변 작성/수정
  */
-function handleBoardReply(adminRow, e) {
+function handleBoardReply(adminRow, e, managerSet) {
   const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
-  const managerSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
-  const managerData = managerSheet.getDataRange().getValues();
-  const isAdmin = managerData.some(row => String(row[0]).trim().toLowerCase() === String(currentKnoxId).trim().toLowerCase());
+  if (!managerSet) {
+    const ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
+    managerSet = new Set(ms.getDataRange().getValues().slice(1).map(r => String(r[0]).trim().toLowerCase()));
+  }
+  const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
   if (!isAdmin) return createResponse({ status: 'error', message: '관리자만 답변할 수 있어.' });
 
   const postId = e.parameter.postId;
@@ -133,11 +137,13 @@ function handleBoardReply(adminRow, e) {
 /**
  * 게시판 관리자 답변 삭제
  */
-function handleBoardReplyDelete(adminRow, e) {
+function handleBoardReplyDelete(adminRow, e, managerSet) {
   const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
-  const managerSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
-  const managerData = managerSheet.getDataRange().getValues();
-  const isAdmin = managerData.some(row => String(row[0]).trim().toLowerCase() === String(currentKnoxId).trim().toLowerCase());
+  if (!managerSet) {
+    const ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
+    managerSet = new Set(ms.getDataRange().getValues().slice(1).map(r => String(r[0]).trim().toLowerCase()));
+  }
+  const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
   if (!isAdmin) return createResponse({ status: 'error', message: '관리자만 삭제할 수 있어.' });
 
   const postId = e.parameter.postId;
@@ -158,11 +164,13 @@ function handleBoardReplyDelete(adminRow, e) {
 /**
  * 게시판 상단고정 토글 (관리자 전용)
  */
-function handleBoardPin(adminRow, e) {
+function handleBoardPin(adminRow, e, managerSet) {
   const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
-  const managerSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
-  const managerData = managerSheet.getDataRange().getValues();
-  const isAdmin = managerData.some(row => String(row[0]).trim().toLowerCase() === String(currentKnoxId).trim().toLowerCase());
+  if (!managerSet) {
+    const ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
+    managerSet = new Set(ms.getDataRange().getValues().slice(1).map(r => String(r[0]).trim().toLowerCase()));
+  }
+  const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
   if (!isAdmin) return createResponse({ status: 'error', message: '관리자만 고정할 수 있어.' });
 
   const postId = e.parameter.postId;

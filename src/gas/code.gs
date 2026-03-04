@@ -46,14 +46,32 @@ const doGet = (e) => {
 
   const adminData = adminSheet.getDataRange().getValues();
 
+  // ── O(1) 룩업용 Map 구축 (adminData.find() 26회 → Map.get()) ──
+  const adminByUUID = new Map();
+  const adminByKnoxId = new Map();
+  const adminByBizplayId = new Map();
+  adminData.forEach((row, idx) => {
+    if (idx === 0) return;
+    const uuid = row[ADMIN_COL.UUID];
+    const kid = String(row[ADMIN_COL.KNOX_ID]).trim();
+    const bid = String(row[ADMIN_COL.BIZPLAY_ID] || '').trim();
+    if (uuid) adminByUUID.set(uuid, { row, idx });
+    if (kid) adminByKnoxId.set(kid, { row, idx });
+    if (bid) adminByBizplayId.set(bid, { row, idx });
+  });
+
+  // ── 관리자 Set 구축 (managerSheet 1회 읽기) ──
+  const managerData = managerSheet.getDataRange().getValues();
+  const managerSet = new Set(managerData.slice(1).map(row => String(row[0]).trim().toLowerCase()));
+
   // [기능 4] 관리자 → 사용자에게 잔액 정보 Flow 발송
   if (action === "sendBalanceInfo" && token && e.parameter.targetKnoxId) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    const entry = adminByUUID.get(token);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    const adminRow = entry.row;
 
     const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
-    const managerData = managerSheet.getDataRange().getValues();
-    const isAdmin = managerData.some(row => String(row[0]).trim().toLowerCase() === String(currentKnoxId).trim().toLowerCase());
+    const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
     if (!isAdmin) return createResponse({ error: "NOT_ADMIN" });
 
     const targetKnoxId = e.parameter.targetKnoxId;
@@ -78,8 +96,9 @@ const doGet = (e) => {
 
   // [기능 5] 알람 수신 동의 변경
   if (action === "updateAlarm" && token) {
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
-    if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
+    const entry = adminByUUID.get(token);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    const rowIndex = entry.idx;
 
     const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
     adminSheet.getRange(rowIndex + 1, ADMIN_COL.AGREE + 1).setValue(newVal);
@@ -88,8 +107,9 @@ const doGet = (e) => {
 
   // [기능 8] 밥카 알람 수신 동의 변경
   if (action === "updateCardAlarm" && token) {
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
-    if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
+    const entry = adminByUUID.get(token);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    const rowIndex = entry.idx;
 
     const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
     adminSheet.getRange(rowIndex + 1, 7).setValue(newVal);  // G열: 밥카 Flow 알람
@@ -98,9 +118,9 @@ const doGet = (e) => {
 
   // [기능 15] 밥카 자동결재 모드 변경
   if (action === "updateCardAutoMode" && token) {
-    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
-    if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
-    return handleUpdateCardAutoMode(adminData[rowIndex], e);
+    const entry = adminByUUID.get(token);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    return handleUpdateCardAutoMode(entry.row, e);
   }
 
   // [기능 12] Bizplay 직접 인증 (로그인 화면에서 Bizplay로 로그인)
@@ -120,7 +140,8 @@ const doGet = (e) => {
     }
 
     // 2) I열(BIZPLAY_ID)에서 매핑된 Knox ID 검색
-    const mappedRowIndex = adminData.findIndex(row => String(row[ADMIN_COL.BIZPLAY_ID]).trim() === bizplayId);
+    const mappedEntry = adminByBizplayId.get(bizplayId);
+    const mappedRowIndex = mappedEntry ? mappedEntry.idx : -1;
 
     if (mappedRowIndex === -1) {
       // 매핑 없음 → Flow 인증 필요. Bizplay 세션을 임시 저장
@@ -197,7 +218,8 @@ const doGet = (e) => {
     if (!bizplayId || !knoxId) return createResponse({ error: "MISSING_PARAMS" });
 
     // Knox ID가 A열에 존재하는지 확인 (없으면 신규 등록 예정이므로 통과)
-    const knoxRowIndex = adminData.findIndex(row => String(row[ADMIN_COL.KNOX_ID]).trim() === knoxId);
+    const knoxEntry = adminByKnoxId.get(knoxId);
+    const knoxRowIndex = knoxEntry ? knoxEntry.idx : -1;
 
     // 6자리 랜덤 인증번호 생성
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -300,123 +322,40 @@ const doGet = (e) => {
     });
   }
 
-  // [기능 6] Bizplay 로그인 프록시 (SSO 전체 흐름)
-  if (action === "bizplayLogin" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplayLogin(adminRow, e);
-  }
-
-  // [기능 6.5] Bizplay 교육비 탭 SSO (탭 전환 시 weAuth)
-  if (action === "bizplayEduInit" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplayEduInit(adminRow, e);
-  }
-
-  // [기능 7a] Bizplay 결재라인 조회
-  if (action === "bizplayApprLine" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplayApprLine(adminRow, e);
-  }
-
-  // [기능 7a-2] Bizplay 사원 검색 (결재라인 수정용)
-  if (action === "bizplaySearchUser" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplaySearchUser(adminRow, e);
-  }
-
-  // [기능 7b] Bizplay 기안문서 목록 조회
-  if (action === "bizplayDraftList" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplayDraftList(adminRow, e);
-  }
-
-  // [기능 7c] Bizplay 기안문서 상세 조회
-  if (action === "bizplayDraftDetail" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplayDraftDetail(adminRow, e);
-  }
-
-  // [기능 7] Bizplay 임시저장 (교육 신청서)
-  if (action === "bizplayDraft" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBizplayDraft(adminRow, e);
-  }
-
-  // [기능 13] 맛집 평점 조회
-  if (action === "cardRatings" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleCardRatings(adminRow, e);
-  }
-
-  // [기능 14] 맛집 평점 등록/수정
-  if (action === "cardRate" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleCardRate(adminRow, e);
-  }
-
-  // [기능 9] 밥카 사용내역 조회
-  if (action === "cardRecords" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleCardRecords(adminRow, e);
-  }
-
-  // [기능 10] 밥카 결재 제출
-  if (action === "cardApproval" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleCardApproval(adminRow, e);
-  }
-
-  // [기능 12] 게시판
-  if (action === "boardList" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBoardList(adminRow, e);
-  }
-  if (action === "boardWrite" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBoardWrite(adminRow, e);
-  }
-  if (action === "boardReact" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBoardReact(adminRow, e);
-  }
-  if (action === "boardReply" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBoardReply(adminRow, e);
-  }
-  if (action === "boardReplyDelete" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBoardReplyDelete(adminRow, e);
-  }
-  if (action === "boardPin" && token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
-    return handleBoardPin(adminRow, e);
+  // ── 토큰 인증이 필요한 액션들: Map O(1) 룩업 ──
+  const TOKEN_ACTIONS = {
+    bizplayLogin: handleBizplayLogin,       // [기능 6]
+    bizplayEduInit: handleBizplayEduInit,   // [기능 6.5]
+    bizplayApprLine: handleBizplayApprLine, // [기능 7a]
+    bizplaySearchUser: handleBizplaySearchUser, // [기능 7a-2]
+    bizplayDraftList: handleBizplayDraftList,   // [기능 7b]
+    bizplayDraftDetail: handleBizplayDraftDetail, // [기능 7c]
+    bizplayDraft: handleBizplayDraft,       // [기능 7]
+    cardRatings: handleCardRatings,         // [기능 13]
+    cardRate: handleCardRate,               // [기능 14]
+    cardRecords: handleCardRecords,         // [기능 9]
+    cardApproval: handleCardApproval,       // [기능 10]
+    boardList: handleBoardList,             // [기능 12]
+    boardWrite: handleBoardWrite,
+    boardReact: handleBoardReact,
+    boardReply: (row, ev) => handleBoardReply(row, ev, managerSet),
+    boardReplyDelete: (row, ev) => handleBoardReplyDelete(row, ev, managerSet),
+    boardPin: (row, ev) => handleBoardPin(row, ev, managerSet)
+  };
+  if (TOKEN_ACTIONS[action] && token) {
+    const entry = adminByUUID.get(token);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    return TOKEN_ACTIONS[action](entry.row, e);
   }
 
   // [기능 3] 통합 데이터 조회
   if (token) {
-    const adminRow = adminData.find(row => row[ADMIN_COL.UUID] === token);
-    if (!adminRow) return createResponse({ error: "UNAUTHORIZED" });
+    const entry = adminByUUID.get(token);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    const adminRow = entry.row;
 
     const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
-    const managerData = managerSheet.getDataRange().getValues();
-    const isAdmin = managerData.some(row => String(row[0]).trim().toLowerCase() === String(currentKnoxId).trim().toLowerCase());
+    const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
 
     // --- 교육/도서 데이터 병합 ---
     let allApplyData = [];
@@ -532,8 +471,7 @@ const doGet = (e) => {
       adminStats = stats;
     }
 
-    const adminRowIdx = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
-    adminSheet.getRange(adminRowIdx + 1, ADMIN_COL.LAST_LOGIN + 1).setValue(new Date());
+    adminSheet.getRange(entry.idx + 1, ADMIN_COL.LAST_LOGIN + 1).setValue(new Date());
 
     // 템플릿 데이터 로드
     const tplSheet = ensureTemplateSheet(ss);
@@ -670,12 +608,20 @@ const onSpreadsheetChange = (e) => {
   const adminMap = new Map();
   adminValues.forEach(row => adminMap.set(String(row[ADMIN_COL.KNOX_ID]), row[ADMIN_COL.AGREE]));
 
-  // 3. 누적 사용액 계산을 위해 '교육 + 도서' 전체 데이터를 하나의 배열로 병합
+  // 3. 누적 사용액 사전 계산 (budgetMap: knoxId → 완료 합계)
   const eduData = dataSheet.getDataRange().getValues();
   const bookData = bookSheet.getDataRange().getValues();
-  const eduRows = eduData.slice(1); eduRows.forEach(r => { r._reqType = '교육'; });
-  const bookRows = bookData.slice(1); bookRows.forEach(r => { r._reqType = '도서'; });
-  const allDataForBudget = [...eduRows, ...bookRows];
+  const budgetMap = new Map();
+  const _accBudget = (rows, colDef) => {
+    for (let i = 1; i < rows.length; i++) {
+      const kid = String(rows[i][colDef.KNOX_ID]);
+      if (rows[i][colDef.STATUS] === "완료") {
+        budgetMap.set(kid, (budgetMap.get(kid) || 0) + (Number(rows[i][colDef.COST]) || 0));
+      }
+    }
+  };
+  _accBudget(eduData, DATA_COL);
+  _accBudget(bookData, BOOK_COL);
 
   // 4. 방금 데이터가 추가된 '현재 활성화된 시트'만 스캔하여 발송 대상 찾기
   const activeCol = activeSheetName === SHEET_NAME.BOOK ? BOOK_COL : DATA_COL;
@@ -694,14 +640,7 @@ const onSpreadsheetChange = (e) => {
 
       // 수신동의한 사용자에게만 실제 알림 발송
       if (isAgreed === "Y") {
-        // 사용자 누적액 통합 계산 (교육 + 도서 병합본에서 검색)
-        let totalUsed = 0;
-        allDataForBudget.forEach(r => {
-          const c = colFor(r);
-          if (String(r[c.KNOX_ID]) === knoxId && r[c.STATUS] === "완료") {
-            totalUsed += (Number(r[c.COST]) || 0);
-          }
-        });
+        const totalUsed = budgetMap.get(knoxId) || 0;
 
         var msg = FLOW_MSG.approvalComplete(reqType, docId, row[activeCol.TITLE], row[activeCol.COST], totalUsed, LIMIT_BUDGET - totalUsed);
         if (sendFlowMsg(knoxId, msg)) {
@@ -724,7 +663,7 @@ const onSpreadsheetChange = (e) => {
 function processAlarm(sheet, rowIndex, knoxId, rowData) {
   const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.ADMIN);
   const adminData = adminSheet.getDataRange().getValues();
-  const userAdminInfo = adminData.find(row => row[ADMIN_COL.KNOX_ID] === knoxId);
+  const userAdminInfo = adminData.find(row => String(row[ADMIN_COL.KNOX_ID]).trim() === knoxId);
 
   // 알람 동의 확인
   if (userAdminInfo && userAdminInfo[ADMIN_COL.AGREE] === "Y") {
