@@ -551,7 +551,8 @@ const doGet = (e) => {
         (new Date() - new Date(existing.loginTime || 0)) > 3600000;
       if (needLogin) {
         try {
-          const bizUserId = currentKnoxId + '@emro.co.kr';
+          const savedBizplayId = String(adminRow[ADMIN_COL.BIZPLAY_ID] || '').trim();
+          const bizUserId = (savedBizplayId || currentKnoxId) + '@emro.co.kr';
           const bizPwd = _decryptPw(String(encPw));
           const loginPayload = '_JSON_=' + encodeURIComponent(JSON.stringify({
             USER_ID: bizUserId, PWD: bizPwd,
