@@ -501,8 +501,10 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
   for (var i = 0; i < recs.length; i++) {
     var paperNm = recs[i].PAPER_NM || '';
     var draftDttm = recs[i].DRAFT_DTTM || '';
-    if (paperNm.indexOf('지출결의서(법인카드)') >= 0 && draftDttm.substring(0, 6) === targetYM) {
-      return true; // 이미 상신함
+    var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
+    if (paperNm.indexOf('지출결의서(법인카드)') >= 0 && draftDttm.substring(0, 6) === targetYM
+        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
+      return true; // 이미 상신함 (진행 or 완료)
     }
   }
   return false;

@@ -53,14 +53,14 @@ var FLOW_MSG = {
     var fmt = _fmtMoney(amount);
     if (mode === 'draft') {
       return {
-        content: 'Bizplay에 ' + fmt + '원 임시저장했어',
+        content: 'Bizplay에 임시저장했어',
         link: FLOW_LINK.APPROVAL,
         previewTitle: '📝 밥카 ' + fmt + '원 임시저장'
       };
     }
     // submit
     return {
-      content: 'Bizplay에 ' + fmt + '원 결재요청했어',
+      content: 'Bizplay에 결재요청했어',
       link: FLOW_LINK.APPROVAL,
       previewTitle: '🚀 밥카 ' + fmt + '원 결재요청'
     };
@@ -68,7 +68,7 @@ var FLOW_MSG = {
   // #5 밥카 미결재 리마인더
   cardReminder: function() {
     return {
-      content: '아직 밥카 결재 안한 것 같아...\n 링크를 클릭하면 밥카메뉴에서 바로 결재할 수 있어',
+      content: '아직 밥카 결재 안한 것 같아...\n링크를 클릭하면 밥카메뉴에서 바로 결재할 수 있어',
       link: FLOW_LINK.CARD,
       previewTitle: '⏰ 밥카결재 마지막날'
     };
@@ -82,7 +82,7 @@ var FLOW_MSG = {
     else if (dailyAvg < 8000) comment = ' 편의점 각 🏪';
 
     return {
-      content: '밥카 잔액: ' + _fmtMoney(remain) + '원 (남은 출근일 ' + remainDays + '일)\n일평균잔액 ' + _fmtMoney(dailyAvg) + '원' + comment,
+      content: '남은 출근일 ' + remainDays + '일\n일평균잔액 ' + _fmtMoney(dailyAvg) + '원' + comment,
       link: FLOW_LINK.CARD,
       previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 잔액 ' + _fmtMoney(remain) + '원'
     };
@@ -103,7 +103,7 @@ var FLOW_MSG = {
       previewTitle: '🔐 본인 맞죠?'
     };
   },
-  // #8 밥카 자동결재 실패
+  // #8 밥카 자동결재요청 실패
   cardAutoFail: function(mode, reason) {
     var label = mode === 'draft' ? '임시저장' : mode === 'submit' ? '결재요청' : '알림';
     return {

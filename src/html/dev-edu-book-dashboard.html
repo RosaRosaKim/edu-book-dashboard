@@ -205,14 +205,29 @@ tailwind.config = {
           </div>
         </div>
       </div>
-      <!-- 알람 토글 스켈레톤 -->
+      <!-- 설정 통합 카드 스켈레톤 -->
       <div class="mb-6">
-        <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between">
-          <div>
-            <div class="skeleton w-32 h-4 mb-2"></div>
-            <div class="skeleton w-56 h-3"></div>
+        <div class="bg-surface border border-border rounded-2xl p-5">
+          <!-- Flow 알람 수신 -->
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="skeleton w-8 h-8 rounded-lg shrink-0"></div>
+            <div><div class="skeleton w-24 h-4 mb-1.5"></div><div class="skeleton w-40 h-2.5"></div></div>
           </div>
-          <div class="skeleton w-12 h-7 rounded-full shrink-0"></div>
+          <div class="flex rounded-xl bg-surface-2 p-1 gap-0.5">
+            <div class="skeleton flex-1 h-9 rounded-lg"></div>
+            <div class="skeleton flex-1 h-9 rounded-lg"></div>
+          </div>
+          <!-- 구분선 -->
+          <div class="border-t border-border/40 my-4"></div>
+          <!-- 간편 신청 -->
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="skeleton w-8 h-8 rounded-lg shrink-0"></div>
+            <div><div class="skeleton w-20 h-4 mb-1.5"></div><div class="skeleton w-36 h-2.5"></div></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="skeleton h-9 rounded-xl"></div>
+            <div class="skeleton h-9 rounded-xl"></div>
+          </div>
         </div>
       </div>
       <!-- 신청 내역 스켈레톤 -->
@@ -236,7 +251,7 @@ tailwind.config = {
           <div class="flex justify-between items-end gap-3 mb-4">
             <div>
               <div class="text-[10px] text-[#6e7f7b] mb-1">남은 잔액</div>
-              <div class="font-mono text-3xl font-semibold text-[#47635f]" id="remainAmount">0</div>
+              <div class="font-mono text-3xl font-semibold text-[#47635f] whitespace-nowrap" id="remainAmount">0</div>
               <div class="text-xs text-[#6e7f7b] mt-0.5">연간 한도 <span class="font-mono">500,000</span>원</div>
             </div>
             <div class="text-right">
@@ -264,25 +279,57 @@ tailwind.config = {
         </div>
       </section>
 
-      <!-- 간편 신청 -->
+      <!-- 교육비 설정 통합 카드 -->
       <section id="wizardSection" class="mb-6">
         <div class="bg-surface border border-border rounded-2xl p-5">
 
-          <!-- 패널 1: 신청 유형 선택 (초기 화면) -->
+          <!-- Flow 알람 수신 -->
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold">Flow 알람 수신</div>
+              <div class="text-[11px] text-[#6e7f7b]">교육비 잔액 변동 시 알림</div>
+            </div>
+          </div>
+          <div id="alarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative">
+            <button onclick="setAlarmValue(true)"  id="alarmBtnOn"
+              class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+              수신
+            </button>
+            <button onclick="setAlarmValue(false)" id="alarmBtnOff"
+              class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 5.714 0m-5.714 0a3 3 0 1 1 5.714 0M3.688 15.772A8.966 8.966 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75c0 2.344.9 4.476 2.312 6.022M3.688 15.772A59.768 59.768 0 0 1 12 15c2.9 0 5.694.37 8.312 1.082M3.688 15.772c-1.18.451-2.318.98-3.438 1.578M21.312 15.772c.68.26 1.343.548 1.988.862M12 3.75V2.25m0 0L9.75 4.5M12 2.25l2.25 2.25"/></svg>
+              수신 안함
+            </button>
+          </div>
+
+          <!-- 구분선 -->
+          <div class="border-t border-border/40 my-4"></div>
+
+          <!-- 패널 1: 간편 신청 (초기 화면) -->
           <div id="wizPanel1">
-            <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">간편 신청</div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center gap-2.5 mb-3">
+              <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg>
+              </div>
+              <div>
+                <div class="text-sm font-semibold">간편 신청</div>
+                <div class="text-[11px] text-[#6e7f7b]">교육비 또는 도서 신청</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
               <button onclick="wizardSelectType('edu')"
-                class="bg-accent text-white rounded-xl p-4 hover:brightness-110 transition text-center">
-                <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg>
-                <div class="text-sm font-semibold">교육신청서</div>
-                <div class="text-[10px] opacity-75 mt-1 leading-tight">템플릿, 이전 기록으로<br>빠르게 신청하자</div>
+                class="bg-accent text-white rounded-xl px-3 py-2 hover:brightness-110 transition flex items-center justify-center gap-1.5 text-[12px] font-semibold">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg>
+                교육신청서
               </button>
-              <button disabled
-                class="bg-[#6e7f7b] text-white rounded-xl p-4 opacity-50 cursor-not-allowed text-center">
-                <svg class="w-6 h-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
-                <div class="text-sm font-semibold">도서신청서</div>
-                <div class="text-[10px] opacity-75 mt-1 leading-tight">곧 추가될<br>예정이야</div>
+              <button onclick="showToast('<div class=\'font-semibold mb-1.5\'>도서신청서</div><div class=\'mt-1\'><span class=\'inline-block text-[10px] font-semibold rounded-full px-2 py-0.5 bg-accent/10 text-accent\'>곧 추가될 기능이야</span></div>','smail',this,{dismiss:true,html:true})"
+                class="bg-surface-2 border border-border text-[#47635f] rounded-xl px-3 py-2 opacity-40 flex items-center justify-center gap-1.5 text-[12px] font-semibold cursor-pointer">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>
+                도서신청서
               </button>
             </div>
           </div>
@@ -372,20 +419,6 @@ tailwind.config = {
         </div>
       </section>
 
-      <!-- Flow 알람 설정 -->
-      <section class="mb-6 relative">
-        <div class="bg-surface border border-border rounded-2xl p-5 flex items-center justify-between gap-4">
-          <div>
-            <div class="text-sm font-semibold mb-0.5">Flow 알람 수신 동의</div>
-            <div class="text-xs text-[#6e7f7b]">교육비 잔액 변동이 있으면 알려줄게.</div>
-          </div>
-          <button id="alarmToggle" onclick="toggleAlarm()" class="relative w-12 h-7 rounded-full toggle-track cursor-pointer border-0 outline-none shrink-0"
-            style="background:var(--toggle-bg, #ccebe2);">
-            <span class="toggle-thumb absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow" style="transform:var(--toggle-x, translateX(0))"></span>
-          </button>
-        </div>
-      </section>
-
       <!-- 상세 내역 -->
       <section>
         <div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-3">신청 내역</div>
@@ -449,7 +482,7 @@ tailwind.config = {
   <div id="msgBoxBubble" class="pointer-events-auto relative border-2 border-accent rounded-2xl px-4 py-2.5 shadow-xl max-w-[280px]" style="background:var(--bubble-bg)">
     <div id="msgBoxText" class="text-sm text-[#47635f] font-medium leading-snug"></div>
     <div id="msgBoxDismiss" class="hidden flex justify-end mt-2">
-      <button onclick="dismissToast()" class="px-4 py-1.5 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">응</button>
+      <button onclick="dismissToast()" class="px-4 py-1.5 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">알겠어</button>
     </div>
   </div>
 </div>
@@ -463,7 +496,7 @@ tailwind.config = {
       <div id="confirmText" class="text-sm text-[#47635f] font-medium leading-snug mb-3"></div>
       <div class="flex gap-2 justify-end">
         <button id="confirmNo" class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface-2 text-[#6e7f7b] border border-border hover:brightness-95 transition cursor-pointer">아니</button>
-        <button id="confirmYes" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">응</button>
+        <button id="confirmYes" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">알겠어</button>
       </div>
     </div>
   </div>
@@ -585,6 +618,10 @@ var _navPopState = false;
 var _navExitTime = 0;
 
 window.addEventListener('popstate', function() {
+  // 기안문서 상세가 열려있으면 상세 닫기만 처리 (edu-draft.html 핸들러에서 처리)
+  var draftDetail = document.getElementById('draftDetail');
+  if (draftDetail && !draftDetail.classList.contains('hidden')) return;
+
   if (_navStack.length > 1) {
     _navStack.pop();
     _navPopState = true;
@@ -1023,15 +1060,19 @@ function renderDashboard() {
   $('usedSub').textContent = pendingSum > 0 ? `진행중 ${formatMoney(pendingSum)}원 포함 시 총 ${formatMoney(usedTotal)}원` : '';
   $('remainAmount').textContent = formatMoney(remain) + '원';
 
-  // 프로그레스 바
+  // 프로그레스 바 (hidden→visible 전환 후 확실히 애니메이션)
+  $('barDone').style.width = '0%';
+  $('barPend').style.width = '0%';
   requestAnimationFrame(() => {
-    $('barDone').style.width = confirmedPct + '%';
-    $('barPend').style.left = confirmedPct + '%';
-    $('barPend').style.width = pendingPct + '%';
+    requestAnimationFrame(() => {
+      $('barDone').style.width = confirmedPct + '%';
+      $('barPend').style.left = confirmedPct + '%';
+      $('barPend').style.width = pendingPct + '%';
+    });
   });
 
   // 알람 토글
-  setToggleState(!!userInfo.isAgreed);
+  setAlarmBtnState(!!userInfo.isAgreed);
 
   // 테이블 + 카드
   renderRecords();
@@ -1102,62 +1143,109 @@ function statusPillClass(status) {
   }
 }
 
-/* ═══════════════ 알람 토글 ═══════════════ */
-function setToggleState(on) {
-  const el = $('alarmToggle');
-  if (on) {
-    el.style.setProperty('--toggle-bg', '#059669');
-    el.style.setProperty('--toggle-x', 'translateX(20px)');
+/* ═══════════════ 알람 버튼 ═══════════════ */
+var _alarmLoading = false;
+
+var _alarmBtnOnIcon = '';
+var _alarmBtnOffIcon = '';
+
+function _moveSlider(container, sliderId, activeBtn) {
+  if (!container || !activeBtn) return;
+  var slider = document.getElementById(sliderId);
+  if (!slider) {
+    slider = document.createElement('div');
+    slider.id = sliderId;
+    slider.className = 'absolute rounded-lg bg-accent shadow-sm';
+    slider.style.cssText = 'top:4px;bottom:4px;pointer-events:none;z-index:0';
+    container.insertBefore(slider, container.firstChild);
+    slider.style.left = activeBtn.offsetLeft + 'px';
+    slider.style.width = activeBtn.offsetWidth + 'px';
+    requestAnimationFrame(function() {
+      slider.style.transition = 'left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1)';
+    });
   } else {
-    el.style.setProperty('--toggle-bg', '#ccebe2');
-    el.style.setProperty('--toggle-x', 'translateX(0)');
+    if (!slider.style.transition) {
+      slider.style.transition = 'left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1)';
+    }
+    slider.style.left = activeBtn.offsetLeft + 'px';
+    slider.style.width = activeBtn.offsetWidth + 'px';
   }
+}
+
+function setAlarmBtnState(on) {
+  const btnOn = $('alarmBtnOn');
+  const btnOff = $('alarmBtnOff');
+  if (!btnOn || !btnOff) return;
+  const el = $('alarmToggle');
   el.dataset.on = on ? '1' : '0';
-}
 
-function setToggleLoading(loading) {
-  const el = $('alarmToggle');
-  const thumb = el.querySelector('.toggle-thumb');
-  el.dataset.loading = loading ? '1' : '0';
-  el.style.opacity = loading ? '0.7' : '1';
-  if (loading) {
-    thumb.innerHTML = '<svg class="w-3.5 h-3.5 spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
-    thumb.style.display = 'flex';
-    thumb.style.alignItems = 'center';
-    thumb.style.justifyContent = 'center';
+  // 원본 아이콘 저장
+  if (!_alarmBtnOnIcon) _alarmBtnOnIcon = btnOn.querySelector('svg, .alarm-icon')?.outerHTML || '';
+  if (!_alarmBtnOffIcon) _alarmBtnOffIcon = btnOff.querySelector('svg, .alarm-icon')?.outerHTML || '';
+
+  const activeClass = 'text-white';
+  const inactiveClass = 'text-[#6e7f7b]';
+  const disabledClass = ' opacity-35 cursor-not-allowed';
+  const spinnerSvg = '<svg class="animate-spin h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
+
+  const base = 'flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold ';
+  btnOn.className = base + (on ? activeClass : inactiveClass) + (_alarmLoading ? disabledClass : '');
+  btnOff.className = base + (!on ? activeClass : inactiveClass) + (_alarmLoading ? disabledClass : '');
+
+  // 스피너: 로딩 중이면 선택된 버튼 아이콘을 스피너로 교체
+  const onIconEl = btnOn.querySelector('svg');
+  const offIconEl = btnOff.querySelector('svg');
+  if (_alarmLoading) {
+    if (on && onIconEl) onIconEl.outerHTML = spinnerSvg;
+    if (!on && offIconEl) offIconEl.outerHTML = spinnerSvg;
+    btnOn.disabled = true;
+    btnOff.disabled = true;
   } else {
-    thumb.innerHTML = '';
-    thumb.style.display = '';
+    if (onIconEl) onIconEl.outerHTML = _alarmBtnOnIcon;
+    if (offIconEl) offIconEl.outerHTML = _alarmBtnOffIcon;
+    btnOn.disabled = false;
+    btnOff.disabled = false;
   }
+
+  // 슬라이딩 인디케이터
+  requestAnimationFrame(function() {
+    _moveSlider(el, 'alarmSlider', on ? btnOn : btnOff);
+  });
 }
 
-window.toggleAlarm = async function() {
+window.setAlarmValue = async function(newVal) {
   const el = $('alarmToggle');
-  if (el.dataset.loading === '1') return; // 중복 클릭 방지
   const isOn = el.dataset.on === '1';
-  const newVal = !isOn;
-  const token = localStorage.getItem(TOKEN_KEY);
+  if (_alarmLoading || newVal === isOn) return;
 
-  // 즉시 UI 반영 + 로딩 표시
-  setToggleState(newVal);
-  setToggleLoading(true);
+  _alarmLoading = true;
+  setAlarmBtnState(newVal);
+  const token = localStorage.getItem(TOKEN_KEY);
 
   try {
     const data = await gasFetch(`${API_URL}?action=updateAlarm&token=${encodeURIComponent(token)}&isAgreed=${newVal}`);
 
     if (data.status !== 'success') {
-      setToggleState(isOn); // 롤백
-      showToast('알람 설정 변경에 실패했어.', 'sad', $('alarmToggle'));
+      setAlarmBtnState(isOn);
+      showToast('알람 설정 변경에 실패했어.', 'sad');
     } else {
-      showToast(newVal ? 'Flow 알람 수신이 켜졌어!' : 'Flow 알람 수신이 꺼졌어.', 'smail', $('alarmToggle'));
+      showToast(newVal ? 'Flow 알람 수신이 켜졌어!' : 'Flow 알람 수신이 꺼졌어.', 'smail');
       if (userInfo) userInfo.isAgreed = newVal;
     }
   } catch (e) {
-    setToggleState(isOn); // 롤백
-    showToast('서버 연결에 실패했어.', 'sad', $('alarmToggle'));
+    setAlarmBtnState(isOn);
+    showToast('서버 연결에 실패했어.', 'sad');
   } finally {
-    setToggleLoading(false);
+    _alarmLoading = false;
+    setAlarmBtnState(el.dataset.on === '1');
   }
+};
+
+// 하위호환: 기존 toggleAlarm 호출 대응
+window.toggleAlarm = function() {
+  const el = $('alarmToggle');
+  const isOn = el && el.dataset.on === '1';
+  setAlarmValue(!isOn);
 };
 
 /* ═══════════════ 로그아웃 ═══════════════ */
