@@ -392,6 +392,9 @@ function renderDraftDetail(detail) {
   listWrap.classList.add('hidden');
   detailEl.classList.remove('hidden');
 
+  // 모바일 뒤로가기 시 목록으로 복귀
+  history.pushState({ draftDetail: true }, '');
+
   const title = detail.APPR_SUBJ || '(제목 없음)';
   const docNo = detail.DOC_NO || '';
   const status = detail.APPR_STS_NM || '';
@@ -446,13 +449,20 @@ function renderDraftDetail(detail) {
   detailEl.innerHTML = detailHtml;
 }
 
-function closeDraftDetail() {
-  const listWrap = $('draftsCards').parentElement;
+function closeDraftDetail(fromPopstate) {
   const detailEl = $('draftDetail');
+  if (detailEl.classList.contains('hidden')) return; // 이미 목록 상태면 무시
+  const listWrap = $('draftsCards').parentElement;
   detailEl.classList.add('hidden');
   detailEl.innerHTML = '';
   listWrap.classList.remove('hidden');
+  // 버튼 클릭으로 닫을 때는 pushState를 되돌림
+  if (!fromPopstate) history.back();
 }
+
+window.addEventListener('popstate', function(e) {
+  closeDraftDetail(true);
+});
 
 window.fetchDraftList = fetchDraftList;
 window.fetchDraftDetail = fetchDraftDetail;

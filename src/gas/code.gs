@@ -94,6 +94,13 @@ const doGet = (e) => {
     return createResponse({ status: "success" });
   }
 
+  // [기능 15] 밥카 자동결재 모드 변경
+  if (action === "updateCardAutoMode" && token) {
+    const rowIndex = adminData.findIndex(row => row[ADMIN_COL.UUID] === token);
+    if (rowIndex === -1) return createResponse({ error: "UNAUTHORIZED" });
+    return handleUpdateCardAutoMode(adminData[rowIndex], e);
+  }
+
   // [기능 12] Bizplay 직접 인증 (로그인 화면에서 Bizplay로 로그인)
   if (action === "bizplayAuth") {
     const bizUserId = e.parameter.bizUserId;
@@ -468,7 +475,7 @@ const doGet = (e) => {
     } catch (nErr) { /* 시트 없으면 무시 */ }
 
     const resp = {
-      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()) },
+      userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[8] || 'off').trim().toLowerCase() },
       myHistory: myHistory,
       adminStats: adminStats,
       templates: templates,
@@ -547,25 +554,31 @@ const onSpreadsheetChange = (e) => {
     const knoxId = String(row[activeCol.KNOX_ID]);
     const isAgreed = adminMap.get(knoxId);
 
-    // [발송 조건] 완료 상태 + 수신 동의 + 발송 이력에 없는 문서번호
-    if (docId && status === "완료" && isAgreed === "Y" && !sentDocIds.has(docId)) {
+    // [이력 기록 조건] 완료 상태 + 발송 이력에 없는 문서번호 → 수신동의 무관하게 이력 추가
+    if (docId && status === "완료" && !sentDocIds.has(docId)) {
 
-      // 사용자 누적액 통합 계산 (교육 + 도서 병합본에서 검색)
-      let totalUsed = 0;
-      allDataForBudget.forEach(r => {
-        const c = colFor(r);
-        if (String(r[c.KNOX_ID]) === knoxId && r[c.STATUS] === "완료") {
-          totalUsed += (Number(r[c.COST]) || 0);
+      // 수신동의한 사용자에게만 실제 알림 발송
+      if (isAgreed === "Y") {
+        // 사용자 누적액 통합 계산 (교육 + 도서 병합본에서 검색)
+        let totalUsed = 0;
+        allDataForBudget.forEach(r => {
+          const c = colFor(r);
+          if (String(r[c.KNOX_ID]) === knoxId && r[c.STATUS] === "완료") {
+            totalUsed += (Number(r[c.COST]) || 0);
+          }
+        });
+
+        var msg = FLOW_MSG.approvalComplete(reqType, docId, row[activeCol.TITLE], row[activeCol.COST], totalUsed, LIMIT_BUDGET - totalUsed);
+        if (sendFlowMsg(knoxId, msg)) {
+          console.log(`신규 알람 발송 완료: ${docId} (${reqType})`);
         }
-      });
-
-      // 5. Flow 발송 및 이력 기록
-      var msg = FLOW_MSG.approvalComplete(reqType, docId, row[activeCol.TITLE], row[activeCol.COST], totalUsed, LIMIT_BUDGET - totalUsed);
-      if (sendFlowMsg(knoxId, msg)) {
-        historySheet.appendRow([docId, new Date(), knoxId]);
-        sentDocIds.add(docId); // 루프 내 중복 발송 방지
-        console.log(`신규 알람 발송 완료: ${docId} (${reqType})`);
+      } else {
+        console.log(`이력만 기록 (수신동의 미동의): ${docId}, ${knoxId}`);
       }
+
+      // 발송 여부와 무관하게 이력 기록 (중복 발송 방지)
+      historySheet.appendRow([docId, new Date(), knoxId]);
+      sentDocIds.add(docId);
     }
   });
 };

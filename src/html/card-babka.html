@@ -155,13 +155,6 @@
         </div>
       </div>
       <div class="flex items-center gap-2.5 bg-surface-2 rounded-xl px-3.5 py-2.5">
-        <span class="text-base leading-none">📋</span>
-        <div class="min-w-0 flex-1">
-          <span class="text-[12px] font-medium">Bizplay 결재 요청</span>
-          <span class="text-[11px] text-[#6e7f7b] ml-1.5">매월 14일 + 1영업일에</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-2.5 bg-surface-2 rounded-xl px-3.5 py-2.5">
         <span class="text-base leading-none">⏰</span>
         <div class="min-w-0 flex-1">
           <span class="text-[12px] font-medium">미결재 리마인드</span>
@@ -180,6 +173,26 @@
     <div id="cardNoPwGuide" class="hidden mt-3 flex items-start gap-2 bg-warn/8 border border-warn/20 rounded-xl px-3.5 py-2.5">
       <svg class="w-4 h-4 text-warn shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
       <span class="text-[11px] text-warn leading-relaxed">이 기능이 필요하면 <strong>비밀번호 저장</strong>을 체크하고 다시 로그인해줘.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 밥카 자동결재 모드 -->
+<section class="mb-6 relative" id="cardAutoModeSection">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex items-center gap-2.5 mb-4">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.431.992a7.723 7.723 0 0 1 0 .255c-.007.378.138.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">밥카 자동결재 모드</div>
+        <div class="text-[11px] text-[#6e7f7b]">매월 15일 첫 영업일에 자동 실행</div>
+      </div>
+    </div>
+    <div id="cardAutoModeOptions" class="space-y-2"></div>
+    <div id="cardAutoNoPwGuide" class="hidden mt-3 flex items-start gap-2 bg-warn/8 border border-warn/20 rounded-xl px-3.5 py-2.5">
+      <svg class="w-4 h-4 text-warn shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+      <span class="text-[11px] text-warn leading-relaxed">임시저장/결재요청 모드는 <strong>비밀번호 저장</strong>이 필요해.</span>
     </div>
   </div>
 </section>
@@ -221,6 +234,7 @@
   let cardCurrentRecords = []; // 현재 기간(이번 달) 레코드 — 상단 요약용
   let cardAlarmOn = false;
   let hasBizplayPw = false;
+  let cardAutoMode = 'off'; // 'off' | 'alarm' | 'draft' | 'submit'
   let cardFetchState = 'idle'; // 'idle' | 'loading' | 'loaded' | 'no-session' | 'sso-fail' | 'error'
   let cardFilteredRecords = []; // renderCardRecords에서 표시 중인 필터된 레코드
   let cardViewMode = 'records'; // 'records' | 'stats' | 'rating'
@@ -820,6 +834,7 @@
     requestAnimationFrame(() => { $('cardBarUsed').style.width = usedPct + '%'; });
 
     setCardToggleState(cardAlarmOn);
+    renderAutoModeOptions();
     // PW 미저장 시 토글 비활성화 + 안내 표시
     const toggle = $('cardAlarmToggle');
     const items = $('cardAlarmItems');
@@ -988,6 +1003,69 @@
       window.showToast('서버 연결에 실패했어.', 'sad', el);
     } finally {
       setCardToggleLoading(false);
+    }
+  };
+
+  /* ─── 자동결재 모드 ─── */
+  const AUTO_MODE_OPTIONS = [
+    { value: 'off',    label: '끔',          desc: '아무것도 안 함',               icon: '⏸️', needPw: false },
+    { value: 'alarm',  label: 'Flow 알람만', desc: '결재 안내 메시지만 보냄',     icon: '🔔', needPw: false },
+    { value: 'draft',  label: '임시저장',    desc: '자동으로 Bizplay에 임시저장', icon: '📝', needPw: true },
+    { value: 'submit', label: '결재요청',    desc: '자동으로 결재선에 상신',      icon: '🚀', needPw: true }
+  ];
+
+  function renderAutoModeOptions() {
+    const container = $('cardAutoModeOptions');
+    if (!container) return;
+    container.innerHTML = AUTO_MODE_OPTIONS.map(function(opt) {
+      const selected = cardAutoMode === opt.value;
+      const disabled = opt.needPw && !hasBizplayPw;
+      return '<label class="flex items-center gap-3 rounded-xl px-3.5 py-3 cursor-pointer transition-all'
+        + (selected ? ' ring-2 ring-accent/40 bg-accent/5' : ' bg-surface-2')
+        + (disabled ? ' opacity-40 cursor-not-allowed' : ' hover:bg-accent/5')
+        + '">'
+        + '<input type="radio" name="cardAutoMode" value="' + opt.value + '"'
+        + (selected ? ' checked' : '') + (disabled ? ' disabled' : '')
+        + ' class="accent-[#059669] w-4 h-4 shrink-0" onchange="setCardAutoMode(\'' + opt.value + '\')">'
+        + '<span class="text-base leading-none">' + opt.icon + '</span>'
+        + '<div class="min-w-0 flex-1">'
+        + '<span class="text-[12px] font-medium">' + opt.label + '</span>'
+        + '<span class="text-[11px] text-[#6e7f7b] ml-1.5">' + opt.desc + '</span>'
+        + '</div></label>';
+    }).join('');
+
+    const guide = $('cardAutoNoPwGuide');
+    if (guide) guide.classList.toggle('hidden', hasBizplayPw);
+  }
+
+  window.setCardAutoMode = async function(mode) {
+    if ((mode === 'draft' || mode === 'submit') && !hasBizplayPw) {
+      window.showToast('비밀번호 저장이 필요해.', 'sad');
+      renderAutoModeOptions();
+      return;
+    }
+
+    const prev = cardAutoMode;
+    cardAutoMode = mode;
+    renderAutoModeOptions();
+
+    try {
+      const token = localStorage.getItem('token');
+      const data = await window.gasFetch(
+        window.API_URL + '?action=updateCardAutoMode&token=' + encodeURIComponent(token) + '&mode=' + mode
+      );
+      if (data.status === 'success') {
+        const labels = { off: '꺼졌어', alarm: '알람 모드로 설정됐어', draft: '임시저장 모드로 설정됐어', submit: '결재요청 모드로 설정됐어' };
+        window.showToast('자동결재 ' + (labels[mode] || '변경됐어') + '!', 'smail');
+      } else {
+        cardAutoMode = prev;
+        renderAutoModeOptions();
+        window.showToast(data.message || '설정 변경에 실패했어.', 'sad');
+      }
+    } catch (e) {
+      cardAutoMode = prev;
+      renderAutoModeOptions();
+      window.showToast('서버 연결에 실패했어.', 'sad');
     }
   };
 
@@ -1165,6 +1243,7 @@
   window.initCardModule = function(data) {
     cardAlarmOn = !!(data.userInfo && data.userInfo.isCardAlarmAgreed);
     hasBizplayPw = !!(data.userInfo && data.userInfo.hasBizplayPw);
+    cardAutoMode = (data.userInfo && data.userInfo.cardAutoMode) || 'off';
     renderCardDashboard();
     // fetchCardRecords는 밥카 탭 클릭 시 switchTab에서 호출
   };

@@ -18,6 +18,9 @@ var CARD_ALARM_COL = 7; // 1-based: G열
 /** 웹페이지관리 시트 암호화된 Bizplay PW 컬럼 (H열 = index 7) */
 var CARD_DAILY_COL = 8; // 1-based: H열
 
+/** 웹페이지관리 시트 밥카 자동결재 모드 컬럼 (I열 = index 8) */
+var CARD_AUTO_MODE_COL = 9; // 1-based: I열  값: off, alarm, draft, submit
+
 /** AES 암호화 키 (SHA-256 → 32바이트 AES-CBC 키) */
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 
@@ -39,6 +42,39 @@ function handleUpdateCardAlarm(adminRow, e) {
   return createResponse({ status: 'success' });
 }
 
+/**
+ * 밥카 자동결재 모드 변경
+ * action=updateCardAutoMode&token={UUID}&mode={off|alarm|draft|submit}
+ */
+function handleUpdateCardAutoMode(adminRow, e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var mode = String(e.parameter.mode || 'off').trim().toLowerCase();
+
+  var validModes = ['off', 'alarm', 'draft', 'submit'];
+  if (validModes.indexOf(mode) === -1) {
+    return createResponse({ error: 'INVALID_MODE', message: '유효하지 않은 모드야.' });
+  }
+
+  var adminData = mgmtSheet.getDataRange().getValues();
+  var rowIndex = -1;
+  for (var i = 0; i < adminData.length; i++) {
+    if (adminData[i][ADMIN_COL.UUID] === e.parameter.token) { rowIndex = i; break; }
+  }
+  if (rowIndex === -1) return createResponse({ error: 'UNAUTHORIZED' });
+
+  // draft/submit은 PW 필수
+  if (mode === 'draft' || mode === 'submit') {
+    var encPw = adminData[rowIndex][CARD_DAILY_COL - 1];
+    if (!encPw || !String(encPw).trim()) {
+      return createResponse({ error: 'NO_PASSWORD', message: '비밀번호 저장이 필요해.' });
+    }
+  }
+
+  mgmtSheet.getRange(rowIndex + 1, CARD_AUTO_MODE_COL).setValue(mode);
+  return createResponse({ status: 'success', cardAutoMode: mode });
+}
+
 /* ═══════════════ 밥카 자동 알림 ═══════════════ */
 
 /**
@@ -54,11 +90,92 @@ function sendBabCardAlarm() {
   sendCardDailyBalance();
 }
 
-/** 15일부터 첫 번째 영업일: 전원 결재 안내 */
+/**
+ * 밥카 자동결재/알람 처리 (15일 첫 영업일)
+ * I열 cardAutoMode별 분기:
+ *   off/빈값 → 스킵
+ *   alarm   → Flow 알람만 발송
+ *   draft   → 자동 임시저장
+ *   submit  → 자동 결재요청
+ */
 function sendCardAlarmDay15() {
   var now = new Date();
   if (!_isFirstBizDayFrom15(now)) return;
-  _sendCardAlarm(FLOW_MSG.cardDay15());
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var data = mgmtSheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = data[i][0];
+    if (!knoxId) continue;
+
+    var encPw = data[i][CARD_DAILY_COL - 1]; // H열
+    var autoMode = String(data[i][CARD_AUTO_MODE_COL - 1] || '').trim().toLowerCase(); // I열
+
+    if (!autoMode || autoMode === 'off') continue;
+
+    if (autoMode === 'alarm') {
+      try {
+        sendFlowMsg(knoxId, FLOW_MSG.cardDay15());
+        Logger.log('[자동결재] alarm 발송 - ' + knoxId);
+      } catch (e) {
+        Logger.log('[자동결재] alarm 실패 - ' + knoxId + ': ' + e.message);
+      }
+    } else {
+      _processAutoMode(knoxId, encPw, autoMode);
+    }
+  }
+}
+
+/**
+ * 사용자별 자동결재 모드 처리 (draft / submit)
+ */
+function _processAutoMode(knoxId, encPw, mode) {
+  if (!encPw || !String(encPw).trim()) {
+    Logger.log('[자동결재] PW 없음 스킵 - ' + knoxId);
+    try { sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '비밀번호가 저장되어 있지 않아.')); } catch (e) {}
+    return;
+  }
+
+  try {
+    var userId = knoxId + '@emro.co.kr';
+    var password = _decryptPw(String(encPw));
+
+    // Step 1: 로그인 + webank SSO
+    var loginResult = _bizplayLoginCore(userId, password);
+    if (loginResult.error || !loginResult.webankCookies) {
+      Logger.log('[자동결재] 로그인 실패 - ' + knoxId);
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, 'Bizplay 로그인 실패. 비밀번호를 확인해줘.'));
+      return;
+    }
+
+    // Step 2: 전체 카드 내역 조회
+    var rawResult = _callWebankApiRaw(loginResult.webankCookies);
+    if (rawResult.expired || !rawResult.records || rawResult.records.length === 0) {
+      Logger.log('[자동결재] 카드 내역 없음 - ' + knoxId);
+      // 내역이 없으면 성공도 실패도 아님 — 알림만
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '카드 사용내역이 없거나 조회에 실패했어.'));
+      return;
+    }
+
+    var records = rawResult.records;
+
+    // Step 3: 핵심 결재 로직
+    var apprMode = (mode === 'submit') ? 'approve' : 'temp';
+    var result = _cardApprovalCore(loginResult.webankCookies, records, apprMode);
+
+    if (result.status === 'success') {
+      Logger.log('[자동결재] 성공 - ' + knoxId + ' (' + mode + ', ' + records.length + '건)');
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoSuccess(mode, records.length));
+    } else {
+      Logger.log('[자동결재] 실패 - ' + knoxId + ': ' + (result.message || result.error));
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, result.message || '알 수 없는 오류'));
+    }
+  } catch (ex) {
+    Logger.log('[자동결재] 예외 - ' + knoxId + ': ' + ex.message);
+    try { sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, ex.message)); } catch (e) {}
+  }
 }
 
 /**
@@ -943,7 +1060,61 @@ function handleCardApproval(adminRow, e) {
   }
   if (!selected || selected.length === 0) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없어.' });
 
+  // 카드 내역 raw API 호출 → 선택 레코드 매칭
+  var rawResult = _callWebankApiRaw(webankCookies);
+  if (rawResult.expired) {
+    session.webankCookies = '';
+    PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+    return createResponse({ error: 'SESSION_EXPIRED', message: '세션 만료' });
+  }
+
+  var matched = [];
+  selected.forEach(function(sel) {
+    var found = rawResult.records.filter(function(r) {
+      return r.CARD_NO === sel.cardNo
+        && String(r.SEQ) === String(sel.seq)
+        && (!sel.apvNo || String(r.APV_NO) === String(sel.apvNo));
+    });
+    if (found.length > 0) matched.push(found[0]);
+  });
+
+  if (matched.length === 0) {
+    return createResponse({ error: 'NO_MATCH', message: '선택한 레코드를 찾을 수 없어.' });
+  }
+
+  // 수정된 결재라인 파라미터 확인
+  var modifiedApprLine = null;
+  var modifiedParam = e.parameter.modifiedApprLine || '';
+  if (modifiedParam) {
+    try { modifiedApprLine = JSON.parse(modifiedParam); } catch (mpe) { /* ignore */ }
+  }
+
+  var result = _cardApprovalCore(webankCookies, matched, mode, propKey, modifiedApprLine);
+
+  // 세션 만료 처리
+  if (result.error === 'SESSION_EXPIRED') {
+    session.webankCookies = '';
+    PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+  }
+
+  return createResponse(result);
+}
+
+/**
+ * 밥카 결재 코어 로직 (eusr → eapr → r010 → c004)
+ * handleCardApproval 및 자동결재 트리거에서 공용 사용
+ *
+ * @param {string} webankCookies - webank 세션 쿠키
+ * @param {Array} matched - raw 카드 내역 레코드 배열
+ * @param {string} mode - 'temp' (임시저장) | 'approve' (결재요청)
+ * @param {string} [propKey] - PropertiesService 키 (결재라인 조회/삭제용, 없으면 하드코딩 사용)
+ * @param {Array} [modifiedApprLine] - 수정된 결재라인 (HTTP handler에서만 전달)
+ * @returns {{ status: string, message?: string, error?: string, mode?: string, debug?: object }}
+ */
+function _cardApprovalCore(webankCookies, matched, mode, propKey, modifiedApprLine) {
   var debug = {};
+  var isTemp = (mode !== 'approve');
+
   try {
     // Step 1: eusr_9001_01.act → Form1 hidden 필드
     var actResp = UrlFetchApp.fetch('https://webank.appplay.co.kr/eusr_9001_01.act', {
@@ -952,43 +1123,14 @@ function handleCardApproval(adminRow, e) {
       muteHttpExceptions: true, followRedirects: false
     });
     if (actResp.getResponseCode() === 302 || actResp.getResponseCode() === 301) {
-      session.webankCookies = '';
-      PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
-      return createResponse({ error: 'SESSION_EXPIRED', message: '세션이 만료됐어.' });
+      return { error: 'SESSION_EXPIRED', message: '세션이 만료됐어.' };
     }
     var actHtml = actResp.getContentText();
-    debug.webankCookieLen = webankCookies.length;
 
     // Form1 hidden 필드 파싱
     var formFields = _parseFormFields(actHtml, 'Form1');
-    debug.formFields = formFields;
 
-    // Step 2: 카드 내역 raw API 호출 → 선택 레코드 매칭
-    var rawResult = _callWebankApiRaw(webankCookies);
-    if (rawResult.expired) {
-      session.webankCookies = '';
-      PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
-      return createResponse({ error: 'SESSION_EXPIRED', message: '세션 만료' });
-    }
-    debug.rawRecCount = (rawResult.records || []).length;
-
-    // 선택된 레코드 매칭 (CARD_NO + SEQ + APV_NO)
-    var matched = [];
-    selected.forEach(function(sel) {
-      var found = rawResult.records.filter(function(r) {
-        return r.CARD_NO === sel.cardNo
-          && String(r.SEQ) === String(sel.seq)
-          && (!sel.apvNo || String(r.APV_NO) === String(sel.apvNo));
-      });
-      if (found.length > 0) matched.push(found[0]);
-    });
-    debug.matchedCount = matched.length;
-
-    if (matched.length === 0) {
-      return createResponse({ error: 'NO_MATCH', message: '선택한 레코드를 찾을 수 없어.', debug: debug });
-    }
-
-    // Step 3: 파이프 구분 리스트 구성
+    // Step 2: 파이프 구분 리스트 구성
     var lists = { CARD_NO: [], APV_DT: [], APV_NO: [], APV_CAN_YN: [], SEQ: [], CHNL_ID: [], CNTS_ID: [] };
     matched.forEach(function(r) {
       lists.CARD_NO.push(r.CARD_NO || '');
@@ -1000,7 +1142,7 @@ function handleCardApproval(adminRow, e) {
       lists.CNTS_ID.push(r.CNTS_ID || formFields.CNTS_ID || 'CRD_MAGR_NEW_USR');
     });
 
-    // Step 4: Form1 POST → eapr_1001_01.act
+    // Step 3: Form1 POST → eapr_1001_01.act
     var postData = {};
     for (var k in formFields) postData[k] = formFields[k];
     postData['CARD_NO_LIST'] = lists.CARD_NO.join('|');
@@ -1011,13 +1153,6 @@ function handleCardApproval(adminRow, e) {
     postData['CHNL_LIST'] = lists.CHNL_ID.join('|');
     postData['CNTS_LIST'] = lists.CNTS_ID.join('|');
     postData['LNGG_DSNC'] = 'ko';
-
-    debug.postLists = {
-      CARD_NO_LIST: postData['CARD_NO_LIST'],
-      APV_DT_LIST: postData['APV_DT_LIST'],
-      APV_NO_LIST: postData['APV_NO_LIST'],
-      SEQ_LIST: postData['SEQ_LIST']
-    };
 
     var formPayload = Object.keys(postData).map(function(key) {
       return encodeURIComponent(key) + '=' + encodeURIComponent(postData[key]);
@@ -1036,28 +1171,17 @@ function handleCardApproval(adminRow, e) {
     });
 
     var eaprHtml = eaprResp.getContentText();
-    debug.eaprStatus = eaprResp.getResponseCode();
-    debug.eaprLen = eaprHtml.length;
 
     // 에러 페이지 체크
     if (eaprHtml.indexOf('페이지 오류 안내') >= 0) {
-      debug.eaprHead = eaprHtml.substring(0, 1000);
-      return createResponse({ error: 'EAPR_ERROR', message: 'eapr 팝업 로드 실패', debug: debug });
+      return { error: 'EAPR_ERROR', message: 'eapr 팝업 로드 실패' };
     }
 
     // eapr 폼 필드 전체 파싱
     var eaprForm = _parseFormFields(eaprHtml, '');
-    var isTemp = (mode !== 'approve');
     debug = { eaprStatus: eaprResp.getResponseCode(), matchedCount: matched.length };
-    debug.eaprKeyFields = {
-      APPR_DEFAULT_TYPE: eaprForm.APPR_DEFAULT_TYPE || '',
-      PAPER_SEQ_NO: eaprForm.PAPER_SEQ_NO || '',
-      APPR_SEQ_NO: eaprForm.APPR_SEQ_NO || '',
-      APPR_STS: eaprForm.APPR_STS || '',
-      CNTS_ID: eaprForm.CNTS_ID || ''
-    };
 
-    // === Step 6: r010 검증 호출 ===
+    // === Step 4: r010 검증 호출 ===
     var rcptRec = matched.map(function(r) {
       return {
         DEDCT_YN: 'Y',
@@ -1100,38 +1224,23 @@ function handleCardApproval(adminRow, e) {
       };
     });
 
-    // 결재요청 시: bizplayApprLine에서 저장한 APPRLINE_SEQ_NO를 r010에 전달
+    // 결재라인 처리
     var savedApprLineSeqNo = '';
-    var savedApprLineRaw = null;
-    var modifiedApprLine = null;
-    if (!isTemp) {
-      // 수정된 결재라인 파라미터 확인
-      var modifiedParam = e.parameter.modifiedApprLine || '';
-      if (modifiedParam) {
-        try {
-          modifiedApprLine = JSON.parse(modifiedParam);
-          debug.modifiedApprLineCount = modifiedApprLine.length;
-        } catch (mpe) { debug.modifiedApprLineParseFail = mpe.message; }
-      }
-
+    if (!isTemp && propKey) {
       var alProp = PropertiesService.getScriptProperties().getProperty(propKey + '_cardApprLine');
       if (alProp) {
         try {
-          savedApprLineRaw = JSON.parse(alProp);
-          // APPRLINE_SEQ_NO 추출 (첫 번째 비-0 값) — 항상 원본에서 추출
+          var savedApprLineRaw = JSON.parse(alProp);
           savedApprLineRaw.forEach(function(r) {
             if (!savedApprLineSeqNo && r.APPRLINE_SEQ_NO && r.APPRLINE_SEQ_NO !== '0') {
               savedApprLineSeqNo = r.APPRLINE_SEQ_NO;
             }
           });
-          debug.savedApprLineSeqNo = savedApprLineSeqNo;
-        } catch (pe) { debug.alPropParseFail = pe.message; }
-      }
-
-      // 수정된 결재라인이 있으면 savedApprLineRaw를 대체
-      if (modifiedApprLine && modifiedApprLine.length > 0) {
-        savedApprLineRaw = modifiedApprLine;
-        debug.usingModifiedApprLine = true;
+          // 수정된 결재라인이 있으면 대체
+          if (modifiedApprLine && modifiedApprLine.length > 0) {
+            debug.usingModifiedApprLine = true;
+          }
+        } catch (pe) { /* ignore */ }
       }
     }
 
@@ -1149,8 +1258,6 @@ function handleCardApproval(adminRow, e) {
         { APPR_ORD: '1', APPR_USER_GB: '1', APPRLINE_KIND: '2', RECENT_SAVE_YN: 'Y', BOTTOM_FIXED_YN: 'N', DEPT_CD: '19', DEPT_NM: '재무그룹' },
         { APPR_ORD: '0', APPR_USER_GB: '1', APPRLINE_KIND: '4', RECENT_SAVE_YN: 'Y', BOTTOM_FIXED_YN: 'N', DEPT_CD: '157', DEPT_NM: '관리그룹' }
       ];
-      debug.r010SentSeqNo = r010Json.APPRLINE_SEQ_NO;
-      debug.r010SentREC = r010Json.REC;
     } else if (savedApprLineSeqNo) {
       r010Json.APPRLINE_SEQ_NO = savedApprLineSeqNo;
     }
@@ -1169,21 +1276,14 @@ function handleCardApproval(adminRow, e) {
     });
 
     var r010Body = r010Resp.getContentText();
-    debug.r010Status = r010Resp.getResponseCode();
-    debug.r010BodyLen = r010Body.length;
     var r010Data;
     try { r010Data = JSON.parse(r010Body); } catch (pe) { r010Data = null; }
-    debug.r010Result = r010Data ? { RSLT_CD: r010Data.RSLT_CD, RSLT_MSG: r010Data.RSLT_MSG, hasApprLine: !!(r010Data.APPRLINE_REC && r010Data.APPRLINE_REC.length > 0), APPRLINE_REC: r010Data.APPRLINE_REC } : r010Body.substring(0, 1000);
 
     if (!r010Data || r010Data.RSLT_CD !== '0000') {
-      debug.r010Full = r010Body.substring(0, 2000);
-      debug.rcptRecSample = rcptRec.length > 0 ? rcptRec[0] : null;
-      debug.rcptRecCount = rcptRec.length;
-      debug.r010Sent = JSON.stringify(r010Json).substring(0, 2000);
-      return createResponse({ status: 'debug', message: 'r010 검증 실패', debug: debug });
+      return { error: 'R010_FAIL', message: 'r010 검증 실패: ' + (r010Data ? r010Data.RSLT_MSG : '파싱 오류'), debug: debug };
     }
 
-    // === Step 7: c004 저장 호출 (r010 성공 후) ===
+    // === Step 5: c004 저장 호출 (r010 성공 후) ===
     var totAmt = 0;
     matched.forEach(function(r) { totAmt += Math.round(Number(r.BUY_SUM) || 0); });
 
@@ -1234,14 +1334,11 @@ function handleCardApproval(adminRow, e) {
     // 결재요청: r010에서 받은 APPRLINE_REC을 c004에 전달
     if (!isTemp && r010Data.APPRLINE_REC && r010Data.APPRLINE_REC.length > 0) {
       c004Json.APPRLINE_REC = r010Data.APPRLINE_REC;
-      debug.apprLineSource = 'r010';
-      debug.apprLineCount = r010Data.APPRLINE_REC.length;
     }
     // _cardApprLine 프로퍼티 정리
-    if (!isTemp) {
+    if (!isTemp && propKey) {
       PropertiesService.getScriptProperties().deleteProperty(propKey + '_cardApprLine');
     }
-    debug.c004TempApprYn = c004Json.TEMP_APPR_YN;
 
     var c004Payload = '_JSON_=' + encodeURIComponent(JSON.stringify(c004Json));
     var c004Resp = UrlFetchApp.fetch('https://webank.appplay.co.kr/eapr_1001_01_c004.jct', {
@@ -1257,22 +1354,20 @@ function handleCardApproval(adminRow, e) {
     });
 
     var c004Body = c004Resp.getContentText();
-    debug.c004Status = c004Resp.getResponseCode();
-    debug.c004BodyLen = c004Body.length;
     var c004Data;
     try { c004Data = JSON.parse(c004Body); } catch (pe) { c004Data = null; }
 
     if (c004Data && c004Data.RSLT_CD === '0000') {
       var msg = isTemp ? '임시저장 완료' : '결재요청 완료';
-      return createResponse({ status: 'success', message: c004Data.RSLT_MSG || msg, mode: mode, debug: debug });
+      return { status: 'success', message: c004Data.RSLT_MSG || msg, mode: mode, debug: debug };
     }
 
     debug.c004Result = c004Data || c004Body.substring(0, 2000);
-    return createResponse({ status: 'debug', message: 'c004 응답 확인', debug: debug });
+    return { error: 'C004_FAIL', message: 'c004 저장 실패: ' + (c004Data ? c004Data.RSLT_MSG : '파싱 오류'), debug: debug };
 
   } catch (err) {
     debug.exception = err.message;
-    return createResponse({ error: 'APPROVAL_ERROR', message: err.message, debug: debug });
+    return { error: 'APPROVAL_ERROR', message: err.message, debug: debug };
   }
 }
 

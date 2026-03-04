@@ -65,6 +65,24 @@ var FLOW_MSG = {
       link: FLOW_LINK.CARD,
       previewTitle: '왜케 많이 먹었어..'
     };
+  },
+  // #8 밥카 자동결재 성공
+  cardAutoSuccess: function(mode, count) {
+    var label = mode === 'draft' ? '임시저장' : mode === 'submit' ? '결재요청' : '알림';
+    return {
+      content: '밥카 자동 ' + label + ' 완료! (' + count + '건)',
+      link: FLOW_LINK.CARD,
+      previewTitle: '밥카 자동결재 완료'
+    };
+  },
+  // #9 밥카 자동결재 실패
+  cardAutoFail: function(mode, reason) {
+    var label = mode === 'draft' ? '임시저장' : mode === 'submit' ? '결재요청' : '알림';
+    return {
+      content: '밥카 자동 ' + label + ' 실패\n사유: ' + reason,
+      link: FLOW_LINK.CARD,
+      previewTitle: '밥카 자동결재 실패'
+    };
   }
 };
 
