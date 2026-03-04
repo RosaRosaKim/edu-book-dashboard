@@ -536,6 +536,7 @@ tailwind.config = {
 <script>
 /* ─── 탭 전환 ─── */
 window.switchTab = async function(tabId) {
+  if (tabId === 'approval' || tabId === 'bizplay') tabId = 'draft'; // URL alias
   const tabs = ['edu', 'card', 'draft', 'board'];
   const comingSoon = [];
   const activeClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';

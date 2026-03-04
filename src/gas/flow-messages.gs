@@ -6,7 +6,8 @@
 
 var FLOW_LINK = {
   DASHBOARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=dashboard',
-       CARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=card'
+       CARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=card',
+   APPROVAL: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=approval'
 };
 
 var FLOW_MSG = {
@@ -40,12 +41,28 @@ var FLOW_MSG = {
       previewTitle: '📖 교육비 잔액 안내'
     };
   },
-  // #4 밥카 결재 안내 (14일+1영업일)
-  cardDay14: function() {
+  // #4 밥카 자동결재 모드별 통합 알림 (14일+1영업일)
+  cardAutoAlarm: function(mode, amount) {
+    if (mode === 'alarm') {
+      return {
+        content: '밥값은 회사가, 결재는 내가!\n링크를 클릭하면 밥카메뉴에서 바로 결재할 수 있어',
+        link: FLOW_LINK.CARD,
+        previewTitle: '🍚 밥카결재하는날'
+      };
+    }
+    var fmt = _fmtMoney(amount);
+    if (mode === 'draft') {
+      return {
+        content: 'Bizplay에 ' + fmt + '원 임시저장했어',
+        link: FLOW_LINK.APPROVAL,
+        previewTitle: '📝 밥카 ' + fmt + '원 임시저장'
+      };
+    }
+    // submit
     return {
-      content: '밥값은 회사가, 결재는 내가! \n 링크를 클릭하면 밥카메뉴에서 바로 결재할 수 있어',
-      link: FLOW_LINK.CARD,
-      previewTitle: '🍚 밥카결재하는날'
+      content: 'Bizplay에 ' + fmt + '원 결재요청했어',
+      link: FLOW_LINK.APPROVAL,
+      previewTitle: '🚀 밥카 ' + fmt + '원 결재요청'
     };
   },
   // #5 밥카 미결재 리마인더
@@ -86,20 +103,11 @@ var FLOW_MSG = {
       previewTitle: '🔐 본인 맞죠?'
     };
   },
-  // #8 밥카 자동결재 성공
-  cardAutoSuccess: function(mode, count) {
-    var label = mode === 'draft' ? '임시저장' : mode === 'submit' ? '결재요청' : '알림';
-    return {
-      content: '밥카 자동 ' + label + ' 완료! (' + count + '건)',
-      link: FLOW_LINK.CARD,
-      previewTitle: '밥카 자동결재 완료'
-    };
-  },
-  // #9 밥카 자동결재 실패
+  // #8 밥카 자동결재 실패
   cardAutoFail: function(mode, reason) {
     var label = mode === 'draft' ? '임시저장' : mode === 'submit' ? '결재요청' : '알림';
     return {
-      content: '밥카 자동 ' + label + ' 실패\n사유: ' + reason,
+      content: '[' + label + '모드] 자동 처리 실패\n사유: ' + reason,
       link: FLOW_LINK.CARD,
       previewTitle: '밥카 자동결재 실패'
     };

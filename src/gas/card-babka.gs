@@ -78,6 +78,7 @@ function handleUpdateCardAutoMode(adminRow, e) {
   return createResponse({ status: 'success', cardAutoMode: mode });
 }
 
+
 /* ═══════════════ 밥카 자동 알림 ═══════════════ */
 
 /**
@@ -125,7 +126,7 @@ function sendCardAlarmDay14(data) {
 
     if (autoMode === 'alarm') {
       try {
-        sendFlowMsg(knoxId, FLOW_MSG.cardDay14());
+        sendFlowMsg(knoxId, FLOW_MSG.cardAutoAlarm('alarm'));
         Logger.log('[자동결재] alarm 발송 - ' + knoxId);
       } catch (e) {
         Logger.log('[자동결재] alarm 실패 - ' + knoxId + ': ' + e.message);
@@ -167,15 +168,28 @@ function _processAutoMode(knoxId, encPw, mode) {
       return;
     }
 
-    var records = rawResult.records;
+    // 교통비(티머니) 제외
+    var transportKeywords = ['티머니 버스', '티머니 지하철'];
+    var records = rawResult.records.filter(function(r) {
+      var merchant = (r.merchant || r.MEST_NM || '').trim();
+      return !transportKeywords.some(function(k) { return merchant.indexOf(k) >= 0; });
+    });
+
+    if (records.length === 0) {
+      Logger.log('[자동결재] 교통비 제외 후 내역 없음 - ' + knoxId);
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '교통비를 제외하면 결재할 내역이 없어.'));
+      return;
+    }
 
     // Step 3: 핵심 결재 로직
     var apprMode = (mode === 'submit') ? 'approve' : 'temp';
     var result = _cardApprovalCore(loginResult.webankCookies, records, apprMode);
 
     if (result.status === 'success') {
-      Logger.log('[자동결재] 성공 - ' + knoxId + ' (' + mode + ', ' + records.length + '건)');
-      sendFlowMsg(knoxId, FLOW_MSG.cardAutoSuccess(mode, records.length));
+      var totalCost = 0;
+      records.forEach(function(r) { totalCost += Number(r.cost || r.APV_AMT || 0); });
+      Logger.log('[자동결재] 성공 - ' + knoxId + ' (' + mode + ', ' + records.length + '건, ' + totalCost + '원, 교통비 제외)');
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoAlarm(mode, totalCost));
     } else {
       Logger.log('[자동결재] 실패 - ' + knoxId + ': ' + (result.message || result.error));
       sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, result.message || '알 수 없는 오류'));
