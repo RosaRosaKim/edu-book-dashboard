@@ -27,6 +27,9 @@ var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 /** AES 암호화 키 (SHA-256 → 32바이트 AES-CBC 키) */
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 
+/** 교통비 제외 키워드 */
+var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스'];
+
 /* ═══════════════ 밥카 알람 설정 ═══════════════ */
 
 /**
@@ -169,10 +172,9 @@ function _processAutoMode(knoxId, encPw, mode) {
     }
 
     // 교통비(티머니) 제외
-    var transportKeywords = ['티머니 버스', '티머니 지하철'];
     var records = rawResult.records.filter(function(r) {
       var merchant = (r.merchant || r.MEST_NM || '').trim();
-      return !transportKeywords.some(function(k) { return merchant.indexOf(k) >= 0; });
+      return !TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; });
     });
 
     if (records.length === 0) {
@@ -313,11 +315,10 @@ function sendCardRefundAlert(data) {
         continue;
       }
 
-      var transportKeywords = ['티머니 버스', '티머니 지하철'];
       var usedSum = 0;
       (result.records || []).forEach(function(r) {
         var merchant = (r.merchant || '').trim();
-        if (transportKeywords.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+        if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
         usedSum += Number(r.cost) || 0;
       });
 
@@ -659,13 +660,12 @@ function sendCardDailyBalance(data) {
       }
 
       // 잔액 계산 (교통비 제외)
-      var transportKeywords = ['티머니 버스', '티머니 지하철'];
       var usedSum = 0;
       var usedCount = 0;
       var records = result.records || [];
       records.forEach(function(r) {
         var merchant = (r.merchant || '').trim();
-        if (transportKeywords.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+        if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
         usedSum += Number(r.cost) || 0;
         usedCount++;
       });

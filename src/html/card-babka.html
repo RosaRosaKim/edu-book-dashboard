@@ -152,12 +152,12 @@
       <button onclick="setCardAlarmValue(true)" id="cardAlarmBtnOn"
         class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
-        보내
+        좋아
       </button>
       <button onclick="setCardAlarmValue(false)" id="cardAlarmBtnOff"
         class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 5.714 0m-5.714 0a3 3 0 1 1 5.714 0M3.688 15.772A8.966 8.966 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75c0 2.344.9 4.476 2.312 6.022"/></svg>
-        보내지마
+        싫어
       </button>
     </div>
     <!-- 비밀번호 미저장 안내 -->
@@ -261,6 +261,7 @@
   let cardRatingsCache = null;  // 맛집 평점 캐시
   let cardIsRefreshing = false; // 탭 전환 재조회 중 (전체 스켈레톤 방지)
   let cardStatsSelectedMonth = null; // 월 선택기 상태 (null=전체)
+  const TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스'];
 
   /* ─── 기간 계산: 매월 15일~다음달 14일 ─── */
   function getCardPeriod(now) {
@@ -551,12 +552,11 @@
     const records = cardStatsSelectedMonth ? filterStatsByMonth(allRecords, cardStatsSelectedMonth) : allRecords;
 
     // 교통비 제외, 사용처별 집계
-    const transportKeywords = ['티머니 버스', '티머니 지하철'];
     const merchantMap = {};
     records.forEach(r => {
       const merchant = (r.merchant || '').trim();
       if (!merchant) return;
-      if (transportKeywords.some(k => merchant.includes(k))) return;
+      if (TRANSPORT_KEYWORDS.some(k => merchant.includes(k))) return;
       if (!merchantMap[merchant]) merchantMap[merchant] = { amount: 0, count: 0, address: '' };
       merchantMap[merchant].amount += Number(r.cost) || 0;
       merchantMap[merchant].count++;
@@ -864,11 +864,10 @@
     }
     $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
 
-    const transportKeywords = ['티머니 버스', '티머니 지하철'];
     if (cardCurrentRecords.length > 0) console.log('[card] 첫 레코드 purpose:', JSON.stringify(cardCurrentRecords.slice(0, 3).map(r => ({ merchant: r.merchant, purpose: r.purpose, cost: r.cost }))));
     const currentValid = cardCurrentRecords.filter(r => {
       const merchant = (r.merchant || '').trim();
-      return !transportKeywords.some(k => merchant.includes(k));
+      return !TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
     });
     let usedSum = 0;
     currentValid.forEach(r => { usedSum += Number(r.cost) || 0; });
@@ -878,7 +877,7 @@
     // 교통비 별도 집계
     const transportRecords = cardCurrentRecords.filter(r => {
       const merchant = (r.merchant || '').trim();
-      return transportKeywords.some(k => merchant.includes(k));
+      return TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
     });
     let transportSum = 0;
     transportRecords.forEach(r => { transportSum += Number(r.cost) || 0; });
@@ -942,7 +941,7 @@
       if (ratingWrap) ratingWrap.classList.add('hidden');
       const displayRecords = cardRecords.filter(r => {
         const merchant = (r.merchant || '').trim();
-        return !transportKeywords.some(k => merchant.includes(k));
+        return !TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
       });
       renderCardRecords(displayRecords);
     }
