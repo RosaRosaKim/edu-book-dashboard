@@ -7,11 +7,11 @@
   --accent-light-a: 0.08;
   --body-bg: #fff7ee;
   --header-bg: rgba(255,247,238,.93);
-  --card-bg: #ffffff;
+  --card-bg: #f8fffb;
   --grid-line: rgba(45,138,126,.04);
   --skeleton-a: #e2f5ef;
   --skeleton-b: #ccebe2;
-  --bubble-bg: #ffffff;
+  --bubble-bg: #f8fffb;
 }
 html.dark {
   --c-surface: 26 35 50;
@@ -26,6 +26,7 @@ html.dark {
   --skeleton-a: #22303f;
   --skeleton-b: #30414f;
   --bubble-bg: #1a2332;
+
   color-scheme: dark;
 }
 

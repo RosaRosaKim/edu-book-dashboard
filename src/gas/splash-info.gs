@@ -88,26 +88,18 @@ function _getWeatherNow() {
  * 월급날: 매월 3번째 금요일 (공휴일/주말이면 전날로)
  */
 function _getDday() {
-  // 공휴일 {날짜: 이름} — 매년 초 업데이트 필요 (음력 공휴일은 연도별 상이)
-  var H = {
-    '2026-05-05':'어린이날', '2026-05-25':'부처님오신날 대체공휴일',
-    '2026-06-06':'현충일', '2026-06-08':'대체공휴일',
-    '2026-08-15':'광복절', '2026-08-17':'대체공휴일',
-    '2026-10-03':'개천절', '2026-10-04':'추석', '2026-10-05':'추석', '2026-10-06':'추석',
-    '2026-10-07':'대체공휴일', '2026-10-09':'한글날',
-    '2026-12-25':'크리스마스',
-    '2027-01-01':'신정',
-    '2027-02-06':'설날', '2027-02-07':'설날', '2027-02-08':'설날', '2027-02-09':'대체공휴일',
-    '2027-03-01':'삼일절', '2027-05-05':'어린이날', '2027-05-13':'부처님오신날',
-    '2027-06-06':'현충일', '2027-06-07':'대체공휴일',
-    '2027-08-15':'광복절', '2027-08-16':'대체공휴일',
-    '2027-09-24':'추석', '2027-09-25':'추석', '2027-09-26':'추석', '2027-09-27':'대체공휴일',
-    '2027-10-03':'개천절', '2027-10-04':'대체공휴일', '2027-10-09':'한글날', '2027-10-11':'대체공휴일',
-    '2027-12-25':'크리스마스'
-  };
-
   var now = new Date();
   var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var y = today.getFullYear();
+
+  // card-babka.gs의 _loadHolidays 재사용 (holidays.hyunbin.page API, 캐싱됨)
+  var H = {};
+  var years = [y, y + 1];
+  for (var yi = 0; yi < years.length; yi++) {
+    var loaded = _loadHolidays(years[yi]);
+    for (var k in loaded) H[k] = loaded[k];
+    H[years[yi] + '-05-01'] = '근로자의날'; // 회사 휴일 추가
+  }
 
   function fmt(d) {
     return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
@@ -126,10 +118,10 @@ function _getDday() {
   }
 
   // 월급날: 3번째 금요일 → 공휴일/주말이면 전날로
-  function getPayday(y, m) {
-    var first = new Date(y, m, 1);
+  function getPayday(py, pm) {
+    var first = new Date(py, pm, 1);
     var firstFri = 1 + (5 - first.getDay() + 7) % 7;
-    var pd = new Date(y, m, firstFri + 14);
+    var pd = new Date(py, pm, firstFri + 14);
     while (pd.getDay() === 0 || pd.getDay() === 6 || H[fmt(pd)]) {
       pd.setDate(pd.getDate() - 1);
     }

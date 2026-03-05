@@ -36,11 +36,15 @@
           <div class="skeleton w-28 h-3"></div>
         </div>
       </div>
-      <div class="skeleton w-40 h-3 mb-3"></div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="skeleton w-3.5 h-3.5 rounded"></div>
+        <div class="skeleton w-36 h-3"></div>
+        <div class="skeleton w-20 h-2.5"></div>
+      </div>
       <div class="skeleton w-full h-3 rounded-full mb-3"></div>
       <div class="flex gap-4">
-        <div class="skeleton w-16 h-3"></div>
-        <div class="skeleton w-20 h-3"></div>
+        <div class="skeleton w-14 h-3"></div>
+        <div class="skeleton w-14 h-3"></div>
       </div>
     </div>
   </div>
@@ -81,11 +85,31 @@
       </div>
     </div>
   </div>
+  <!-- 뷰 탭 + 월 태그 스켈레톤 -->
+  <div class="flex gap-2 flex-wrap mb-3">
+    <div class="skeleton h-8 w-20 rounded-full"></div>
+    <div class="skeleton h-8 w-24 rounded-full"></div>
+    <div class="skeleton h-8 w-24 rounded-full"></div>
+  </div>
   <div>
-    <div class="bg-surface border border-border rounded-2xl p-4 space-y-3">
-      <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
-      <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
-      <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+    <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+      <!-- 데스크탑: 헤더 + 행 -->
+      <div class="hidden sm:block">
+        <div class="bg-surface-2 border-b border-border px-4 py-3 flex gap-3">
+          <div class="skeleton w-7 h-2.5 rounded"></div><div class="skeleton w-12 h-2.5 rounded"></div><div class="skeleton flex-1 h-2.5 rounded"></div><div class="skeleton w-12 h-2.5 rounded"></div>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+        </div>
+      </div>
+      <!-- 모바일: 카드 -->
+      <div class="sm:hidden p-3 space-y-3">
+        <div class="bg-surface-2 border border-border/60 rounded-xl p-4 space-y-2"><div class="flex items-center justify-between"><div class="skeleton h-4 flex-1 rounded mr-2"></div><div class="skeleton h-3 w-8 rounded"></div></div><div class="flex items-center gap-0.5 mb-1"><div class="skeleton h-5 w-8 rounded-full"></div><div class="skeleton h-5 w-8 rounded-full"></div></div><div class="flex items-center justify-between"><div class="skeleton h-3 w-20 rounded"></div><div class="skeleton h-3 w-16 rounded"></div></div></div>
+        <div class="bg-surface-2 border border-border/60 rounded-xl p-4 space-y-2"><div class="flex items-center justify-between"><div class="skeleton h-4 w-3/4 rounded mr-2"></div><div class="skeleton h-3 w-8 rounded"></div></div><div class="flex items-center gap-0.5 mb-1"><div class="skeleton h-5 w-8 rounded-full"></div><div class="skeleton h-5 w-8 rounded-full"></div></div><div class="flex items-center justify-between"><div class="skeleton h-3 w-24 rounded"></div><div class="skeleton h-3 w-16 rounded"></div></div></div>
+        <div class="bg-surface-2 border border-border/60 rounded-xl p-4 space-y-2"><div class="flex items-center justify-between"><div class="skeleton h-4 w-2/3 rounded mr-2"></div><div class="skeleton h-3 w-8 rounded"></div></div><div class="flex items-center gap-0.5 mb-1"><div class="skeleton h-5 w-8 rounded-full"></div><div class="skeleton h-5 w-8 rounded-full"></div></div><div class="flex items-center justify-between"><div class="skeleton h-3 w-16 rounded"></div><div class="skeleton h-3 w-16 rounded"></div></div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -303,7 +327,7 @@
   let cardRatingsCache = null;  // 맛집 평점 캐시
   let cardIsRefreshing = false; // 탭 전환 재조회 중 (전체 스켈레톤 방지)
   let cardStatsSelectedMonth = null; // 월 선택기 상태 (null=전체)
-  const TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+  const TRANSPORT_CATEGORY = '대중교통';
 
   /* ─── 다중카드 상태 ─── */
   let userCards = [];           // [{cardNo, alias, limit, isLunchCard}]
@@ -615,7 +639,7 @@
     records.forEach(r => {
       const merchant = (r.merchant || '').trim();
       if (!merchant) return;
-      if (TRANSPORT_KEYWORDS.some(k => merchant.includes(k))) return;
+      if ((r.category || '') === TRANSPORT_CATEGORY) return;
       if (!merchantMap[merchant]) merchantMap[merchant] = { amount: 0, count: 0, address: '' };
       merchantMap[merchant].amount += Number(r.cost) || 0;
       merchantMap[merchant].count++;
@@ -1008,10 +1032,7 @@
     }
     $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
 
-    const currentValid = cardCurrentRecords.filter(r => {
-      const merchant = (r.merchant || '').trim();
-      return !TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
-    });
+    const currentValid = cardCurrentRecords.filter(r => (r.category || '') !== TRANSPORT_CATEGORY);
     let usedSum = 0;
     currentValid.forEach(r => { usedSum += Number(r.cost) || 0; });
 
@@ -1021,10 +1042,7 @@
     const usedPct = budget > 0 ? Math.min((usedSum / budget) * 100, 100) : 0;
 
     // 교통비 별도 집계
-    const transportRecords = cardCurrentRecords.filter(r => {
-      const merchant = (r.merchant || '').trim();
-      return TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
-    });
+    const transportRecords = cardCurrentRecords.filter(r => (r.category || '') === TRANSPORT_CATEGORY);
     let transportSum = 0;
     transportRecords.forEach(r => { transportSum += Number(r.cost) || 0; });
     const transportEl = $('cardTransportSummary');
@@ -1107,10 +1125,7 @@
       statsWrap.classList.add('hidden');
       recordsWrap.classList.remove('hidden');
       if (ratingWrap) ratingWrap.classList.add('hidden');
-      const displayRecords = cardRecords.filter(r => {
-        const merchant = (r.merchant || '').trim();
-        return !TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
-      });
+      const displayRecords = cardRecords.filter(r => (r.category || '') !== TRANSPORT_CATEGORY);
       renderCardRecords(displayRecords);
     }
   }

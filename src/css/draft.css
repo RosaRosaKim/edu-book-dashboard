@@ -4,7 +4,7 @@
 .draft-bg-ok { background: #f6fdf7; }
 .draft-bg-reject { background: #fff8f8; }
 .draft-bg-progress { background: #f5faff; }
-.draft-bg-default { background: #ffffff; }
+.draft-bg-default { background: var(--card-bg); }
 .draft-bar-ok { background: #4caf50; }
 .draft-bar-reject { background: #ef5350; }
 .draft-bar-progress { background: #42a5f5; }

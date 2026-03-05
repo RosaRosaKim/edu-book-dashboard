@@ -29,7 +29,7 @@
     <div>
       <label class="text-[10px] text-[#6e7f7b] block mb-1">교육과정명 <span class="text-danger">*</span></label>
       <input id="draftCourse" type="text" placeholder="교육과정명 입력"
-        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition">
     </div>
 
     <!-- 교육기간 -->
@@ -37,12 +37,12 @@
       <div>
         <label class="text-[10px] text-[#6e7f7b] block mb-1">교육 시작일 <span class="text-danger">*</span></label>
         <input id="draftStartDate" type="date"
-          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition">
       </div>
       <div>
         <label class="text-[10px] text-[#6e7f7b] block mb-1">교육 종료일 <span class="text-danger">*</span></label>
         <input id="draftEndDate" type="date"
-          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition">
       </div>
     </div>
 
@@ -50,7 +50,7 @@
     <div>
       <label class="text-[10px] text-[#6e7f7b] block mb-1">교육기관 <span class="text-danger">*</span></label>
       <input id="draftInstitution" type="text" placeholder="교육기관 입력"
-        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition">
     </div>
 
     <!-- 교육구분 (세그먼트) -->
@@ -76,7 +76,7 @@
     <div>
       <label class="text-[10px] text-[#6e7f7b] block mb-1">교육 목적 및 내용 <span class="text-danger">*</span></label>
       <textarea id="draftPurpose" rows="3" placeholder="교육 목적 및 내용을 입력해줘"
-        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition resize-y"></textarea>
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition resize-y"></textarea>
     </div>
 
     <!-- 금액 + 잔액 -->
@@ -85,7 +85,7 @@
         <label class="text-[10px] text-[#6e7f7b] block mb-1">금액 (원) <span class="text-danger">*</span></label>
         <input id="draftCost" type="text" inputmode="numeric" placeholder="0"
           oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value) this.value=Number(this.value).toLocaleString('ko-KR'); checkBudget()"
-          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition font-mono">
+          class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition font-mono">
       </div>
       <div>
         <label class="text-[10px] text-[#6e7f7b] block mb-1">현재 잔액</label>
@@ -114,7 +114,7 @@
     <div>
       <label class="text-[10px] text-[#6e7f7b] block mb-1">비고</label>
       <input id="draftRemark" type="text" placeholder="비고 (선택)"
-        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white focus:border-accent focus:outline-none transition">
+        class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-[var(--card-bg)] focus:border-accent focus:outline-none transition">
     </div>
 
     <!-- 임시저장 + 결재요청 -->

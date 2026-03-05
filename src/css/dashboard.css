@@ -30,7 +30,7 @@
 }
 .seg-item:hover .seg-label { color:#47635f; }
 .seg-item input:checked + .seg-label {
-  background:#fff; color:#2d8a7e; font-weight:600;
+  background:var(--card-bg); color:#2d8a7e; font-weight:600;
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
 html.dark .seg-item input:checked + .seg-label {

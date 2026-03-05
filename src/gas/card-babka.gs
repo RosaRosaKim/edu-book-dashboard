@@ -27,8 +27,8 @@ var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 /** AES 암호화 키 (SHA-256 → 32바이트 AES-CBC 키) */
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 
-/** 교통비 제외 키워드 */
-var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+/** 교통비 업종명 */
+var TRANSPORT_CATEGORY = '대중교통';
 
 /* ═══════════════ 사용자카드정보 CRUD ═══════════════ */
 
@@ -407,10 +407,9 @@ function _processAutoMode(knoxId, encPw, mode) {
       });
     }
 
-    // 교통비(티머니) 제외
+    // 교통비 제외
     var records = rawResult.records.filter(function(r) {
-      var merchant = (r.merchant || r.MEST_NM || '').trim();
-      return !TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; });
+      return (r.category || '') !== TRANSPORT_CATEGORY;
     });
 
     if (records.length === 0) {
@@ -553,8 +552,7 @@ function sendCardRefundAlert(data) {
 
       var usedSum = 0;
       (result.records || []).forEach(function(r) {
-        var merchant = (r.merchant || '').trim();
-        if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+        if ((r.category || '') === TRANSPORT_CATEGORY) return;
         usedSum += Number(r.cost) || 0;
       });
 
@@ -925,8 +923,7 @@ function sendCardDailyBalance(data) {
         records.forEach(function(r) {
           var cn = r.cardNo || 'unknown';
           if (!byCard[cn]) byCard[cn] = { used: 0, count: 0 };
-          var merchant = (r.merchant || '').trim();
-          if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+          if ((r.category || '') === TRANSPORT_CATEGORY) return;
           byCard[cn].used += Number(r.cost) || 0;
           byCard[cn].count++;
         });
@@ -956,8 +953,7 @@ function sendCardDailyBalance(data) {
         var lunchCard = userCardsArr.find(function(c) { return c.isLunchCard; });
         records.forEach(function(r) {
           if (lunchCard && r.cardNo !== lunchCard.cardNo) return;
-          var merchant = (r.merchant || '').trim();
-          if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+          if ((r.category || '') === TRANSPORT_CATEGORY) return;
           usedSum += Number(r.cost) || 0;
           usedCount++;
         });
