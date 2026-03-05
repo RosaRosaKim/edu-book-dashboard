@@ -87,6 +87,27 @@ var FLOW_MSG = {
       previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 잔액 ' + _fmtMoney(remain) + '원'
     };
   },
+  // #6b 밥카 다중카드 잔액 알림 (합산 메시지)
+  cardDailyBalanceMulti: function(cardSummaries) {
+    // cardSummaries: [{ name, remain, used, hasLimit, isLunch }]
+    var remainDays = _calcRemainingBizDays();
+    var parts = cardSummaries.map(function(c) {
+      if (c.isLunch || c.hasLimit) {
+        return c.name + ': 잔액 ' + _fmtMoney(c.remain) + '원';
+      }
+      return c.name + ': 사용 ' + _fmtMoney(c.used) + '원';
+    });
+    var lunchCard = cardSummaries.find(function(c) { return c.isLunch; });
+    var dailyAvg = (lunchCard && remainDays > 0) ? Math.round(lunchCard.remain / remainDays) : 0;
+    var comment = '';
+    if (dailyAvg >= 15000) comment = ' 스테이크 가능 🥩';
+    else if (dailyAvg > 0 && dailyAvg < 8000) comment = ' 편의점 각 🏪';
+    return {
+      content: parts.join(' | ') + '\n남은 출근일 ' + remainDays + '일' + comment,
+      link: FLOW_LINK.CARD,
+      previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 ' + (lunchCard ? '잔액 ' + _fmtMoney(lunchCard.remain) + '원' : parts[0])
+    };
+  },
   // #7 밥카 초과 사용 환불 안내
   cardRefund: function(overAmount, periodLabel) {
     return {

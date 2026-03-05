@@ -16,7 +16,8 @@ const SHEET_NAME = {
   TEMPLATE: "신청 템플릿",
   NOTICE: "공지사항",
   BOARD: "게시판",
-  RATING: "맛집평가"
+  RATING: "맛집평가",
+  CARD_INFO: "사용자카드정보"
 };
 
 const DATA_COL = {
@@ -37,8 +38,9 @@ const ADMIN_COL = {
 const doGet = (e) => {
   const { action, token, knoxId, authCode } = e.parameter;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const dataSheet = ss.getSheetByName(SHEET_NAME.DATA);
-  const bookSheet = ss.getSheetByName(SHEET_NAME.BOOK);
+  const phase = e.parameter.phase; // '1'=fast, '2'=heavy, undefined=전체(하위호환)
+  const dataSheet = (phase !== '1') ? ss.getSheetByName(SHEET_NAME.DATA) : null;
+  const bookSheet = (phase !== '1') ? ss.getSheetByName(SHEET_NAME.BOOK) : null;
   const adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   const managerSheet = ss.getSheetByName(SHEET_NAME.MANAGER);
 
@@ -335,6 +337,7 @@ const doGet = (e) => {
     cardRate: handleCardRate,               // [기능 14]
     cardRecords: handleCardRecords,         // [기능 9]
     cardApproval: handleCardApproval,       // [기능 10]
+    cardInfo: handleCardInfo,               // [기능 17] 사용자카드정보 CRUD
     boardList: handleBoardList,             // [기능 12]
     boardWrite: handleBoardWrite,
     boardReact: handleBoardReact,
@@ -357,7 +360,110 @@ const doGet = (e) => {
     const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
     const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
 
-    // --- 교육/도서 데이터 병합 ---
+    // ── Phase 1: 빠른 기본 정보 (data/book 시트 생략) ──
+    if (phase === '1') {
+      adminSheet.getRange(entry.idx + 1, ADMIN_COL.LAST_LOGIN + 1).setValue(new Date());
+
+      let notice = null;
+      try {
+        const noticeSheet = ss.getSheetByName(SHEET_NAME.NOTICE);
+        if (noticeSheet && noticeSheet.getLastRow() >= 2) {
+          const row = noticeSheet.getRange(2, 1, 1, 4).getValues()[0];
+          if (row[0] || row[1]) {
+            notice = { title: String(row[0] || ''), content: String(row[1] || ''), id: String(row[2] || ''), image: String(row[3] || '') };
+          }
+        }
+      } catch (nErr) {}
+
+      let cardInfo = [];
+      try { cardInfo = _getUserCards(currentKnoxId); } catch (ciErr) {}
+
+      const resp = {
+        userInfo: { name: adminRow[ADMIN_COL.NAME] || '사용자', isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: null, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
+        myHistory: null,
+        cardInfo: cardInfo,
+        phase: 1
+      };
+      if (notice) resp.notice = notice;
+      return createResponse(resp);
+    }
+
+    // ── Phase 2: 교육/도서 내역 + 템플릿 + Bizplay + 관리자통계 ──
+    if (phase === '2') {
+      let allApplyData = [];
+      if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; allApplyData.push(row); }); }
+      if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; allApplyData.push(row); }); }
+
+      const myRows = allApplyData.filter(row => String(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
+      let myUsed = 0;
+      const myHistory = myRows.map(row => {
+        const c = colFor(row);
+        const cost = Number(row[c.COST]) || 0;
+        if (row[c.STATUS] === "완료") myUsed += cost;
+        const displayTitle = `[${row._reqType}] ${row[c.TITLE]}`;
+        const rec = { date: row[0], courseName: displayTitle, cost, status: row[c.STATUS], period: row._reqType === "교육" ? (row[c.PERIOD] || '') : '' };
+        if (row._reqType === "교육") {
+          rec.institution = row[DATA_COL.VENDOR] || '';
+          rec.eduType = row[DATA_COL.EDU_TYPE] || '';
+          rec.purpose = row[DATA_COL.PURPOSE] || '';
+          rec.billing = row[DATA_COL.BILLING] || '';
+          rec.remark = row[DATA_COL.REMARK] || '';
+        }
+        return rec;
+      });
+
+      let adminStats = null;
+      if (isAdmin) {
+        const stats = { totalConfirmed: 0, totalPending: 0, totalMemberCount: adminSheet.getLastRow() - 1, vendors: {}, allUserList: [], allRecords: [] };
+        const userMap = new Map();
+        adminData.forEach((row, idx) => { if (idx === 0) return; const uId = String(row[ADMIN_COL.KNOX_ID]); userMap.set(uId, { knoxId: uId, name: row[ADMIN_COL.NAME] || "미확인", dept: row[ADMIN_COL.DEPT] || "", used: 0, pending: 0, eduUsed: 0, bookUsed: 0 }); });
+        allApplyData.forEach(row => { const c = colFor(row); const sId = String(row[c.KNOX_ID]); const cost = Number(row[c.COST]) || 0; const status = String(row[c.STATUS]); const vendor = row._reqType === "교육" ? (row[DATA_COL.VENDOR] || "기타") : "도서"; if (status === "완료") { stats.totalConfirmed += cost; stats.vendors[vendor] = (stats.vendors[vendor] || 0) + cost; } else if (status.includes("대기") || status.includes("진행")) { stats.totalPending += cost; } if (userMap.has(sId)) { const u = userMap.get(sId); if (u.name === '미확인' && row[c.NAME]) u.name = String(row[c.NAME]); if (status === "완료") { u.used += cost; if (row._reqType === "교육") u.eduUsed += cost; else if (row._reqType === "도서") u.bookUsed += cost; } else if (status.includes("대기") || status.includes("진행")) { u.pending += cost; } } });
+        stats.allRecords = allApplyData.map(row => { const c = colFor(row); const knoxId = String(row[c.KNOX_ID]); const masterName = userMap.has(knoxId) ? userMap.get(knoxId).name : ''; return { knoxId, name: masterName || row[c.NAME] || '', courseName: `[${row._reqType}] ${row[c.TITLE]}`, cost: Number(row[c.COST]) || 0, status: row[c.STATUS] || '', period: row._reqType === "교육" ? (row[12] || '') : '', date: row[0] ? new Date(row[0]).toISOString() : '', reqType: row._reqType }; });
+        stats.allUserList = Array.from(userMap.values()).map(u => ({ ...u, isOverLimit: u.used >= 450000, isZeroUsage: u.used === 0 }));
+        adminStats = stats;
+      }
+
+      const tplSheet = ensureTemplateSheet(ss);
+      let templates = [];
+      if (tplSheet && tplSheet.getLastRow() > 1) { const tplData = tplSheet.getDataRange().getValues(); tplData.shift(); templates = tplData.map(r => ({ courseName: r[0], institution: r[1], eduType: r[2], billing: r[3], cost: Number(r[4]) || 0, purpose: r[5], remark: r[6] })); }
+
+      let bizplaySession = null;
+      const encPw = adminRow[7];
+      if (encPw && String(encPw).trim()) {
+        const propKey = 'bizplay_' + currentKnoxId;
+        const existingRaw = PropertiesService.getScriptProperties().getProperty(propKey);
+        const existing = existingRaw ? JSON.parse(existingRaw) : null;
+        const needLogin = !existing || !existing.bizplayCookies || (new Date() - new Date(existing.loginTime || 0)) > 3600000;
+        if (needLogin) {
+          try {
+            const savedBizplayId = String(adminRow[ADMIN_COL.BIZPLAY_ID] || '').trim();
+            const bizUserId = (savedBizplayId || currentKnoxId) + '@emro.co.kr';
+            const bizPwd = _decryptPw(String(encPw));
+            const loginPayload = '_JSON_=' + encodeURIComponent(JSON.stringify({ USER_ID: bizUserId, PWD: bizPwd, CAPTCHA_VALUE: '', LNK_ID: '', LNK_INTT: '', LOGIN_SAVE: 'N', USER_OS: 'win10.0', USER_BR: 'Chrome', USER_BR_VER: '145.0.0.0', TMPR_CD2: '', TMPR_CD3: '', LNGG_DSNC: 'DF', '_LODING_BAR_YN_': 'Y' }));
+            const loginResp = UrlFetchApp.fetch('https://www.bizplay.co.kr/login_proc_01.jct', { method: 'post', contentType: 'application/x-www-form-urlencoded; charset=UTF-8', headers: { 'User-Agent': BROWSER_UA }, payload: loginPayload, followRedirects: false, muteHttpExceptions: true });
+            const body = JSON.parse(loginResp.getContentText());
+            if (body.RSLT_CD === '0000') { const sessionData = { bizplayCookies: extractCookies(loginResp), userId: bizUserId, userName: body.USER_NM, useInttId: body.USE_INTT_ID || '', loginTime: new Date().toISOString() }; PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(sessionData)); bizplaySession = { userId: bizUserId, userName: body.USER_NM }; }
+          } catch (bizErr) { console.log('[auto-bizplay] 자동 로그인 실패: ' + bizErr.message); }
+        } else if (existing) { bizplaySession = { userId: existing.userId, userName: existing.userName }; }
+      }
+
+      var weatherAlert = null;
+      try { weatherAlert = _getWeatherAlert(); } catch(we) {}
+      var weatherNow = null;
+      if (!weatherAlert) { try { weatherNow = _getWeatherNow(); } catch(wn) {} }
+      var stockInfo = null;
+      try { stockInfo = _getStockInfo(); } catch(se) {}
+      var ddayInfo = [];
+      try { ddayInfo = _getDday() || []; } catch(de) {}
+      var airQuality = null;
+      try { airQuality = _getAirQuality(); } catch(ae) {}
+      var newsHeadlines = [];
+      try { newsHeadlines = _getNewsHeadlines() || []; } catch(ne) {}
+
+      return createResponse({ myHistory: myHistory, usedBudget: myUsed, templates: templates, adminStats: adminStats, bizplaySession: bizplaySession, weatherAlert: weatherAlert, weatherNow: weatherNow, stockInfo: stockInfo, ddayInfo: ddayInfo, airQuality: airQuality, newsHeadlines: newsHeadlines, phase: 2 });
+    }
+
+    // --- 교육/도서 데이터 병합 (phase 없음 = 하위호환 전체 응답) ---
     let allApplyData = [];
     if (dataSheet) {
       const eduData = dataSheet.getDataRange().getValues();
@@ -547,12 +653,17 @@ const doGet = (e) => {
       }
     } catch (nErr) { /* 시트 없으면 무시 */ }
 
+    // 사용자 카드정보 로드
+    let cardInfo = [];
+    try { cardInfo = _getUserCards(currentKnoxId); } catch (ciErr) { /* 시트 없으면 무시 */ }
+
     const resp = {
       userInfo: { name: myRows.length > 0 ? myRows[0][colFor(myRows[0]).NAME] : "사용자", isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: myUsed, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
       myHistory: myHistory,
       adminStats: adminStats,
       templates: templates,
-      bizplaySession: bizplaySession
+      bizplaySession: bizplaySession,
+      cardInfo: cardInfo
     };
     if (notice) resp.notice = notice;
     return createResponse(resp);
@@ -572,7 +683,6 @@ function ensureTemplateSheet(ss) {
 }
 
 const createResponse = (obj) => ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-
 
 // [설정 유지]
 const DOC_ID_COL = 6; // G열: 문서번호 (0부터 시작하므로 6)

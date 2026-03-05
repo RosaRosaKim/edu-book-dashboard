@@ -93,12 +93,33 @@
 <!-- 밥카 실제 컨텐츠 (로딩 완료 후 표시) -->
 <div id="cardContent" class="hidden">
 
+<!-- 카드 선택기 (2개 이상 시 표시) -->
+<div id="cardSelector" class="mb-4 hidden relative">
+  <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
+    <svg class="w-4 h-4 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+    <!-- 커스텀 드롭다운 -->
+    <div id="cardDropdownWrap" class="flex-1 relative cursor-pointer" onclick="window._toggleCardList()">
+      <div id="cardDropdownLabel" class="flex items-center gap-1.5 text-sm font-semibold text-[#47635f] select-none"></div>
+    </div>
+    <svg class="w-3 h-3 text-[#6e7f7b] shrink-0 pointer-events-none -ml-1 transition-transform duration-200" id="cardChevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+    <button onclick="window._editCardSettings(this)" title="카드 설정" class="p-1 text-[#6e7f7b] hover:text-accent transition cursor-pointer">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button onclick="window._refreshCards()" title="카드 목록 새로고침" class="p-1 text-[#6e7f7b] hover:text-accent transition cursor-pointer">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </button>
+  </div>
+  <!-- 드롭다운 옵션 목록 -->
+  <div id="cardDropdownList" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-border shadow-lg overflow-hidden bg-surface">
+  </div>
+</div>
+
 <!-- 밥카 잔액 요약 -->
 <section class="mb-6">
   <div class="bg-surface border border-border rounded-2xl p-5">
     <div class="flex justify-between items-end flex-wrap gap-3 mb-4">
       <div>
-        <div class="text-[10px] text-[#6e7f7b] mb-1">남은 잔액</div>
+        <div class="text-[10px] text-[#6e7f7b] mb-1" id="cardRemainLabel">남은 잔액</div>
         <div class="font-mono text-3xl font-semibold text-[#47635f]" id="cardRemainAmount">0원</div>
         <div class="text-xs text-[#6e7f7b] mt-0.5" id="cardBudgetLabel">다음 초기화까지 <span class="font-mono" id="cardResetDays">-</span>일</div>
       </div>
@@ -145,10 +166,10 @@
       </div>
       <div>
         <div class="text-sm font-semibold">Flow 알람 수신</div>
-        <div class="text-[11px] text-[#6e7f7b]">평일 잔액, 미결재 리마인드, 초과환불 알림</div>
+        <div id="cardAlarmDesc" class="text-[11px] text-[#6e7f7b]">평일 잔액, 미결재 리마인드, 초과환불 알림</div>
       </div>
     </div>
-    <div id="cardAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative">
+    <div id="cardAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative overflow-hidden">
       <button onclick="setCardAlarmValue(true)" id="cardAlarmBtnOn"
         class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
         <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
@@ -166,6 +187,8 @@
       <span class="text-[11px] text-warn leading-relaxed">이 기능이 필요하면 <strong>비밀번호 저장</strong>을 체크하고 다시 로그인해줘.</span>
     </div>
 
+    <!-- 자동결재 + 결재 (밥카 카드만 표시) -->
+    <div id="cardLunchOnlySection">
     <!-- 구분선 -->
     <div class="border-t border-border/40 my-4"></div>
 
@@ -212,6 +235,7 @@
         </button>
       </div>
     </div>
+    </div><!-- /cardLunchOnlySection -->
 
   </div>
 </section>
@@ -242,6 +266,24 @@
 
 </div><!-- /cardContent -->
 
+<!-- 카드 설정 시트 (모바일: 바텀시트 / PC: 오버레이 팝업) -->
+<div id="cardSettingsSheet" class="fixed inset-0 z-[60]" style="display:none;">
+  <div class="absolute inset-0 bg-black/30" onclick="window._closeCardSheet()"></div>
+  <!-- 모바일: 바텀시트 -->
+  <div id="cardSheetMobile" class="fixed bottom-0 inset-x-0 z-[61] rounded-t-2xl shadow-xl max-w-sm mx-auto p-5 transition-transform duration-300 sm:hidden bg-surface"
+       style="transform:translateY(100%);">
+    <div class="w-10 h-1 rounded-full bg-border mx-auto mb-4"></div>
+    <div id="cardSheetTitleM" class="text-sm font-bold text-[#47635f] mb-3"></div>
+    <div id="cardSheetBodyM"></div>
+  </div>
+  <!-- PC: 오버레이 팝업 -->
+  <div id="cardSheetPC" class="fixed z-[61] hidden sm:block rounded-2xl shadow-xl border-2 border-accent/20 p-5 w-[300px] transition-all duration-200 opacity-0 bg-surface"
+       style="transform:scale(.95);">
+    <div id="cardSheetTitleP" class="text-sm font-bold text-[#47635f] mb-3"></div>
+    <div id="cardSheetBodyP"></div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════ 밥카 모듈 ═══════════════ */
 (function() {
@@ -262,6 +304,22 @@
   let cardIsRefreshing = false; // 탭 전환 재조회 중 (전체 스켈레톤 방지)
   let cardStatsSelectedMonth = null; // 월 선택기 상태 (null=전체)
   const TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+
+  /* ─── 다중카드 상태 ─── */
+  let userCards = [];           // [{cardNo, alias, limit, isLunchCard}]
+  let selectedCardNo = '';      // 현재 선택된 카드번호
+  let cardSetupState = 'idle';  // 'idle' | 'loading' | 'registered' | 'needs-choice'
+
+  /* ─── 카드번호 마스킹 ─── */
+  function maskCardNo(cardNo) {
+    if (!cardNo || cardNo.length < 8) return cardNo || '';
+    return cardNo.substring(0, 4) + '********' + cardNo.substring(cardNo.length - 4);
+  }
+  function cardDisplayName(card) {
+    if (!card) return '';
+    const masked = maskCardNo(card.cardNo);
+    return masked;
+  }
 
   /* ─── 기간 계산: 매월 15일~다음달 14일 ─── */
   function getCardPeriod(now) {
@@ -391,9 +449,11 @@
     const wrap = $('cardMonthTags');
     if (!wrap) return;
 
+    const currentCard = userCards.find(c => c.cardNo === selectedCardNo) || {};
+    const isLunch = currentCard.isLunchCard !== false;
     const tabs = [
       { key: 'records', label: getMonthBtnLabel() },
-      { key: 'stats', label: '🏆 나의 TOP 5' },
+      { key: 'stats', label: isLunch ? '🏆 나의 TOP 5' : '🏆 TOP 5' },
       { key: 'rating', label: '⭐ 맛집 평가' }
     ];
 
@@ -523,7 +583,6 @@
         cardStatsCache = data.records || [];
       }
     } catch (e) {
-      console.error('[card] 통계 조회 예외:', e);
     }
 
     if (isStatsView) {
@@ -651,7 +710,6 @@
         renderCardDashboard();
       }
     } catch (e) {
-      console.error('[card] 평점 조회 예외:', e);
     }
   }
 
@@ -839,21 +897,107 @@
     content.classList.toggle('hidden', isInitialLoading);
   }
 
+  /* ─── 카드 선택기 렌더링 ─── */
+  let _cardListOpen = false;
+
+  function renderCardSelector() {
+    const el = $('cardSelector');
+    if (!el) return;
+    if (userCards.length < 2) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    // 라벨 업데이트
+    const cur = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const label = $('cardDropdownLabel');
+    if (label && cur) {
+      const badge = cur.isLunchCard
+        ? '<span class="text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded-full shrink-0">밥카</span>'
+        : (cur.alias ? '<span class="text-[10px] font-semibold text-[#6e7f7b] bg-[#6e7f7b]/10 px-1.5 py-0.5 rounded-full shrink-0">' + escapeHtml(cur.alias) + '</span>' : '');
+      label.innerHTML = '<span class="truncate">' + escapeHtml(cardDisplayName(cur)) + '</span>' + (badge ? ' ' + badge : '');
+    }
+    // 목록 렌더
+    _renderCardList();
+  }
+
+  function _renderCardList() {
+    const list = $('cardDropdownList');
+    if (!list) return;
+    list.innerHTML = userCards.map(c => {
+      const active = c.cardNo === selectedCardNo;
+      const tag = c.isLunchCard
+        ? '<span class="text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded-full ml-auto shrink-0">밥카</span>'
+        : (c.alias ? '<span class="text-[10px] font-semibold text-[#6e7f7b] bg-[#6e7f7b]/10 px-1.5 py-0.5 rounded-full ml-auto shrink-0">' + escapeHtml(c.alias) + '</span>' : '');
+      return '<div data-card="' + c.cardNo + '" onclick="window._pickCard(\'' + c.cardNo + '\')"'
+        + ' class="flex items-center gap-2.5 px-3.5 py-3 cursor-pointer transition-colors'
+        + (active ? ' bg-accent/8 text-accent font-semibold' : ' text-[#47635f] hover:bg-surface-2') + '">'
+        + '<svg class="w-3.5 h-3.5 shrink-0' + (active ? ' text-accent' : ' text-transparent') + '" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+        + '<div class="flex-1 min-w-0">'
+        + '<div class="text-sm truncate">' + escapeHtml(cardDisplayName(c)) + '</div>'
+        + ''
+        + '</div>' + tag + '</div>';
+    }).join('<div class="border-t border-border/50"></div>');
+  }
+
+  window._toggleCardList = function() {
+    const list = $('cardDropdownList');
+    const chevron = $('cardChevron');
+    _cardListOpen = !_cardListOpen;
+    list.classList.toggle('hidden', !_cardListOpen);
+    if (chevron) chevron.style.transform = _cardListOpen ? 'rotate(180deg)' : '';
+    if (_cardListOpen) {
+      // 외부 클릭으로 닫기
+      setTimeout(() => document.addEventListener('click', _closeCardList, { once: true }), 0);
+    }
+  };
+
+  function _closeCardList(e) {
+    const wrap = $('cardSelector');
+    if (wrap && wrap.contains(e?.target)) {
+      // 내부 클릭이면 다시 리스너 등록
+      setTimeout(() => document.addEventListener('click', _closeCardList, { once: true }), 0);
+      return;
+    }
+    _cardListOpen = false;
+    const list = $('cardDropdownList');
+    const chevron = $('cardChevron');
+    if (list) list.classList.add('hidden');
+    if (chevron) chevron.style.transform = '';
+  }
+
+  window._pickCard = function(cardNo) {
+    _cardListOpen = false;
+    $('cardDropdownList').classList.add('hidden');
+    $('cardChevron').style.transform = '';
+    window._switchCard(cardNo);
+  };
+
   /* ─── 렌더링 ─── */
   function formatMoney(n) { return Number(n).toLocaleString('ko-KR'); }
   function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
   async function renderCardDashboard() {
     updateCardVisibility();
+    renderCardSelector();
     renderViewTabs();
+
+    // ── 현재 선택된 카드 정보 ──
+    const currentCard = userCards.find(c => c.cardNo === selectedCardNo) || {};
+    const isLunchCard = currentCard.isLunchCard !== false; // 기본=true (카드정보 없으면 밥카)
 
     // ── 상단 요약: 항상 현재 기간 기준 ──
     const currentPeriod = getCardPeriod();
-    const { bizDays, budget } = await getCardBudget(currentPeriod);
+    const { bizDays, budget: lunchBudget } = await getCardBudget(currentPeriod);
+
+    // 카드 종류별 예산 결정
+    let budget;
+    if (isLunchCard) {
+      budget = lunchBudget; // 영업일 × 10,000원
+    } else {
+      budget = Number(currentCard.limit) || 0; // 비밥카: 사용자 지정 한도
+    }
 
     const fmtFull = d => d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
     $('cardPeriodLabel').textContent = fmtFull(currentPeriod.start) + ' ~ ' + fmtFull(currentPeriod.end);
-    $('cardBizDaysLabel').textContent = '(출근일 ' + bizDays + '일)';
+    $('cardBizDaysLabel').textContent = isLunchCard ? '(출근일 ' + bizDays + '일)' : (budget > 0 ? '(한도 ' + formatMoney(budget) + '원)' : '');
 
     const now = new Date();
     let nextReset;
@@ -864,14 +1008,16 @@
     }
     $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
 
-    if (cardCurrentRecords.length > 0) console.log('[card] 첫 레코드 purpose:', JSON.stringify(cardCurrentRecords.slice(0, 3).map(r => ({ merchant: r.merchant, purpose: r.purpose, cost: r.cost }))));
     const currentValid = cardCurrentRecords.filter(r => {
       const merchant = (r.merchant || '').trim();
       return !TRANSPORT_KEYWORDS.some(k => merchant.includes(k));
     });
     let usedSum = 0;
     currentValid.forEach(r => { usedSum += Number(r.cost) || 0; });
-    const remain = budget - usedSum;
+
+    // 비밥카 + 한도 없음: 잔액 대신 누적사용금액만 표시
+    const hasLimit = isLunchCard || budget > 0;
+    const remain = hasLimit ? budget - usedSum : 0;
     const usedPct = budget > 0 ? Math.min((usedSum / budget) * 100, 100) : 0;
 
     // 교통비 별도 집계
@@ -892,18 +1038,34 @@
 
     $('cardUsedAmount').textContent = formatMoney(usedSum) + '원';
     $('cardUsedSub').textContent = '';
-    $('cardRemainAmount').textContent = formatMoney(remain) + '원';
-    $('cardRemainAmount').style.color = remain < 0 ? '#dc2626' : '';
+    if (hasLimit) {
+      $('cardRemainAmount').textContent = formatMoney(remain) + '원';
+      $('cardRemainAmount').style.color = remain < 0 ? '#dc2626' : '';
+    } else {
+      // 한도 없는 비밥카: "남은 잔액" 라벨 대신 누적사용금액
+      $('cardRemainAmount').textContent = formatMoney(usedSum) + '원';
+      $('cardRemainAmount').style.color = '';
+    }
     // 프로그레스 바 (hidden→visible 전환 후 확실히 애니메이션)
     $('cardBarUsed').style.width = '0%';
-    requestAnimationFrame(() => {
+    if (hasLimit) {
       requestAnimationFrame(() => {
-        $('cardBarUsed').style.width = usedPct + '%';
+        requestAnimationFrame(() => {
+          $('cardBarUsed').style.width = usedPct + '%';
+        });
       });
-    });
+    }
+
+    // ── 밥카 전용 섹션 표시/숨김 ──
+    const lunchSection = $('cardLunchOnlySection');
+    if (lunchSection) lunchSection.classList.toggle('hidden', !isLunchCard);
+
+    // 알림 설명 텍스트: 밥카=전체, 비밥카=평일 잔액만
+    const alarmDesc = $('cardAlarmDesc');
+    if (alarmDesc) alarmDesc.textContent = isLunchCard ? '평일 잔액, 미결재 리마인드, 초과환불 알림' : '평일 잔액 알림';
 
     setCardAlarmBtnState(cardAlarmOn);
-    renderAutoModeOptions();
+    if (isLunchCard) renderAutoModeOptions();
     // PW 미저장 시 토글 비활성화 + 안내 표시
     const toggle = $('cardAlarmToggle');
     const items = $('cardAlarmItems');
@@ -916,6 +1078,12 @@
       if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; toggle.style.cursor = 'pointer'; }
       if (items) items.style.opacity = '1';
       if (guide) guide.classList.add('hidden');
+    }
+
+    // ── "남은 잔액" 라벨 변경 (비밥카 + 한도없음) ──
+    const remainLabel = $('cardRemainLabel');
+    if (remainLabel) {
+      remainLabel.textContent = (!isLunchCard && !hasLimit) ? '누적 사용금액' : '남은 잔액';
     }
 
     // ── 하단: 뷰 모드별 분기 ──
@@ -1106,7 +1274,9 @@
       const data = await window.gasFetch(window.API_URL + '?action=updateCardAlarm&token=' + encodeURIComponent(token) + '&isAgreed=' + newVal);
       if (data.status === 'success') {
         cardAlarmOn = newVal;
-        window.showToast(newVal ? '밥카 Flow 알람 보내줄게!' : '밥카 Flow 알람 안 보낼게.', 'smail');
+        const cur = userCards.find(c => c.cardNo === selectedCardNo);
+        const cardLabel = cur && cur.alias ? cur.alias : '밥카';
+        window.showToast(newVal ? cardLabel + ' Flow 알람 보내줄게!' : cardLabel + ' Flow 알람 안 보낼게.', 'smail');
       } else {
         setCardAlarmBtnState(isOn);
         window.showToast('알람 설정 변경에 실패했어.', 'sad');
@@ -1298,10 +1468,7 @@
         const modifiedParam = '&modifiedApprLine=' + encodeURIComponent(JSON.stringify(apprResult));
         const urlApprove = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
           + '&mode=approve' + selParam + modifiedParam;
-        console.log('[card] 결재 제출 시작, 건수:', selectedRecords.length);
         const data = await window.gasFetch(urlApprove);
-        console.log('[card] 결재 응답:', JSON.stringify(data).substring(0, 2000));
-        if (data.debug) console.log('[card] debug:', JSON.stringify(data.debug).substring(0, 3000));
 
         if (data.status === 'success') {
           window.showToast(selectedRecords.length + '건 결재요청 완료!', 'smail', anchorBtn);
@@ -1319,10 +1486,7 @@
       setLoading('임시저장 중...');
       const url = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
         + '&mode=temp' + selParam;
-      console.log('[card] 임시저장 시작, 건수:', selectedRecords.length);
       const data = await window.gasFetch(url);
-      console.log('[card] 결재 응답:', JSON.stringify(data).substring(0, 2000));
-      if (data.debug) console.log('[card] 결재 debug:', JSON.stringify(data.debug).substring(0, 3000));
 
       if (data.status === 'success') {
         window.showToast(selectedRecords.length + '건 임시저장 완료!', 'smail', anchorBtn);
@@ -1332,7 +1496,6 @@
         window.showToast(data.message || '임시저장에 실패했어.', 'sad', anchorBtn);
       }
     } catch (e) {
-      console.error('[card] 예외:', e);
       window.showToast('서버 연결에 실패했어.', 'sad', anchorBtn);
     } finally {
       cardApprovalLoading = false;
@@ -1352,41 +1515,41 @@
       return;
     }
 
+    // 최초 카드 등록 체크
+    if (userCards.length === 0 && cardSetupState !== 'loading') {
+      await _checkAndRegisterCards();
+    }
+
     cardFetchState = 'loading';
     renderCardDashboard();
     if (window.showLoading) window.showLoading();
+    if (window.showToast && window._getLoadingToast) { const _m = window._getLoadingToast(true); if (_m) window.showToast(_m, 'smail', null, { timeout: 8000 }); }
 
     // 평점 + 통계도 병렬로 로드 시작
     fetchRatings();
     fetchStats();
 
     try {
-      console.log('[card] 사용내역 조회 시작...');
-      const url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token);
+      let url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token);
+      if (selectedCardNo) url += '&cardNo=' + encodeURIComponent(selectedCardNo);
       const data = await window.gasFetch(url);
-      console.log('[card] 응답:', JSON.stringify(data).substring(0, 500));
 
       if (data.status === 'success') {
-        console.log('[card] 조회 성공, records:', data.records?.length);
         cardRecords = data.records || [];
         cardCurrentRecords = cardRecords;
         cardFetchState = 'loaded';
       } else if (data.error === 'SESSION_EXPIRED') {
-        console.log('[card] 세션 만료:', data.message);
         cardFetchState = 'sso-fail';
+        if (window.showToast) window.showToast('세션이 만료됐어. 다시 로그인해줘.', 'sad');
       } else if (data.error === 'NO_SESSION') {
-        console.log('[card] 세션 없음:', data.error, data.message);
         cardFetchState = 'no-session';
       } else if (data.error === 'WEBANK_SSO_FAIL') {
-        console.log('[card] SSO 실패:', data.message);
-        if (data.debug) console.log('[card] SSO debug:', JSON.stringify(data.debug));
         cardFetchState = 'sso-fail';
+        if (window.showToast) window.showToast('Bizplay 연결에 실패했어.', 'sad');
       } else {
-        console.log('[card] 알 수 없는 응답 → error 처리:', data);
         cardFetchState = 'error';
       }
     } catch (e) {
-      console.error('[card] 사용내역 조회 예외:', e);
       cardFetchState = 'error';
     }
 
@@ -1399,11 +1562,300 @@
     window.showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad', $('cardNoRecords'));
   };
 
+  /* ─── 카드 전환 ─── */
+  window._switchCard = function(cardNo) {
+    selectedCardNo = cardNo;
+    cardRecords = [];
+    cardCurrentRecords = [];
+    cardStatsCache = null;
+    cardFetchState = 'idle';
+    fetchCardRecords(true);
+  };
+
+  /* ─── 설정 시트 공통 (모바일: 바텀시트 / PC: 오버레이) ─── */
+  function _isPC() { return window.innerWidth >= 640; }
+  let _sheetAnchor = null;
+
+  function _openCardSheet(title, bodyHtml, anchorEl) {
+    _sheetAnchor = anchorEl || null;
+    $('cardSettingsSheet').style.display = '';
+
+    if (_isPC()) {
+      $('cardSheetTitleP').textContent = title;
+      $('cardSheetBodyP').innerHTML = bodyHtml;
+      const pc = $('cardSheetPC');
+      // 앵커 근처에 위치
+      if (_sheetAnchor) {
+        const r = _sheetAnchor.getBoundingClientRect();
+        pc.style.top = (r.bottom + 8) + 'px';
+        pc.style.left = Math.max(8, Math.min(r.left - 120, window.innerWidth - 316)) + 'px';
+      } else {
+        pc.style.top = '80px';
+        pc.style.left = '50%';
+        pc.style.transform = 'translateX(-50%) scale(.95)';
+      }
+      requestAnimationFrame(() => {
+        pc.classList.remove('opacity-0');
+        pc.classList.add('opacity-100');
+        pc.style.transform = _sheetAnchor ? 'scale(1)' : 'translateX(-50%) scale(1)';
+      });
+    } else {
+      $('cardSheetTitleM').textContent = title;
+      $('cardSheetBodyM').innerHTML = bodyHtml;
+      requestAnimationFrame(() => { $('cardSheetMobile').style.transform = 'translateY(0)'; });
+    }
+  }
+
+  function _closeCardSheet() {
+    if (_isPC()) {
+      const pc = $('cardSheetPC');
+      pc.classList.remove('opacity-100');
+      pc.classList.add('opacity-0');
+      pc.style.transform = _sheetAnchor ? 'scale(.95)' : 'translateX(-50%) scale(.95)';
+    } else {
+      $('cardSheetMobile').style.transform = 'translateY(100%)';
+    }
+    setTimeout(() => { $('cardSettingsSheet').style.display = 'none'; }, 250);
+  }
+  window._closeCardSheet = _closeCardSheet;
+
+  /* ─── 카드 설정 (별칭/한도/밥카 변경) ─── */
+  let _settingsAnchor = null;
+  window._editCardSettings = function(anchorEl) {
+    if (userCards.length === 0) return;
+    _settingsAnchor = anchorEl || null;
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const isLunch = card.isLunchCard;
+    const e = escapeHtml;
+
+    let html = '<div class="space-y-2">';
+    if (!isLunch) {
+      html += '<button onclick="window._showAliasEdit()" class="w-full text-left p-3 rounded-xl border border-border hover:border-accent/50 transition flex items-center gap-3 cursor-pointer">'
+        + '<span class="text-base">✏️</span><div><div class="text-sm font-semibold text-[#47635f]">별칭 변경</div>'
+        + '<div class="text-xs text-[#6e7f7b] mt-0.5">현재: ' + e(card.alias || '없음') + '</div></div></button>';
+      html += '<button onclick="window._showLimitEdit()" class="w-full text-left p-3 rounded-xl border border-border hover:border-accent/50 transition flex items-center gap-3 cursor-pointer">'
+        + '<span class="text-base">💰</span><div><div class="text-sm font-semibold text-[#47635f]">한도 변경</div>'
+        + '<div class="text-xs text-[#6e7f7b] mt-0.5">현재: ' + (card.limit ? formatMoney(card.limit) + '원' : '한도 없음') + '</div></div></button>';
+    }
+    html += '<button onclick="window._showLunchCardPick()" class="w-full text-left p-3 rounded-xl border border-border hover:border-accent/50 transition flex items-center gap-3 cursor-pointer">'
+      + '<span class="text-base">🍚</span><div><div class="text-sm font-semibold text-[#47635f]">밥카 카드 변경</div></div></button>';
+    html += '</div>';
+
+    _openCardSheet('카드 설정', html, _settingsAnchor);
+  };
+
+  /* ─── 시트 내용 교체 헬퍼 ─── */
+  function _updateSheetContent(title, bodyHtml) {
+    if (_isPC()) {
+      $('cardSheetTitleP').textContent = title;
+      $('cardSheetBodyP').innerHTML = bodyHtml;
+    } else {
+      $('cardSheetTitleM').textContent = title;
+      $('cardSheetBodyM').innerHTML = bodyHtml;
+    }
+  }
+
+  /* ─── 별칭 변경 뷰 ─── */
+  window._showAliasEdit = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const html = '<input id="cardAliasInput" type="text" value="' + escapeHtml(card.alias || '') + '" placeholder="별칭 입력 (비우면 삭제)"'
+      + ' class="w-full border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent" style="background:var(--surface,#fff);">'
+      + '<button onclick="window._saveAlias()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">저장</button>';
+    _updateSheetContent('별칭 변경', html);
+    setTimeout(() => { const inp = $('cardAliasInput'); if (inp) inp.focus(); }, 100);
+  };
+  window._saveAlias = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const val = ($('cardAliasInput') || {}).value || '';
+    _closeCardSheet();
+    _callCardInfo('updateAlias', { cardNo: card.cardNo, alias: val });
+  };
+
+  /* ─── 한도 변경 뷰 ─── */
+  window._showLimitEdit = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const html = '<input id="cardLimitInput" type="number" value="' + (card.limit || 0) + '" placeholder="금액 (0=한도없음)"'
+      + ' class="w-full border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent" style="background:var(--surface,#fff);">'
+      + '<p class="text-xs text-[#6e7f7b] mt-1.5">0을 입력하면 한도를 해제해</p>'
+      + '<button onclick="window._saveLimit()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">저장</button>';
+    _updateSheetContent('한도 변경', html);
+    setTimeout(() => { const inp = $('cardLimitInput'); if (inp) inp.focus(); }, 100);
+  };
+  window._saveLimit = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const val = ($('cardLimitInput') || {}).value || '0';
+    _closeCardSheet();
+    _callCardInfo('updateLimit', { cardNo: card.cardNo, limit: val });
+  };
+
+  /* ─── 밥카 카드 변경 뷰 ─── */
+  window._showLunchCardPick = function() {
+    let html = '<div class="space-y-2">';
+    userCards.forEach(c => {
+      const checked = c.isLunchCard ? ' checked' : '';
+      const tag = c.isLunchCard ? '<span class="text-xs text-accent ml-auto font-semibold">현재 밥카</span>' : '';
+      html += '<label class="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:border-accent/50 transition'
+        + (c.isLunchCard ? ' border-accent bg-accent/5' : '') + '">'
+        + '<input type="radio" name="lunchPick" value="' + c.cardNo + '"' + checked + ' class="accent-[var(--accent)]">'
+        + '<span class="text-sm font-medium text-[#47635f]">' + escapeHtml(cardDisplayName(c)) + '</span>' + tag + '</label>';
+    });
+    html += '</div>';
+    html += '<button onclick="window._saveLunchCard()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">변경</button>';
+    _updateSheetContent('밥카 카드 변경', html);
+  };
+  window._saveLunchCard = function() {
+    const picked = document.querySelector('input[name="lunchPick"]:checked');
+    if (!picked) return;
+    _closeCardSheet();
+    _callCardInfo('setLunchCard', { cardNo: picked.value });
+  };
+
+  /* ─── 카드 목록 새로고침 ─── */
+  window._refreshCards = async function() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    if (window.showLoading) window.showLoading();
+    try {
+      const url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=refresh';
+      const data = await window.gasFetch(url);
+      if (data.status === 'success' && data.cards) {
+        userCards = data.cards;
+        if (window.showToast) window.showToast('카드 목록 갱신 완료', 'ok');
+        renderCardSelector();
+      } else {
+        if (window.showToast) window.showToast(data.message || '갱신 실패', 'sad');
+      }
+    } catch (e) {
+      if (window.showToast) window.showToast('갱신 실패: ' + e.message, 'sad');
+    }
+    if (window.hideLoading) window.hideLoading();
+  };
+
+  /* ─── 카드정보 API 호출 공통 ─── */
+  async function _callCardInfo(subAction, params) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    if (window.showLoading) window.showLoading();
+    try {
+      let url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=' + subAction;
+      Object.keys(params || {}).forEach(k => {
+        url += '&' + k + '=' + encodeURIComponent(params[k]);
+      });
+      const data = await window.gasFetch(url);
+      if (data.status === 'success' && data.cards) {
+        userCards = data.cards;
+        const lunch = userCards.find(c => c.isLunchCard);
+        if (lunch) selectedCardNo = lunch.cardNo;
+        localStorage.setItem('cardRegistered_' + (window._knoxId || ''), '1');
+        if (window.showToast) window.showToast('저장 완료', 'ok');
+        cardFetchState = 'idle';
+        fetchCardRecords(true);
+      } else if (data.status === 'needsChoice') {
+        _showLunchCardChoice(data.candidates, data.allCards);
+      } else {
+        if (window.showToast) window.showToast(data.message || '실패', 'sad');
+      }
+    } catch (e) {
+      if (window.showToast) window.showToast('오류: ' + e.message, 'sad');
+    }
+    if (window.hideLoading) window.hideLoading();
+  }
+
+  /* ─── 밥카 카드 선택 팝업 (신규 등록 시) ─── */
+  let _lunchChoiceCandidates = null, _lunchChoiceAllCards = null;
+  function _showLunchCardChoice(candidates, allCards) {
+    _lunchChoiceCandidates = candidates;
+    _lunchChoiceAllCards = allCards;
+    let html = '<div class="space-y-2">';
+    (candidates || []).forEach((c, i) => {
+      const checked = i === 0 ? ' checked' : '';
+      html += '<label class="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:border-accent/50 transition">'
+        + '<input type="radio" name="lunchInit" value="' + i + '"' + checked + ' class="accent-[var(--accent)]">'
+        + '<span class="text-sm font-medium text-[#47635f]">' + escapeHtml(maskCardNo(c.cardNo)) + '</span></label>';
+    });
+    html += '</div>';
+    html += '<button onclick="window._saveLunchInit()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">선택</button>';
+    _openCardSheet('밥카 카드를 선택해줘', html);
+  }
+  window._saveLunchInit = function() {
+    const picked = document.querySelector('input[name="lunchInit"]:checked');
+    if (!picked) return;
+    const idx = parseInt(picked.value);
+    _closeCardSheet();
+    if (_lunchChoiceAllCards && _lunchChoiceAllCards.length > 0) {
+      _lunchChoiceAllCards.forEach(c => { c.isLunchCard = c.cardNo === _lunchChoiceCandidates[idx].cardNo; });
+      const token = localStorage.getItem('token');
+      const url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=saveAllCards&cards=' + encodeURIComponent(JSON.stringify(_lunchChoiceAllCards));
+      window.gasFetch(url).then(data => {
+        if (data.status === 'success' && data.cards) {
+          userCards = data.cards;
+          const lunch = userCards.find(c => c.isLunchCard);
+          selectedCardNo = lunch ? lunch.cardNo : (userCards[0] || {}).cardNo || '';
+          cardSetupState = 'registered';
+          localStorage.setItem('cardRegistered_' + (window._knoxId || ''), '1');
+          fetchCardRecords(true);
+        }
+      });
+    } else {
+      _callCardInfo('setLunchCard', { cardNo: _lunchChoiceCandidates[idx].cardNo });
+    }
+  };
+
+  /* ─── 최초 카드 등록 플로우 ─── */
+  async function _checkAndRegisterCards() {
+    if (cardSetupState === 'registered' || cardSetupState === 'loading') return;
+    if (userCards.length > 0) { cardSetupState = 'registered'; return; }
+
+    // localStorage 캐시 확인
+    const knoxId = window._knoxId || '';
+    if (localStorage.getItem('cardRegistered_' + knoxId)) {
+      // 캐시 있지만 서버에 데이터 없음 → 재등록 필요할 수 있으나 일단 스킵
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    const session = localStorage.getItem('bizplay_session');
+    if (!token || !session) return;
+
+    cardSetupState = 'loading';
+    if (window.showToast) window.showToast('밥카를 찾고 있어!', 'info');
+
+    try {
+      const url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=register';
+      const data = await window.gasFetch(url);
+
+      if (data.status === 'success' && data.cards) {
+        userCards = data.cards;
+        const lunch = userCards.find(c => c.isLunchCard);
+        selectedCardNo = lunch ? lunch.cardNo : (userCards[0] || {}).cardNo || '';
+        cardSetupState = 'registered';
+        localStorage.setItem('cardRegistered_' + knoxId, '1');
+        if (window.showToast) window.showToast('밥카를 찾았어!', 'ok');
+      } else if (data.status === 'needsChoice') {
+        if (window.showToast) window.showToast('아.. 넌 법인카드가 더 있구나.. 좀 더 기다려줘', 'smail', null, { timeout: 3500 });
+        setTimeout(() => { _showLunchCardChoice(data.candidates, data.allCards); }, 2000);
+      } else {
+        cardSetupState = 'idle';
+      }
+    } catch (e) {
+      cardSetupState = 'idle';
+    }
+  }
+
   /* ─── 외부 인터페이스 ─── */
   window.initCardModule = function(data) {
     cardAlarmOn = !!(data.userInfo && data.userInfo.isCardAlarmAgreed);
     hasBizplayPw = !!(data.userInfo && data.userInfo.hasBizplayPw);
     cardAutoMode = (data.userInfo && data.userInfo.cardAutoMode) || 'off';
+
+    // 다중카드 정보 로드
+    if (data.cardInfo && data.cardInfo.length > 0) {
+      userCards = data.cardInfo;
+      const lunch = userCards.find(c => c.isLunchCard);
+      selectedCardNo = lunch ? lunch.cardNo : (userCards[0] || {}).cardNo || '';
+      cardSetupState = 'registered';
+    }
+
     renderCardDashboard();
     // fetchCardRecords는 밥카 탭 클릭 시 switchTab에서 호출
   };

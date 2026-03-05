@@ -30,6 +30,232 @@ var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 /** 교통비 제외 키워드 */
 var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
 
+/* ═══════════════ 사용자카드정보 CRUD ═══════════════ */
+
+/** 사용자 카드 목록 조회 */
+function _getUserCards(knoxId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME.CARD_INFO);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === knoxId) {
+      result.push({
+        cardNo: String(data[i][1] || ''),
+        alias: String(data[i][2] || ''),
+        limit: Number(data[i][3]) || 0,
+        isLunchCard: String(data[i][4]).trim().toUpperCase() === 'Y'
+      });
+    }
+  }
+  return result;
+}
+
+/** 사용자 카드 목록 저장 (기존 행 덮어쓰기) */
+function _saveUserCards(knoxId, cards) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME.CARD_INFO);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME.CARD_INFO);
+    sheet.appendRow(['녹스ID', '카드번호', '별칭', '한도', '중식대여부']);
+  }
+  // 기존 행 삭제 (역순)
+  if (sheet.getLastRow() >= 2) {
+    var data = sheet.getDataRange().getValues();
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][0]).trim() === knoxId) sheet.deleteRow(i + 1);
+    }
+  }
+  // 새 행 추가
+  cards.forEach(function(c) {
+    sheet.appendRow([knoxId, c.cardNo, c.alias || '', c.limit || 0, c.isLunchCard ? 'Y' : 'N']);
+  });
+}
+
+/** 기존 설정 유지하며 새 카드만 추가 */
+function _mergeNewCards(knoxId, newCardNos) {
+  var existing = _getUserCards(knoxId);
+  var existingMap = {};
+  existing.forEach(function(c) { existingMap[c.cardNo] = c; });
+  var merged = existing.slice();
+  newCardNos.forEach(function(no) {
+    if (!existingMap[no]) {
+      merged.push({ cardNo: no, alias: '', limit: 0, isLunchCard: false });
+    }
+  });
+  if (merged.length > existing.length) {
+    _saveUserCards(knoxId, merged);
+  }
+  return merged;
+}
+
+/** 중식대 카드 자동 감지 (raw webank 내역에서 TRAN_KIND_NM 확인) */
+function _autoDetectLunchCard(webankCookies, cards) {
+  if (cards.length === 1) return { auto: true, lunchCardNo: cards[0].cardNo };
+
+  // 1개월 전부터 오늘까지 조회
+  var now = new Date();
+  var oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+  var fromDt = Utilities.formatDate(oneMonthAgo, 'Asia/Seoul', 'yyyyMMdd');
+  var toDt = Utilities.formatDate(now, 'Asia/Seoul', 'yyyyMMdd');
+
+  var payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+    PAGE_NO: '1', PAGE_SZ: '300',
+    APV_YN: 'A', PROC_STS: '', ORD_COL: 'APV_DT', ORD_MT: 'DESC',
+    BOX_CD: '0', SEARCH_NM: '',
+    FROM_APV_DT: fromDt, TO_APV_DT: toDt,
+    PAGE_URL_ADR: 'eusr_0001_01',
+    CNTS_IDNT_ID: 'CRD_MAGR_NEW', GB: 'R'
+  }));
+  var resp = UrlFetchApp.fetch('https://webank.appplay.co.kr/eusr_9001_01_r001.jct', {
+    method: 'post',
+    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+    headers: { 'User-Agent': BROWSER_UA, 'Cookie': webankCookies },
+    payload: payload, muteHttpExceptions: true
+  });
+  var body = resp.getContentText();
+  var data;
+  try { data = JSON.parse(body); } catch (e) { return { auto: false, candidates: cards }; }
+  if (!data.REC) return { auto: false, candidates: cards };
+
+  var cardNoSet = {};
+  cards.forEach(function(c) { cardNoSet[c.cardNo] = true; });
+  var lunchCardNos = {};
+  (data.REC || []).forEach(function(r) {
+    var kind = String(r.TRAN_KIND_NM || '');
+    var cardNo = String(r.CARD_NO || '');
+    if (kind.indexOf('중식대') >= 0 && cardNoSet[cardNo]) {
+      lunchCardNos[cardNo] = true;
+    }
+  });
+
+  var detected = Object.keys(lunchCardNos);
+  if (detected.length === 1) return { auto: true, lunchCardNo: detected[0] };
+  if (detected.length > 1) return { auto: false, candidates: detected.map(function(no) { return cards.find(function(c) { return c.cardNo === no; }) || { cardNo: no }; }) };
+  return { auto: false, candidates: cards };
+}
+
+/** 사용자카드정보 핸들러 (subAction 분기) */
+function handleCardInfo(adminRow, e) {
+  var knoxId = adminRow[ADMIN_COL.KNOX_ID];
+  var subAction = e.parameter.subAction || 'get';
+
+  if (subAction === 'get') {
+    return createResponse({ status: 'success', cards: _getUserCards(knoxId) });
+  }
+
+  if (subAction === 'register') {
+    // Bizplay 로그인 → webank 쿠키 → 카드 목록 추출
+    var propKey = 'bizplay_' + knoxId;
+    var rawSession = PropertiesService.getScriptProperties().getProperty(propKey);
+    if (!rawSession) return createResponse({ error: 'NO_SESSION', message: 'Bizplay 로그인이 필요해.' });
+    var session = JSON.parse(rawSession);
+    var webankCookies = session.webankCookies || '';
+    if (!webankCookies) {
+      var acquired = _acquireWebankCookies(session);
+      if (acquired.cookies) {
+        webankCookies = acquired.cookies;
+        session.webankCookies = webankCookies;
+        PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
+      }
+    }
+    if (!webankCookies) {
+      var reloginResult = _cardTryRelogin(adminRow, propKey);
+      if (reloginResult.webankCookies) webankCookies = reloginResult.webankCookies;
+    }
+    if (!webankCookies) return createResponse({ error: 'WEBANK_SSO_FAIL', message: 'webank 인증 실패' });
+
+    // 현재 기간 + 1개월전 내역에서 카드번호 추출
+    var result = _callWebankApi(webankCookies);
+    if (result.expired || result.error) return createResponse({ error: 'API_FAIL', message: '카드 내역 조회 실패' });
+
+    var cardNoSet = {};
+    (result.records || []).forEach(function(r) { if (r.cardNo) cardNoSet[r.cardNo] = true; });
+    var cardNos = Object.keys(cardNoSet);
+    if (cardNos.length === 0) return createResponse({ error: 'NO_CARDS', message: '카드 내역이 없어.' });
+
+    var cards = cardNos.map(function(no) { return { cardNo: no, alias: '', limit: 0, isLunchCard: false }; });
+
+    // 중식대 자동 감지
+    var detection = _autoDetectLunchCard(webankCookies, cards);
+    if (detection.auto) {
+      cards.forEach(function(c) { c.isLunchCard = c.cardNo === detection.lunchCardNo; });
+      _saveUserCards(knoxId, cards);
+      return createResponse({ status: 'success', cards: cards, autoDetected: true });
+    }
+    // 사용자 선택 필요
+    return createResponse({ status: 'needsChoice', candidates: detection.candidates, allCards: cards });
+  }
+
+  if (subAction === 'setLunchCard') {
+    var lunchCardNo = e.parameter.cardNo || '';
+    var cards = _getUserCards(knoxId);
+    if (cards.length === 0) return createResponse({ error: 'NO_CARDS' });
+    cards.forEach(function(c) { c.isLunchCard = c.cardNo === lunchCardNo; });
+    // 선택한 카드가 목록에 없으면 (register 직후 allCards에서 온 경우)
+    if (!cards.some(function(c) { return c.isLunchCard; })) {
+      return createResponse({ error: 'CARD_NOT_FOUND' });
+    }
+    _saveUserCards(knoxId, cards);
+    return createResponse({ status: 'success', cards: cards });
+  }
+
+  if (subAction === 'updateAlias') {
+    var cardNo = e.parameter.cardNo || '';
+    var alias = e.parameter.alias || '';
+    var cards = _getUserCards(knoxId);
+    var found = false;
+    cards.forEach(function(c) { if (c.cardNo === cardNo) { c.alias = alias; found = true; } });
+    if (!found) return createResponse({ error: 'CARD_NOT_FOUND' });
+    _saveUserCards(knoxId, cards);
+    return createResponse({ status: 'success', cards: cards });
+  }
+
+  if (subAction === 'updateLimit') {
+    var cardNo = e.parameter.cardNo || '';
+    var limit = Number(e.parameter.limit) || 0;
+    var cards = _getUserCards(knoxId);
+    var found = false;
+    cards.forEach(function(c) { if (c.cardNo === cardNo) { c.limit = limit; found = true; } });
+    if (!found) return createResponse({ error: 'CARD_NOT_FOUND' });
+    _saveUserCards(knoxId, cards);
+    return createResponse({ status: 'success', cards: cards });
+  }
+
+  if (subAction === 'refresh') {
+    var propKey = 'bizplay_' + knoxId;
+    var rawSession = PropertiesService.getScriptProperties().getProperty(propKey);
+    if (!rawSession) return createResponse({ error: 'NO_SESSION' });
+    var session = JSON.parse(rawSession);
+    var webankCookies = session.webankCookies || '';
+    if (!webankCookies) {
+      var acquired = _acquireWebankCookies(session);
+      if (acquired.cookies) webankCookies = acquired.cookies;
+    }
+    if (!webankCookies) return createResponse({ error: 'WEBANK_SSO_FAIL' });
+
+    var result = _callWebankApi(webankCookies);
+    if (result.expired || result.error) return createResponse({ error: 'API_FAIL' });
+    var cardNoSet = {};
+    (result.records || []).forEach(function(r) { if (r.cardNo) cardNoSet[r.cardNo] = true; });
+    var newCardNos = Object.keys(cardNoSet);
+    var merged = _mergeNewCards(knoxId, newCardNos);
+    return createResponse({ status: 'success', cards: merged });
+  }
+
+  // allCards 저장 (register에서 needsChoice 후 사용자가 선택 전 전체 카드 저장)
+  if (subAction === 'saveAllCards') {
+    var cardsJson = e.parameter.cards || '[]';
+    var cards;
+    try { cards = JSON.parse(cardsJson); } catch (pe) { return createResponse({ error: 'INVALID_JSON' }); }
+    _saveUserCards(knoxId, cards);
+    return createResponse({ status: 'success', cards: cards });
+  }
+
+  return createResponse({ error: 'INVALID_SUB_ACTION' });
+}
+
 /* ═══════════════ 밥카 알람 설정 ═══════════════ */
 
 /**
@@ -169,6 +395,16 @@ function _processAutoMode(knoxId, encPw, mode) {
       // 내역이 없으면 성공도 실패도 아님 — 알림만
       sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '카드 사용내역이 없거나 조회에 실패했어.'));
       return;
+    }
+
+    // 중식대 카드 필터링 (다중카드 대응)
+    var userCards = [];
+    try { userCards = _getUserCards(knoxId); } catch (uce) {}
+    var lunchCard = userCards.find(function(c) { return c.isLunchCard; });
+    if (lunchCard) {
+      rawResult.records = rawResult.records.filter(function(r) {
+        return String(r.CARD_NO || '') === lunchCard.cardNo;
+      });
     }
 
     // 교통비(티머니) 제외
@@ -633,6 +869,26 @@ function sendCardDailyBalance(data) {
     data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
   }
 
+  // 사용자카드정보 전체 로드 (한번에)
+  var allCardInfo = {};
+  try {
+    var ciSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.CARD_INFO);
+    if (ciSheet && ciSheet.getLastRow() >= 2) {
+      var ciData = ciSheet.getDataRange().getValues();
+      for (var ci = 1; ci < ciData.length; ci++) {
+        var kid = String(ciData[ci][0]).trim();
+        if (!kid) continue;
+        if (!allCardInfo[kid]) allCardInfo[kid] = [];
+        allCardInfo[kid].push({
+          cardNo: String(ciData[ci][1] || ''),
+          alias: String(ciData[ci][2] || ''),
+          limit: Number(ciData[ci][3]) || 0,
+          isLunchCard: String(ciData[ci][4]).trim().toUpperCase() === 'Y'
+        });
+      }
+    }
+  } catch (ciErr) {}
+
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
     var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
@@ -659,24 +915,60 @@ function sendCardDailyBalance(data) {
         continue;
       }
 
-      // 잔액 계산 (교통비 제외)
-      var usedSum = 0;
-      var usedCount = 0;
       var records = result.records || [];
-      records.forEach(function(r) {
-        var merchant = (r.merchant || '').trim();
-        if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
-        usedSum += Number(r.cost) || 0;
-        usedCount++;
-      });
+      var userCardsArr = allCardInfo[knoxId] || [];
 
-      // 예산 계산 (영업일 × 10000원)
-      var budget = _calcCardBudget();
-      var remain = budget - usedSum;
+      if (userCardsArr.length >= 2) {
+        // ── 다중카드: 카드별로 그룹핑 → 합산 메시지 ──
+        var lunchBudget = _calcCardBudget();
+        var byCard = {};
+        records.forEach(function(r) {
+          var cn = r.cardNo || 'unknown';
+          if (!byCard[cn]) byCard[cn] = { used: 0, count: 0 };
+          var merchant = (r.merchant || '').trim();
+          if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+          byCard[cn].used += Number(r.cost) || 0;
+          byCard[cn].count++;
+        });
 
-      var msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
-      sendFlowMsg(knoxId, msg);
-      Logger.log('[잔액알림] 발송 완료 - ' + knoxId + ': ' + msg);
+        var summaries = userCardsArr.map(function(c) {
+          var stats = byCard[c.cardNo] || { used: 0, count: 0 };
+          var cardBudget = c.isLunchCard ? lunchBudget : c.limit;
+          var last4 = c.cardNo.length >= 4 ? c.cardNo.substring(c.cardNo.length - 4) : c.cardNo;
+          var name = c.isLunchCard ? '밥카' : (c.alias ? c.alias + '(' + last4 + ')' : '카드(' + last4 + ')');
+          return {
+            name: name,
+            remain: cardBudget - stats.used,
+            used: stats.used,
+            hasLimit: c.isLunchCard || c.limit > 0,
+            isLunch: c.isLunchCard
+          };
+        });
+
+        var msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
+        sendFlowMsg(knoxId, msg);
+        Logger.log('[잔액알림] 다중카드 발송 - ' + knoxId);
+      } else {
+        // ── 기존 단일카드 로직 (하위호환) ──
+        var usedSum = 0;
+        var usedCount = 0;
+        // 중식대 카드 필터링
+        var lunchCard = userCardsArr.find(function(c) { return c.isLunchCard; });
+        records.forEach(function(r) {
+          if (lunchCard && r.cardNo !== lunchCard.cardNo) return;
+          var merchant = (r.merchant || '').trim();
+          if (TRANSPORT_KEYWORDS.some(function(k) { return merchant.indexOf(k) >= 0; })) return;
+          usedSum += Number(r.cost) || 0;
+          usedCount++;
+        });
+
+        var budget = _calcCardBudget();
+        var remain = budget - usedSum;
+
+        var msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
+        sendFlowMsg(knoxId, msg);
+        Logger.log('[잔액알림] 발송 완료 - ' + knoxId);
+      }
     } catch (ex) {
       Logger.log('[잔액알림] 예외 - ' + knoxId + ': ' + ex.message);
     }
@@ -790,6 +1082,7 @@ function handleCardRecords(adminRow, e) {
     // API 호출 (기간 파라미터 지원)
     var fromDt = e.parameter.fromDt || '';
     var toDt = e.parameter.toDt || '';
+    var filterCardNo = e.parameter.cardNo || ''; // 카드번호 필터
     var result = _callWebankApi(webankCookies, fromDt, toDt);
 
     if (result.expired) {
@@ -799,7 +1092,8 @@ function handleCardRecords(adminRow, e) {
       if (retry.webankCookies) {
         result = _callWebankApi(retry.webankCookies, fromDt, toDt);
         if (!result.expired && !result.error) {
-          return createResponse({ status: 'success', records: result.records, totalCount: result.totalCount });
+          var recs = filterCardNo ? result.records.filter(function(r) { return r.cardNo === filterCardNo; }) : result.records;
+          return createResponse({ status: 'success', records: recs, totalCount: recs.length });
         }
       }
       session.webankCookies = '';
@@ -811,7 +1105,8 @@ function handleCardRecords(adminRow, e) {
       return createResponse({ error: result.error, message: result.message });
     }
 
-    return createResponse({ status: 'success', records: result.records, totalCount: result.totalCount });
+    var records = filterCardNo ? result.records.filter(function(r) { return r.cardNo === filterCardNo; }) : result.records;
+    return createResponse({ status: 'success', records: records, totalCount: records.length });
   } catch (err) {
     return createResponse({ error: 'CARD_API_ERROR', message: err.message });
   }
@@ -913,7 +1208,7 @@ function _callWebankApi(webankCookies, fromDt, toDt) {
       cardNo: r.CARD_NO || '',
       txSeq: r.TX_SEQ || '',
       seq: r.SEQ || '',
-      address: r.MEST_ADDR || r.MEST_ADR || ''
+      address: ((r.MEST_ADDR_1 || '') + ' ' + (r.MEST_ADDR_2 || '')).trim()
     };
   });
 

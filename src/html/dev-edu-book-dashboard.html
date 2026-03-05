@@ -166,7 +166,15 @@ tailwind.config = {
         <button onclick="logout()" class="text-xs text-[#6e7f7b] border border-border rounded-lg px-3 py-1.5 hover:border-danger hover:text-danger transition">로그아웃</button>
       </div>
     </div>
-    <div class="max-w-2xl mx-auto px-5 flex overflow-x-auto scrollbar-hide">
+    <!-- 탭 스켈레톤 (로딩 중) -->
+    <div id="tabSkeleton" class="max-w-2xl mx-auto px-5 flex gap-2 py-2">
+      <div class="skeleton w-16 h-5 rounded"></div>
+      <div class="skeleton w-12 h-5 rounded"></div>
+      <div class="skeleton w-16 h-5 rounded"></div>
+      <div class="skeleton w-14 h-5 rounded"></div>
+    </div>
+    <!-- 실제 탭 (로딩 완료 후 표시) -->
+    <div id="tabBar" class="max-w-2xl mx-auto px-5 flex overflow-x-auto scrollbar-hide hidden">
       <button id="tabBtnEdu" onclick="switchTab('edu')"
         class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap">📚 교육비</button>
       <button id="tabBtnCard" onclick="switchTab('card')"
@@ -374,7 +382,7 @@ tailwind.config = {
               <span class="text-sm">&larr;</span> 돌아가기
             </button>
             <div class="text-sm font-semibold mb-1">교육 내역 선택</div>
-            <div class="text-xs text-[#6e7f7b] mb-4">선택하면 자동으로 폼이 채워져 (시작일은 오늘로 설정)</div>
+            <div class="text-xs text-[#6e7f7b] mb-4">선택하면 자동으로 폼이 채워져 </div>
             <div id="wizRecordList" class="space-y-2 max-h-64 overflow-y-auto"></div>
           </div>
 
@@ -407,7 +415,7 @@ tailwind.config = {
               <span class="text-sm">&larr;</span> 돌아가기
             </button>
             <div id="wizPanel5Title" class="text-sm font-semibold mb-1">서비스 선택</div>
-            <div class="text-xs text-[#6e7f7b] mb-4">자주 신청하는 서비스를 선택하면 내용이 자동으로 채워져<br>환율에 따라 금액이 변동될 수 있으니 결제 금액을 확인해줘</div>
+            <div class="text-xs text-[#6e7f7b] mb-4">자주 신청하는 서비스를 선택하면 내용이 자동으로 채워져<br>환율에 따라 금액이 변동될 수 있으니 결제 금액 확인해</div>
             <div id="wizTemplateList" class="space-y-2 max-h-64 overflow-y-auto"></div>
             <button onclick="wizardSelectTemplate(-1)"
               class="w-full mt-3 text-center text-sm text-accent font-semibold py-2.5 rounded-xl border border-accent/30 hover:bg-accent/5 transition">
@@ -440,9 +448,14 @@ tailwind.config = {
           <!-- 모바일: 카드 -->
           <div id="recordsCards" class="record-card p-3 space-y-3"></div>
           <div id="noRecords" class="hidden text-center py-10 text-[#6e7f7b] text-sm">
-            <img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">
+            <img src="../img/working.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">
             <div>신청 내역이 없어.</div>
             <button onclick="document.getElementById('wizardSection').scrollIntoView({behavior:'smooth',block:'start'})" class="mt-3 px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:brightness-110 transition">교육비 신청하러 가기 &rarr;</button>
+          </div>
+          <div id="recordsSkeleton" class="hidden p-3 space-y-3">
+            <div class="h-14 rounded-lg bg-border/40 animate-pulse"></div>
+            <div class="h-14 rounded-lg bg-border/30 animate-pulse" style="animation-delay:.15s"></div>
+            <div class="h-14 rounded-lg bg-border/20 animate-pulse" style="animation-delay:.3s"></div>
           </div>
         </div>
       </section>
@@ -550,13 +563,7 @@ tailwind.config = {
         <div id="noticeTitle" class="text-base font-bold text-[#2d3a37] mb-2 shrink-0"></div>
         <div id="noticeContent" class="text-sm text-[#4a5a56] leading-relaxed overflow-y-auto whitespace-pre-line min-h-0"></div>
         <div class="flex items-center justify-between mt-4 shrink-0">
-          <label class="flex items-center gap-2 cursor-pointer select-none group" onclick="toggleNoticeChk(event)">
-            <span class="relative flex items-center justify-center w-5 h-5 rounded-md border-2 border-[#b5c9c3] bg-white transition-all group-hover:border-accent" id="noticeChkBox">
-              <svg id="noticeChkIcon" class="w-3 h-3 text-white opacity-0 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-            </span>
-            <input type="checkbox" id="noticeDismissToday" class="sr-only" />
-            <span class="text-xs text-[#6e7f7b]">오늘 하루 안 보기</span>
-          </label>
+          <button onclick="dismissNoticeForever()" class="text-xs text-[#6e7f7b] underline underline-offset-2 cursor-pointer hover:text-accent transition">다시 안 보기</button>
           <button onclick="closeNotice()" class="px-4 py-2 text-sm font-semibold rounded-lg bg-accent text-white hover:brightness-110 transition cursor-pointer">확인</button>
         </div>
       </div>
@@ -589,12 +596,19 @@ window.switchTab = async function(tabId) {
   document.getElementById('bizplayContainer').classList.toggle('hidden', tabId !== 'edu');
 
   // 모듈 로딩 + 탭별 데이터 refresh
-  if (tabId === 'card' && window.fetchCardRecords) window.fetchCardRecords();
+  if (tabId === 'card') {
+    if (window.fetchCardRecords) window.fetchCardRecords();
+    else window._pendingCardFetch = true; // card 모듈 로드 후 실행
+  }
   if (tabId === 'draft') {
+    const msg = _getLoadingToast(true);
+    if (msg) showToast(msg, 'smail', null, { timeout: 8000 });
     await window._loadModule('edu-draft.html', 'draftContainer');
     if (window.fetchDraftList) window.fetchDraftList();
   }
   if (tabId === 'board') {
+    const msg = _getLoadingToast(true);
+    if (msg) showToast(msg, 'smail', null, { timeout: 8000 });
     await window._loadModule('edu-board.html', 'boardContainer');
     if (window.loadBoard) window.loadBoard();
   }
@@ -661,6 +675,39 @@ let records = [];
 let remainBudget = 0;
 let templates = [];
 let newWizPayType = '';
+
+/* ─── 로딩 토스트 메시지 (날씨 등 유용한 정보 또는 랜덤 문구) ─── */
+const _splashBase = [
+  "Actually, I'm not a big fan of purple",
+  'To our Eternal Leader, J. Song',
+  '난 비밀 사내커플을 알고 있다'
+];
+let _infoToasts = []; // 정보성: 주식, 날씨, 미세먼지, D-day
+let _newsToasts = []; // 뉴스 헤드라인
+let _shownInfo = [], _shownNews = [];
+let _lastCat = 'news'; // 마지막 카테고리 → 다음엔 반대쪽
+function _pickFrom(pool, shown) {
+  if (shown.length >= pool.length) shown.length = 0;
+  const rem = [];
+  for (let i = 0; i < pool.length; i++) { if (shown.indexOf(i) === -1) rem.push(i); }
+  const pick = rem[Math.floor(Math.random() * rem.length)];
+  shown.push(pick);
+  return pool[pick];
+}
+function _getLoadingToast(skipable) {
+  const hasInfo = _infoToasts.length > 0;
+  const hasNews = _newsToasts.length > 0;
+  if (skipable && !hasInfo && !hasNews && Math.random() < 0.5) return null;
+  // 정보도 뉴스도 없으면 하드코딩
+  if (!hasInfo && !hasNews) return _pickFrom(_splashBase, _shownInfo);
+  // 둘 다 있으면 번갈아
+  if (hasInfo && hasNews) {
+    _lastCat = (_lastCat === 'info') ? 'news' : 'info';
+    return _lastCat === 'info' ? _pickFrom(_infoToasts, _shownInfo) : _pickFrom(_newsToasts, _shownNews);
+  }
+  // 하나만 있으면 그것만
+  return hasInfo ? _pickFrom(_infoToasts, _shownInfo) : _pickFrom(_newsToasts, _shownNews);
+}
 
 /* ─── DOM ─── */
 const $ = id => document.getElementById(id);
@@ -938,44 +985,78 @@ async function loadDashboard() {
   showLoading();
 
   try {
-    const data = await gasFetch(`${API_URL}?token=${encodeURIComponent(token)}`);
+    // ── Phase 1: 빠른 기본 정보 ──
+    showToast(_getLoadingToast(), 'smail', null, { timeout: 8000 });
+    const p1 = await gasFetch(`${API_URL}?token=${encodeURIComponent(token)}&phase=1`);
 
-    if (data.error) {
-      if (data.error === 'UNAUTHORIZED' || data.error === 'INVALID_TOKEN' || data.error === 'TOKEN_EXPIRED') {
+    if (p1.error) {
+      if (p1.error === 'UNAUTHORIZED' || p1.error === 'INVALID_TOKEN' || p1.error === 'TOKEN_EXPIRED') {
         localStorage.removeItem(TOKEN_KEY);
         showAuth();
         return;
       }
-      throw new Error(data.error);
+      throw new Error(p1.error);
     }
 
-    userInfo = data.userInfo || {};
+    // Phase 1 데이터 적용 → 즉시 UI 표시
+    userInfo = p1.userInfo || {};
     window._isAdmin = userInfo.isAdmin || false;
-    records = data.myHistory || [];
-    templates = data.templates || [];
+    records = [];
+    if (userInfo.name) localStorage.setItem('user_first_char', userInfo.name.charAt(0));
 
-    // 서버에서 Bizplay 자동 세션 복원된 경우 localStorage에 저장
-    if (data.bizplaySession) {
-      localStorage.setItem('bizplay_session', JSON.stringify(data.bizplaySession));
-    }
-
-    renderDashboard();
-    await initCard(data);
-
-    $('loadingState').classList.add('hidden');
-    $('dashContent').classList.remove('hidden');
-    hideLoading();
+    // Phase 1 데이터만 저장 (기존 스켈레톤 유지, Phase 2 완료 후 전환)
     initIdleWatcher();
-    initBizplay();
-    showNoticeIfNeeded(data.notice);
-
-    // URL ?tab= 파라미터 또는 localStorage로 진입 시 해당 탭 전환
+    showNoticeIfNeeded(p1.notice);
     const urlTab = new URLSearchParams(location.search).get('tab');
     const initTab = urlTab || localStorage.getItem('init_tab') || 'edu';
     localStorage.removeItem('init_tab');
+
+    // ── Phase 2: 교육비 내역 + Bizplay + 모듈 로드 (병렬) ──
+    showToast(_getLoadingToast(), 'smail', null, { timeout: 0 });
+    const [p2] = await Promise.all([
+      gasFetch(`${API_URL}?token=${encodeURIComponent(token)}&phase=2`),
+      initCard(p1),
+      loadBizplayModule()
+    ]);
+
+    if (p2.error) {
+      if (p2.error === 'UNAUTHORIZED' || p2.error === 'INVALID_TOKEN' || p2.error === 'TOKEN_EXPIRED') {
+        localStorage.removeItem(TOKEN_KEY);
+        showAuth();
+        return;
+      }
+      throw new Error(p2.error);
+    }
+
+    // Phase 2 데이터 병합
+    userInfo.usedBudget = p2.usedBudget;
+    records = p2.myHistory || [];
+    templates = p2.templates || [];
+    if (p2.bizplaySession) {
+      localStorage.setItem('bizplay_session', JSON.stringify(p2.bizplaySession));
+    }
+    // 정보 토스트 등록 — 우선순위순 (이후 탭 전환 시 랜덤 표시)
+    if (p2.stockInfo) _infoToasts.push(p2.stockInfo);
+    if (p2.weatherAlert) _infoToasts.push(p2.weatherAlert);
+    if (p2.airQuality) _infoToasts.push(p2.airQuality);
+    if (p2.ddayInfo) p2.ddayInfo.forEach(function(m) { _infoToasts.push(m); });
+    if (p2.weatherNow) _infoToasts.push(p2.weatherNow);
+    if (p2.newsHeadlines) p2.newsHeadlines.forEach(function(m) { _newsToasts.push(m); });
+
+    // 스켈레톤 → 실제 대시보드 전환
+    renderDashboard();
+    $('loadingState').classList.add('hidden');
+    $('dashContent').classList.remove('hidden');
+    $('tabSkeleton').classList.add('hidden');
+    $('tabBar').classList.remove('hidden');
+    hideLoading();
     switchTab(initTab);
+
   } catch (e) {
     $('loadingState').classList.add('hidden');
+    $('dashContent').classList.remove('hidden');
+    $('tabSkeleton').classList.add('hidden');
+    $('tabBar').classList.remove('hidden');
     $('errorState').classList.remove('hidden');
     $('errorMsg').textContent = e.message || '데이터를 불러올 수 없어.';
     hideLoading();
@@ -988,9 +1069,7 @@ let _noticeId = null;
 function showNoticeIfNeeded(notice) {
   if (!notice || !notice.id) return;
   _noticeId = notice.id;
-  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const dismissKey = 'notice_dismiss_' + notice.id;
-  if (localStorage.getItem(dismissKey) === today) return;
+  if (localStorage.getItem('notice_dismiss_' + notice.id)) return;
 
   $('noticeTitle').textContent = notice.title || '';
   $('noticeContent').textContent = notice.content || '';
@@ -1004,29 +1083,19 @@ function showNoticeIfNeeded(notice) {
     $('noticeImage').style.display = 'none';
     card.style.background = 'linear-gradient(135deg, #f1faf7 0%, #fff7ee 50%, #f5f0ff 100%)';
   }
-  $('noticeDismissToday').checked = false;
-  $('noticeChkBox').classList.remove('bg-accent','border-accent'); $('noticeChkBox').classList.add('bg-white','border-[#b5c9c3]');
-  $('noticeChkIcon').classList.replace('opacity-100','opacity-0');
   $('noticeBox').style.display = '';
 }
 
-function toggleNoticeChk(e) {
-  e.preventDefault();
-  const c = $('noticeDismissToday');
-  c.checked = !c.checked;
-  const b = $('noticeChkBox'), i = $('noticeChkIcon');
-  if (c.checked) { b.classList.add('bg-accent','border-accent'); b.classList.remove('bg-white','border-[#b5c9c3]'); i.classList.replace('opacity-0','opacity-100'); }
-  else { b.classList.remove('bg-accent','border-accent'); b.classList.add('bg-white','border-[#b5c9c3]'); i.classList.replace('opacity-100','opacity-0'); }
+function dismissNoticeForever() {
+  if (!_noticeId) return;
+  localStorage.setItem('notice_dismiss_' + _noticeId, '1');
+  $('noticeBox').style.display = 'none';
 }
 
 function closeNotice() {
-  if ($('noticeDismissToday').checked && _noticeId) {
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    localStorage.setItem('notice_dismiss_' + _noticeId, today);
-  }
   $('noticeBox').style.display = 'none';
 }
-window.toggleNoticeChk = toggleNoticeChk;
+window.dismissNoticeForever = dismissNoticeForever;
 window.closeNotice = closeNotice;
 
 /* ═══════════════ 렌더링 ═══════════════ */
@@ -1038,6 +1107,22 @@ function renderDashboard() {
   // 관리자 버튼
   const adminLink = $('adminLink');
   if (adminLink) adminLink.classList.toggle('hidden', !userInfo.isAdmin);
+
+  // Phase 1 로딩 상태: usedBudget이 null이면 아직 교육비 내역 미로드
+  if (userInfo.usedBudget == null) {
+    $('usedAmount').textContent = '---';
+    $('usedSub').textContent = '불러오는 중...';
+    $('remainAmount').textContent = '---';
+    $('barDone').style.width = '0%';
+    $('barPend').style.width = '0%';
+    setAlarmBtnState(!!userInfo.isAgreed);
+    // 스켈레톤 표시 (내역 로딩 중)
+    $('recordsTable').parentElement.style.display = 'none';
+    $('recordsCards').style.display = 'none';
+    $('noRecords').classList.add('hidden');
+    $('recordsSkeleton').classList.remove('hidden');
+    return;
+  }
 
   // 금액 계산 — API에서 확정(완료) 금액을 제공, 나머지는 레코드에서 계산
   const confirmedSum = userInfo.usedBudget || 0;
@@ -1081,6 +1166,7 @@ function renderRecords() {
   const cards = $('recordsCards');
   body.innerHTML = '';
   cards.innerHTML = '';
+  $('recordsSkeleton').classList.add('hidden'); // 스켈레톤 숨김
 
   if (records.length === 0) {
     $('recordsTable').parentElement.style.display = 'none';
@@ -1382,16 +1468,18 @@ function showToast(msg, mood, anchorEl, opts) {
   });
 
   clearTimeout(msgBoxTimer);
-  if (!opts.dismiss) {
+  const _t = opts.timeout != null ? opts.timeout : 2800;
+  if (!opts.dismiss && _t > 0) {
     msgBoxTimer = setTimeout(() => {
       box.classList.remove('opacity-100');
       box.classList.add('opacity-0');
       box.style.transform = 'scale(.9)';
       setTimeout(() => { box.style.display = 'none'; }, 300);
-    }, 2800);
+    }, _t);
   }
 }
 window.showToast = showToast;
+window._getLoadingToast = _getLoadingToast;
 
 function dismissToast() {
   const box = $('msgBox');
@@ -1679,10 +1767,9 @@ async function initCard(data) {
     wait += 50;
   }
   if (window.initCardModule) window.initCardModule(data);
-  // ?tab=card 직접 진입 시 바로 데이터 조회
-  const urlTab = new URLSearchParams(location.search).get('tab');
-  const savedTab = localStorage.getItem('init_tab');
-  if ((urlTab === 'card' || savedTab === 'card') && window.fetchCardRecords) {
+  // 지연된 카드 조회 실행 (switchTab('card')가 먼저 호출된 경우)
+  if (window._pendingCardFetch && window.fetchCardRecords) {
+    delete window._pendingCardFetch;
     window.fetchCardRecords();
   }
 }
@@ -1722,9 +1809,15 @@ function setHeaderIcon(state) {
 }
 
 function showLoading() { isLoading = true; clearTimeout(idleTimer); setHeaderIcon('loading'); }
-function hideLoading() { isLoading = false; resetIdleTimer(); }
+function hideLoading() { isLoading = false; resetIdleTimer(); hideToast(); }
+function hideToast() {
+  clearTimeout(msgBoxTimer);
+  const box = $('msgBox');
+  if (box) { box.classList.remove('opacity-100'); box.classList.add('opacity-0'); box.style.transform = 'scale(.9)'; setTimeout(() => { box.style.display = 'none'; }, 300); }
+}
 window.showLoading = showLoading;
 window.hideLoading = hideLoading;
+window.hideToast = hideToast;
 
 function showDance() { if (!isLoading) setHeaderIcon('dance'); }
 function showSmail() { if (!isLoading) setHeaderIcon('smail'); }
