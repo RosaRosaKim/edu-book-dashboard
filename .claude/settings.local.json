@@ -44,7 +44,8 @@
       "Bash(where jadx:*)",
       "Bash(xargs grep:*)",
       "Bash(grep:*)",
-      "WebFetch(domain:emplinfo.appplay.co.kr)"
+      "WebFetch(domain:emplinfo.appplay.co.kr)",
+      "WebFetch(domain:query1.finance.yahoo.com)"
     ]
   }
 }
