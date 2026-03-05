@@ -28,7 +28,7 @@ var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 
 /** 교통비 제외 키워드 */
-var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스'];
+var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
 
 /* ═══════════════ 밥카 알람 설정 ═══════════════ */
 
