@@ -954,6 +954,7 @@ function sendCardDailyBalance(data) {
         });
 
         var msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
+        if (_resendNotice) msg.content += _resendNotice;
         sendFlowMsg(knoxId, msg);
         Logger.log('[잔액알림] 다중카드 발송 - ' + knoxId);
       } else {
@@ -973,12 +974,25 @@ function sendCardDailyBalance(data) {
         var remain = budget - usedSum;
 
         var msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
+        if (_resendNotice) msg.content += _resendNotice;
         sendFlowMsg(knoxId, msg);
         Logger.log('[잔액알림] 발송 완료 - ' + knoxId);
       }
     } catch (ex) {
       Logger.log('[잔액알림] 예외 - ' + knoxId + ': ' + ex.message);
     }
+  }
+}
+
+var _resendNotice = '';
+
+/** 잔액알림 수동 재발송 (하단 안내문 포함, GAS 에디터에서 직접 실행) */
+function resendCardDailyBalance() {
+  _resendNotice = '\n\n⚠️ 교통비 집계 오류로 재발송된 알림입니다.';
+  try {
+    sendCardDailyBalance();
+  } finally {
+    _resendNotice = '';
   }
 }
 
