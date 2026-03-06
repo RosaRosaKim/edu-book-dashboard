@@ -45,7 +45,8 @@
       "Bash(xargs grep:*)",
       "Bash(grep:*)",
       "WebFetch(domain:emplinfo.appplay.co.kr)",
-      "WebFetch(domain:query1.finance.yahoo.com)"
+      "WebFetch(domain:query1.finance.yahoo.com)",
+      "Bash(openssl rand:*)"
     ]
   }
 }

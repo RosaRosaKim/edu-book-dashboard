@@ -1537,7 +1537,7 @@ function _tryEmplSearch(cookies, searchWord, debug, prefix, domain) {
 
 /**
  * Bizplay 사원 검색 프록시
- * action=bizplaySearchUser&token={UUID}&searchWord={이름}
+ * action=bizplaySearchUser&token={knoxId:hash}&searchWord={이름}
  *
  * 전략 순서:
  * A) approval 도메인에서 직접 com_empl_r002.jct 호출

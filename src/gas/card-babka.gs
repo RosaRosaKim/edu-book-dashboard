@@ -271,7 +271,7 @@ function handleCardInfo(adminRow, e) {
 
 /**
  * 밥카 알람 수신 동의/해제
- * action=updateCardAlarm&token={UUID}&isAgreed={true/false}
+ * action=updateCardAlarm&token={knoxId:hash}&isAgreed={true/false}
  */
 function handleUpdateCardAlarm(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -287,7 +287,7 @@ function handleUpdateCardAlarm(adminRow, e) {
 
 /**
  * 밥카 자동결재 모드 변경
- * action=updateCardAutoMode&token={UUID}&mode={off|alarm|draft|submit}
+ * action=updateCardAutoMode&token={knoxId:hash}&mode={off|alarm|draft|submit}
  */
 function handleUpdateCardAutoMode(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -300,11 +300,15 @@ function handleUpdateCardAutoMode(adminRow, e) {
   }
 
   var adminData = mgmtSheet.getDataRange().getValues();
-  var rowIndex = -1;
-  for (var i = 0; i < adminData.length; i++) {
-    if (adminData[i][ADMIN_COL.UUID] === e.parameter.token) { rowIndex = i; break; }
-  }
-  if (rowIndex === -1) return createResponse({ error: 'UNAUTHORIZED' });
+  var adminByKnoxId = new Map();
+  adminData.forEach(function(row, idx) {
+    if (idx === 0) return;
+    var kid = String(row[ADMIN_COL.KNOX_ID]).trim();
+    if (kid) adminByKnoxId.set(kid, { row: row, idx: idx });
+  });
+  var entry = _verifyToken(e.parameter.token, adminByKnoxId);
+  if (!entry) return createResponse({ error: 'UNAUTHORIZED' });
+  var rowIndex = entry.idx;
 
   // draft/submit은 PW 필수
   if (mode === 'draft' || mode === 'submit') {
@@ -1059,7 +1063,7 @@ function _fmtMoney(n) {
 
 /**
  * 밥카(법인카드) 사용내역 조회
- * action=cardRecords&token={UUID}
+ * action=cardRecords&token={knoxId:hash}
  *
  * Bizplay SSO 세션 → webank 인증 → 카드 사용내역 API 호출
  */
@@ -1380,7 +1384,7 @@ function _followRdmKey(gateUrl, rdmKey, debug) {
 
 /**
  * 밥카 결재 올리기 (USER_NO_REC 제출)
- * action=cardApproval&token={UUID}&selectedRecords={JSON}
+ * action=cardApproval&token={knoxId:hash}&selectedRecords={JSON}
  *
  * 1. eapr_1001_01.act 페이지 GET → 사용자 정보 파싱
  * 2. USER_NO_REC 구성
@@ -1841,7 +1845,7 @@ function ensureRatingSheet(ss) {
 
 /**
  * 전체 좋아요/싫어요 집계 + 내 평가 반환
- * action=cardRatings&token={UUID}
+ * action=cardRatings&token={knoxId:hash}
  */
 function handleCardRatings(adminRow, e) {
   var knoxId = String(adminRow[ADMIN_COL.KNOX_ID]);
@@ -1878,7 +1882,7 @@ function handleCardRatings(adminRow, e) {
 
 /**
  * 좋아요/싫어요 저장/수정
- * action=cardRate&token={UUID}&merchant={name}&rating={1=좋아요, 0=싫어요}
+ * action=cardRate&token={knoxId:hash}&merchant={name}&rating={1=좋아요, 0=싫어요}
  */
 function handleCardRate(adminRow, e) {
   var knoxId = String(adminRow[ADMIN_COL.KNOX_ID]);

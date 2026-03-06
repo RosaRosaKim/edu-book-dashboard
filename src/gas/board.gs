@@ -5,7 +5,7 @@ const BOARD_COL = { ID: 0, CONTENT: 1, DATE: 2, LIKES: 3, DISLIKES: 4, REPLY: 5,
  * 게시판 목록 조회
  */
 function handleBoardList(adminRow, e) {
-  const token = adminRow[ADMIN_COL.UUID];
+  const token = String(adminRow[ADMIN_COL.KNOX_ID]);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'success', posts: [] });
@@ -60,7 +60,7 @@ function handleBoardWrite(adminRow, e) {
  * 게시판 좋아요/싫어요 토글
  */
 function handleBoardReact(adminRow, e) {
-  const token = adminRow[ADMIN_COL.UUID];
+  const token = String(adminRow[ADMIN_COL.KNOX_ID]);
   const postId = e.parameter.postId;
   const type = e.parameter.type;
   if (!postId || !type || (type !== 'like' && type !== 'dislike')) {

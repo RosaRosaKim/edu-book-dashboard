@@ -1,11 +1,3 @@
-// [메뉴] 스프레드시트 열 때 커스텀 메뉴 추가
-function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('관리 도구')
-    .addItem('UUID 자동채번', 'generateExistingUUIDs')
-    .addToUi();
-}
-
 // [설정] 시트 이름과 컬럼 인덱스
 const LIMIT_BUDGET = 500000;
 const SHEET_NAME = {
@@ -29,8 +21,28 @@ const BOOK_COL = {
 function colFor(row) { return row._reqType === '도서' ? BOOK_COL : DATA_COL; }
 
 const ADMIN_COL = {
-  KNOX_ID: 0, AGREE: 1, UUID: 2, LAST_LOGIN: 3, DEPT: 4, NAME: 5, BIZPLAY_ID: 8  // I열 = index 8
+  KNOX_ID: 0, AGREE: 1, LAST_LOGIN: 3, DEPT: 4, NAME: 5, BIZPLAY_ID: 8  // I열 = index 8
 };
+
+/** knoxId + 암호화PW + salt 기반 토큰 생성 */
+function _generateToken(knoxId, encPw) {
+  const salt = PropertiesService.getScriptProperties().getProperty('TOKEN_SALT') || '';
+  const raw = knoxId + ':' + (encPw || '') + ':' + salt;
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw)
+    .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+  return knoxId + ':' + hash;
+}
+
+/** 토큰 검증 → 일치하면 { row, idx } 반환, 아니면 null */
+function _verifyToken(token, adminByKnoxId) {
+  if (!token || token.indexOf(':') === -1) return null;
+  var knoxId = token.substring(0, token.indexOf(':'));
+  var entry = adminByKnoxId.get(knoxId);
+  if (!entry) return null;
+  var encPw = String(entry.row[7] || '');
+  var expected = _generateToken(knoxId, encPw);
+  return token === expected ? entry : null;
+}
 
 /**
  * 웹 요청 처리 (교육/도서 병합 및 AI 3컬럼 분류 반영)
@@ -48,16 +60,13 @@ const doGet = (e) => {
 
   const adminData = adminSheet.getDataRange().getValues();
 
-  // ── O(1) 룩업용 Map 구축 (adminData.find() 26회 → Map.get()) ──
-  const adminByUUID = new Map();
+  // ── O(1) 룩업용 Map 구축 ──
   const adminByKnoxId = new Map();
   const adminByBizplayId = new Map();
   adminData.forEach((row, idx) => {
     if (idx === 0) return;
-    const uuid = row[ADMIN_COL.UUID];
     const kid = String(row[ADMIN_COL.KNOX_ID]).trim();
     const bid = String(row[ADMIN_COL.BIZPLAY_ID] || '').trim();
-    if (uuid) adminByUUID.set(uuid, { row, idx });
     if (kid) adminByKnoxId.set(kid, { row, idx });
     if (bid) adminByBizplayId.set(bid, { row, idx });
   });
@@ -68,7 +77,7 @@ const doGet = (e) => {
 
   // [기능 4] 관리자 → 사용자에게 잔액 정보 Flow 발송
   if (action === "sendBalanceInfo" && token && e.parameter.targetKnoxId) {
-    const entry = adminByUUID.get(token);
+    const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     const adminRow = entry.row;
 
@@ -98,7 +107,7 @@ const doGet = (e) => {
 
   // [기능 5] 알람 수신 동의 변경
   if (action === "updateAlarm" && token) {
-    const entry = adminByUUID.get(token);
+    const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     const rowIndex = entry.idx;
 
@@ -109,7 +118,7 @@ const doGet = (e) => {
 
   // [기능 8] 밥카 알람 수신 동의 변경
   if (action === "updateCardAlarm" && token) {
-    const entry = adminByUUID.get(token);
+    const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     const rowIndex = entry.idx;
 
@@ -120,7 +129,7 @@ const doGet = (e) => {
 
   // [기능 15] 밥카 자동결재 모드 변경
   if (action === "updateCardAutoMode" && token) {
-    const entry = adminByUUID.get(token);
+    const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     return handleUpdateCardAutoMode(entry.row, e);
   }
@@ -169,8 +178,6 @@ const doGet = (e) => {
     // 3) 매핑 있음 → 해당 행의 Knox ID로 세션 생성
     const knoxId = adminData[mappedRowIndex][ADMIN_COL.KNOX_ID];
     const row = adminData[mappedRowIndex];
-    const uuid = row[ADMIN_COL.UUID] || Utilities.getUuid();
-    adminSheet.getRange(mappedRowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
 
     var sessionData = {
       bizplayCookies: result.bizplayCookies,
@@ -191,15 +198,17 @@ const doGet = (e) => {
 
     // 비밀번호 저장 (잔액알림 등에 활용)
     const savePw = e.parameter.savePw;
+    var savedEncPw = '';
     if (savePw === 'true') {
-      adminSheet.getRange(mappedRowIndex + 1, 8).setValue(_encryptPw(bizPwd)); // H열: Bizplay PW
+      savedEncPw = _encryptPw(bizPwd);
+      adminSheet.getRange(mappedRowIndex + 1, 8).setValue(savedEncPw); // H열: Bizplay PW
     } else {
       adminSheet.getRange(mappedRowIndex + 1, 8).setValue(''); // H열 클리어 (자동로그인 해제)
     }
 
     return createResponse({
       status: 'success',
-      token: uuid,
+      token: _generateToken(knoxId, savedEncPw),
       userName: result.userName,
       ssoComplete: result.ssoComplete,
       session: {
@@ -285,14 +294,6 @@ const doGet = (e) => {
       adminSheet.getRange(rowIndex + 1, ADMIN_COL.BIZPLAY_ID + 1).setValue(bizplayId);
     }
 
-    // adminData 새로 읽기 (행 추가 후)
-    const freshAdminData = adminSheet.getDataRange().getValues();
-    const adminRow = freshAdminData[rowIndex];
-
-    // UUID 발급
-    const uuid = adminRow[ADMIN_COL.UUID] || Utilities.getUuid();
-    adminSheet.getRange(rowIndex + 1, ADMIN_COL.UUID + 1).setValue(uuid);
-
     // Bizplay 세션: temp → 정식 이동
     const props = PropertiesService.getScriptProperties();
     const tempRaw = props.getProperty('bizplay_temp_' + bizplayId);
@@ -304,15 +305,17 @@ const doGet = (e) => {
     // 비밀번호 저장
     const savePw = e.parameter.savePw;
     const bizPwd = e.parameter.bizPwd;
+    var verifyEncPw = '';
     if (savePw === 'true' && bizPwd) {
-      adminSheet.getRange(rowIndex + 1, 8).setValue(_encryptPw(bizPwd)); // H열
+      verifyEncPw = _encryptPw(bizPwd);
+      adminSheet.getRange(rowIndex + 1, 8).setValue(verifyEncPw); // H열
     }
 
     // 세션 정보 구성
     const tempSession = tempRaw ? JSON.parse(tempRaw) : {};
     return createResponse({
       status: 'success',
-      token: uuid,
+      token: _generateToken(knoxId, verifyEncPw),
       userName: tempSession.userName || '',
       session: {
         userId: tempSession.userId || (bizplayId + '@emro.co.kr'),
@@ -346,14 +349,14 @@ const doGet = (e) => {
     boardPin: (row, ev) => handleBoardPin(row, ev, managerSet)
   };
   if (TOKEN_ACTIONS[action] && token) {
-    const entry = adminByUUID.get(token);
+    const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     return TOKEN_ACTIONS[action](entry.row, e);
   }
 
   // [기능 3] 통합 데이터 조회
   if (token) {
-    const entry = adminByUUID.get(token);
+    const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     const adminRow = entry.row;
 
