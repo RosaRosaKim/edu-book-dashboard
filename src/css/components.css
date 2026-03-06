@@ -1,3 +1,26 @@
+/* ═══════ 레인보우 보더 ═══════ */
+@keyframes rainbow-spin { to { --rainbow-angle: 360deg; } }
+@property --rainbow-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.rainbow-border {
+  position: relative;
+  border: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+.rainbow-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--rainbow-angle), #f8717188, #fbbf2488, #34d39988, #60a5fa88, #a78bfa88, #f472b688, #f8717188);
+  animation: rainbow-spin 4s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
 /* ═══════ 애니메이션 ═══════ */
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .fade-in { animation: fadeIn .35s ease; }

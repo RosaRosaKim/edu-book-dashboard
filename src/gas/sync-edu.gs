@@ -262,6 +262,9 @@ function _writeEduRows(ss, newRows) {
 function _sendCompletionFlow(ss, reqType, completedDocs) {
   if (!completedDocs || completedDocs.length === 0) return 0;
 
+  // 문서번호 오름차순 정렬 (인사-2026-0001 → 인사-2026-9999)
+  completedDocs.sort(function(a, b) { return a.docNo < b.docNo ? -1 : a.docNo > b.docNo ? 1 : 0; });
+
   // Flow자동발송이력 시트에서 기존 발송 문서번호 Set
   var historySheet = ss.getSheetByName(SHEET_NAME_HISTORY);
   if (!historySheet) {
