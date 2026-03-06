@@ -718,7 +718,7 @@ function _pickFrom(pool, shown) {
 function _getLoadingToast(skipable) {
   const hasInfo = _infoToasts.length > 0;
   const hasNews = _newsToasts.length > 0;
-  if (skipable && !hasInfo && !hasNews && Math.random() < 0.5) return null;
+  if (skipable && Math.random() < 0.5) return null;
   // 정보도 뉴스도 없으면 하드코딩
   if (!hasInfo && !hasNews) return _pickFrom(_splashBase, _shownInfo);
   // 둘 다 있으면 번갈아
@@ -1007,7 +1007,7 @@ async function loadDashboard() {
 
   try {
     // ── Phase 1: 빠른 기본 정보 ──
-    showToast(_getLoadingToast(), 'smail', null, { timeout: 8000 });
+    showToast(_getLoadingToast(), 'smail', null, { timeout: 0 });
     const p1 = await gasFetch(`${API_URL}?token=${encodeURIComponent(token)}&phase=1`);
 
     if (p1.error) {
@@ -1033,7 +1033,6 @@ async function loadDashboard() {
     localStorage.removeItem('init_tab');
 
     // ── Phase 2: 교육비 내역 + Bizplay + 모듈 로드 (병렬) ──
-    showToast(_getLoadingToast(), 'smail', null, { timeout: 0 });
     const [p2] = await Promise.all([
       gasFetch(`${API_URL}?token=${encodeURIComponent(token)}&phase=2`),
       initCard(p1),

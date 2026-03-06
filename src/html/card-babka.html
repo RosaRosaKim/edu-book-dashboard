@@ -1074,28 +1074,26 @@
       });
     }
 
-    // ── 밥카 전용 섹션 표시/숨김 ──
-    const lunchSection = $('cardLunchOnlySection');
-    if (lunchSection) lunchSection.classList.toggle('hidden', !isLunchCard);
+    // ── 밥카 전용 섹션 전체 표시/숨김 (알람 토글 + 자동결재 + 결재) ──
+    const autoModeSection = $('cardAutoModeSection');
+    if (autoModeSection) autoModeSection.classList.toggle('hidden', !isLunchCard);
 
-    // 알림 설명 텍스트: 밥카=전체, 비밥카=평일 잔액만
-    const alarmDesc = $('cardAlarmDesc');
-    if (alarmDesc) alarmDesc.textContent = isLunchCard ? '평일 잔액, 미결재 리마인드, 초과환불 알림' : '평일 잔액 알림';
-
-    setCardAlarmBtnState(cardAlarmOn);
-    if (isLunchCard) renderAutoModeOptions();
-    // PW 미저장 시 토글 비활성화 + 안내 표시
-    const toggle = $('cardAlarmToggle');
-    const items = $('cardAlarmItems');
-    const guide = $('cardNoPwGuide');
-    if (!hasBizplayPw) {
-      if (toggle) { toggle.disabled = true; toggle.style.opacity = '0.35'; toggle.style.cursor = 'not-allowed'; }
-      if (items) items.style.opacity = '0.4';
-      if (guide) guide.classList.remove('hidden');
-    } else {
-      if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; toggle.style.cursor = 'pointer'; }
-      if (items) items.style.opacity = '1';
-      if (guide) guide.classList.add('hidden');
+    if (isLunchCard) {
+      setCardAlarmBtnState(cardAlarmOn);
+      renderAutoModeOptions();
+      // PW 미저장 시 토글 비활성화 + 안내 표시
+      const toggle = $('cardAlarmToggle');
+      const items = $('cardAlarmItems');
+      const guide = $('cardNoPwGuide');
+      if (!hasBizplayPw) {
+        if (toggle) { toggle.disabled = true; toggle.style.opacity = '0.35'; toggle.style.cursor = 'not-allowed'; }
+        if (items) items.style.opacity = '0.4';
+        if (guide) guide.classList.remove('hidden');
+      } else {
+        if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; toggle.style.cursor = 'pointer'; }
+        if (items) items.style.opacity = '1';
+        if (guide) guide.classList.add('hidden');
+      }
     }
 
     // ── "남은 잔액" 라벨 변경 (비밥카 + 한도없음) ──
@@ -1280,6 +1278,9 @@
     const el = $('cardAlarmToggle');
     const isOn = el.dataset.on === '1';
     if (_cardAlarmLoading || newVal === isOn) return;
+    // 비밥카에서는 변경 불가
+    const cur = userCards.find(c => c.cardNo === selectedCardNo);
+    if (cur && cur.isLunchCard === false) return;
 
     _cardAlarmLoading = true;
     setCardAlarmBtnState(newVal);
@@ -1583,6 +1584,7 @@
     cardRecords = [];
     cardCurrentRecords = [];
     cardStatsCache = null;
+    cardStatsSelectedMonth = null;
     cardFetchState = 'idle';
     fetchCardRecords(true);
   };
