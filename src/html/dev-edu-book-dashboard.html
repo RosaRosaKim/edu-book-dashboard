@@ -98,6 +98,20 @@ tailwind.config = {
       </button>
     </div>
 
+    <!-- 관리자 자동 로그인 + 동기화 -->
+    <div class="mt-4 pt-4 border-t border-border">
+      <button onclick="adminAutoLogin()" id="adminLoginBtn"
+        class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        관리자 자동 로그인
+      </button>
+      <button onclick="adminSyncEdu()" id="adminSyncBtn"
+        class="hidden w-full mt-2 py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        교육신청서 동기화
+      </button>
+      <div id="adminLoginError" class="text-danger text-xs mt-2 hidden"></div>
+      <div id="adminLoginSuccess" class="text-edu text-xs mt-2 hidden"></div>
+    </div>
+
     <!-- Flow 인증 단계 (최초 1회, Bizplay ID ↔ Knox ID 매핑) -->
     <div id="authFlowVerify" class="hidden">
       <div class="space-y-2 mb-3">
@@ -842,6 +856,63 @@ function showDashboard() {
   $('authScreen').classList.add('hidden');
   $('dashboard').classList.remove('hidden');
 }
+
+/* ═══════════════ 관리자 자동 로그인 ═══════════════ */
+window.adminAutoLogin = async function() {
+  const btn = $('adminLoginBtn');
+  setBtnLoading(btn, true, '로그인 중...');
+  $('adminLoginError').classList.add('hidden');
+  $('adminLoginSuccess').classList.add('hidden');
+
+  try {
+    const url = `${API_URL}?action=adminAutoLogin`;
+    const data = await gasFetch(url);
+
+    if (data.status === 'success' && data.token) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem('auth_method', 'admin');
+      const el = $('adminLoginSuccess');
+      el.textContent = '로그인 성공! ' + (data.userName || '') + ' (' + (data.knoxId || '') + ')';
+      el.classList.remove('hidden');
+      $('adminSyncBtn').classList.remove('hidden');
+    } else {
+      const el = $('adminLoginError');
+      let msg = data.message || data.error || '로그인 실패';
+      if (data.debug) msg += '\n[ID: ' + (data.debug.bizUserId || '') + ', Knox: ' + (data.debug.knoxId || '') + ']';
+      el.textContent = msg;
+      el.style.whiteSpace = 'pre-line';
+      el.classList.remove('hidden');
+    }
+  } catch (err) {
+    const el = $('adminLoginError');
+    el.textContent = '네트워크 오류: ' + err.message;
+    el.classList.remove('hidden');
+  } finally {
+    setBtnLoading(btn, false, '관리자 자동 로그인');
+  }
+};
+
+window.adminSyncEdu = async function() {
+  const btn = $('adminSyncBtn');
+  setBtnLoading(btn, true, '동기화 중...');
+  $('adminLoginError').classList.add('hidden');
+  $('adminLoginSuccess').classList.add('hidden');
+
+  try {
+    const url = `${API_URL}?action=adminSyncEdu`;
+    const data = await gasFetch(url);
+
+    const el = data.status === 'success' ? $('adminLoginSuccess') : $('adminLoginError');
+    el.textContent = data.message || data.error || '동기화 실패';
+    el.classList.remove('hidden');
+  } catch (err) {
+    const el = $('adminLoginError');
+    el.textContent = '네트워크 오류: ' + err.message;
+    el.classList.remove('hidden');
+  } finally {
+    setBtnLoading(btn, false, '교육신청서 동기화');
+  }
+};
 
 /* ═══════════════ Bizplay 로그인 ═══════════════ */
 // Flow 인증용 임시 저장

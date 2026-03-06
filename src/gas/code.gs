@@ -76,6 +76,21 @@ const doGet = (e) => {
   const managerData = managerSheet.getDataRange().getValues();
   const managerSet = new Set(managerData.slice(1).map(row => String(row[0]).trim().toLowerCase()));
 
+  // [기능 16] 관리자 자동 로그인 → sync-edu.gs
+  if (action === "adminAutoLogin") {
+    return handleAdminAutoLogin(managerData, managerSheet, adminByKnoxId);
+  }
+
+  // [기능 17] 교육신청서 동기화 → sync-edu.gs
+  if (action === "adminSyncEdu") {
+    return handleAdminSyncEdu(e);
+  }
+
+  // [기능 18] 도서신청서 동기화 → sync-edu.gs
+  if (action === "adminSyncBook") {
+    return handleAdminSyncBook(e);
+  }
+
   // [기능 4] 관리자 → 사용자에게 잔액 정보 Flow 발송
   if (action === "sendBalanceInfo" && token && e.parameter.targetKnoxId) {
     const entry = _verifyToken(token, adminByKnoxId);
@@ -709,110 +724,6 @@ const createResponse = (obj) => ContentService.createTextOutput(JSON.stringify(o
 // [설정 유지]
 const DOC_ID_COL = 6; // G열: 문서번호 (0부터 시작하므로 6)
 const SHEET_NAME_HISTORY = "Flow자동발송이력";
-
-/**
- * 시트 전체를 검사하되, '교육 신청서'와 '도서 신청서' 모두 감지하여 알림 발송
- */
-const onSpreadsheetChange = (e) => {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const dataSheet = ss.getSheetByName(SHEET_NAME.DATA); // 교육 신청서
-  const bookSheet = ss.getSheetByName(SHEET_NAME.BOOK); // 도서 신청서
-  const adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  const historySheet = ss.getSheetByName(SHEET_NAME_HISTORY);
-
-  if (!dataSheet || !bookSheet || !adminSheet || !historySheet) return;
-
-  // 1. 현재 변경이 일어난 시트가 '교육'인지 '도서'인지 판별
-  const activeSheet = ss.getActiveSheet();
-  const activeSheetName = activeSheet.getName();
-
-  // 교육/도서 신청서가 아니면 작동 중단
-  if (activeSheetName !== SHEET_NAME.DATA && activeSheetName !== SHEET_NAME.BOOK) return;
-
-  // 알림 타이틀 분기 처리
-  const reqType = activeSheetName === SHEET_NAME.DATA ? "교육비" : "도서비";
-
-  // 2. 발송 이력 (Set) 및 관리자 동의 (Map) 생성
-  const historyValues = historySheet.getDataRange().getValues();
-  const sentDocIds = new Set(historyValues.map(row => String(row[0]).trim()));
-
-  const adminValues = adminSheet.getDataRange().getValues();
-  const adminMap = new Map();
-  adminValues.forEach(row => adminMap.set(String(row[ADMIN_COL.KNOX_ID]), row[ADMIN_COL.AGREE]));
-
-  // 3. 누적 사용액 사전 계산 (budgetMap: knoxId → 완료 합계)
-  const eduData = dataSheet.getDataRange().getValues();
-  const bookData = bookSheet.getDataRange().getValues();
-  const budgetMap = new Map();
-  const _accBudget = (rows, colDef) => {
-    for (let i = 1; i < rows.length; i++) {
-      const kid = String(rows[i][colDef.KNOX_ID]);
-      if (rows[i][colDef.STATUS] === "완료") {
-        budgetMap.set(kid, (budgetMap.get(kid) || 0) + (Number(rows[i][colDef.COST]) || 0));
-      }
-    }
-  };
-  _accBudget(eduData, DATA_COL);
-  _accBudget(bookData, BOOK_COL);
-
-  // 4. 방금 데이터가 추가된 '현재 활성화된 시트'만 스캔하여 발송 대상 찾기
-  const activeCol = activeSheetName === SHEET_NAME.BOOK ? BOOK_COL : DATA_COL;
-  const currentSheetData = activeSheet.getDataRange().getValues();
-
-  currentSheetData.forEach((row, index) => {
-    if (index === 0) return; // 헤더 제외
-
-    const docId = String(row[DOC_ID_COL]).trim();
-    const status = row[activeCol.STATUS];
-    const knoxId = String(row[activeCol.KNOX_ID]);
-    const isAgreed = adminMap.get(knoxId);
-
-    // [이력 기록 조건] 완료 상태 + 발송 이력에 없는 문서번호 → 수신동의 무관하게 이력 추가
-    if (docId && status === "완료" && !sentDocIds.has(docId)) {
-
-      // 수신동의한 사용자에게만 실제 알림 발송
-      if (isAgreed === "Y") {
-        const totalUsed = budgetMap.get(knoxId) || 0;
-
-        var msg = FLOW_MSG.approvalComplete(reqType, docId, row[activeCol.TITLE], row[activeCol.COST], totalUsed, LIMIT_BUDGET - totalUsed);
-        if (sendFlowMsg(knoxId, msg)) {
-          console.log(`신규 알람 발송 완료: ${docId} (${reqType})`);
-        }
-      } else {
-        console.log(`이력만 기록 (수신동의 미동의): ${docId}, ${knoxId}`);
-      }
-
-      // 발송 여부와 무관하게 이력 기록 (중복 발송 방지)
-      historySheet.appendRow([docId, new Date(), knoxId]);
-      sentDocIds.add(docId);
-    }
-  });
-};
-
-/**
- * 실제 알람 발송 프로세스 (중복 코드 방지를 위해 분리)
- */
-function processAlarm(sheet, rowIndex, knoxId, rowData) {
-  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.ADMIN);
-  const adminData = adminSheet.getDataRange().getValues();
-  const userAdminInfo = adminData.find(row => String(row[ADMIN_COL.KNOX_ID]).trim() === knoxId);
-
-  // 알람 동의 확인
-  if (userAdminInfo && userAdminInfo[ADMIN_COL.AGREE] === "Y") {
-    // 잔액 재계산 로직
-    const allData = sheet.getDataRange().getValues();
-    let totalUsed = 0;
-    allData.forEach(r => {
-      if (r[9] === knoxId && r[19] === "완료") totalUsed += (Number(r[16]) || 0);
-    });
-
-    var msg = FLOW_MSG.approvalNotice(rowData[11], rowData[16], totalUsed, LIMIT_BUDGET - totalUsed);
-    if (sendFlowMsg(knoxId, msg)) {
-      sheet.getRange(rowIndex, 27).setValue("Y"); // AA열 발송 완료 표시
-      console.log(`Row ${rowIndex}: ${knoxId} 알람 발송 성공`);
-    }
-  }
-};
 
 /**
  * Flow 메신저 발송 공통 함수

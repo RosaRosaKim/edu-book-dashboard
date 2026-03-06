@@ -77,12 +77,8 @@ var FLOW_MSG = {
   cardDailyBalance: function(remain, budget, used, count) {
     var remainDays = _calcRemainingBizDays();
     var dailyAvg = remainDays > 0 ? Math.round(remain / remainDays) : 0;
-    var comment = '';
-    if (dailyAvg >= 15000) comment = ' 스테이크 가능 🥩';
-    else if (dailyAvg < 8000) comment = ' 편의점 각 🏪';
-
     return {
-      content: '남은 출근일 ' + remainDays + '일\n일평균잔액 ' + _fmtMoney(dailyAvg) + '원' + comment,
+      content: '남은 출근일 ' + remainDays + '일\n일평균잔액 ' + _fmtMoney(dailyAvg) + '원',
       link: FLOW_LINK.CARD,
       previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 잔액 ' + _fmtMoney(remain) + '원'
     };
@@ -99,11 +95,8 @@ var FLOW_MSG = {
     });
     var lunchCard = cardSummaries.find(function(c) { return c.isLunch; });
     var dailyAvg = (lunchCard && remainDays > 0) ? Math.round(lunchCard.remain / remainDays) : 0;
-    var comment = '';
-    if (dailyAvg >= 15000) comment = ' 스테이크 가능 🥩';
-    else if (dailyAvg > 0 && dailyAvg < 8000) comment = ' 편의점 각 🏪';
     return {
-      content: parts.join(' | ') + '\n남은 출근일 ' + remainDays + '일' + comment,
+      content: parts.join(' | ') + '\n남은 출근일 ' + remainDays + '일',
       link: FLOW_LINK.CARD,
       previewTitle: '💵 ' + (new Date().getMonth()+1) + '월' + new Date().getDate() + '일 ' + (lunchCard ? '잔액 ' + _fmtMoney(lunchCard.remain) + '원' : parts[0])
     };
@@ -131,6 +124,14 @@ var FLOW_MSG = {
       content: '[' + label + '모드] 자동 처리 실패\n사유: ' + reason,
       link: FLOW_LINK.CARD,
       previewTitle: '밥카 자동결재 실패'
+    };
+  },
+  // #9 교육/도서 신청서 동기화 실패
+  syncFail: function(reason) {
+    return {
+      content: '교육/도서 신청서 자동 동기화 실패\n사유: ' + reason,
+      link: FLOW_LINK.DASHBOARD,
+      previewTitle: '⚠️ 신청서 동기화 실패'
     };
   }
 };
