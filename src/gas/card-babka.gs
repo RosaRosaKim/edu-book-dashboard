@@ -29,6 +29,17 @@ var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
 
 /** 교통비 업종명 */
 var TRANSPORT_CATEGORY = '대중교통';
+/** 교통비 제외 키워드 (가맹점명 포함 여부) */
+var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+
+function isTransportRecord(r) {
+  if ((r.category || '') === TRANSPORT_CATEGORY) return true;
+  var m = (r.merchant || '').trim();
+  for (var i = 0; i < TRANSPORT_KEYWORDS.length; i++) {
+    if (m.indexOf(TRANSPORT_KEYWORDS[i]) !== -1) return true;
+  }
+  return false;
+}
 
 /* ═══════════════ 사용자카드정보 CRUD ═══════════════ */
 
@@ -409,7 +420,7 @@ function _processAutoMode(knoxId, encPw, mode) {
 
     // 교통비 제외
     var records = rawResult.records.filter(function(r) {
-      return (r.category || '') !== TRANSPORT_CATEGORY;
+      return !isTransportRecord(r);
     });
 
     if (records.length === 0) {
@@ -552,7 +563,7 @@ function sendCardRefundAlert(data) {
 
       var usedSum = 0;
       (result.records || []).forEach(function(r) {
-        if ((r.category || '') === TRANSPORT_CATEGORY) return;
+        if (isTransportRecord(r)) return;
         usedSum += Number(r.cost) || 0;
       });
 
@@ -923,7 +934,7 @@ function sendCardDailyBalance(data) {
         records.forEach(function(r) {
           var cn = r.cardNo || 'unknown';
           if (!byCard[cn]) byCard[cn] = { used: 0, count: 0 };
-          if ((r.category || '') === TRANSPORT_CATEGORY) return;
+          if (isTransportRecord(r)) return;
           byCard[cn].used += Number(r.cost) || 0;
           byCard[cn].count++;
         });
@@ -953,7 +964,7 @@ function sendCardDailyBalance(data) {
         var lunchCard = userCardsArr.find(function(c) { return c.isLunchCard; });
         records.forEach(function(r) {
           if (lunchCard && r.cardNo !== lunchCard.cardNo) return;
-          if ((r.category || '') === TRANSPORT_CATEGORY) return;
+          if (isTransportRecord(r)) return;
           usedSum += Number(r.cost) || 0;
           usedCount++;
         });

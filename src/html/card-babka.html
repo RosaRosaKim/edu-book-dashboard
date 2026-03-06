@@ -328,6 +328,12 @@
   let cardIsRefreshing = false; // 탭 전환 재조회 중 (전체 스켈레톤 방지)
   let cardStatsSelectedMonth = null; // 월 선택기 상태 (null=전체)
   const TRANSPORT_CATEGORY = '대중교통';
+  const TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+  function isTransportRecord(r) {
+    if ((r.category || '') === TRANSPORT_CATEGORY) return true;
+    const m = (r.merchant || '').trim();
+    return TRANSPORT_KEYWORDS.some(k => m.includes(k));
+  }
 
   /* ─── 다중카드 상태 ─── */
   let userCards = [];           // [{cardNo, alias, limit, isLunchCard}]
@@ -639,7 +645,7 @@
     records.forEach(r => {
       const merchant = (r.merchant || '').trim();
       if (!merchant) return;
-      if ((r.category || '') === TRANSPORT_CATEGORY) return;
+      if (isTransportRecord(r)) return;
       if (!merchantMap[merchant]) merchantMap[merchant] = { amount: 0, count: 0, address: '' };
       merchantMap[merchant].amount += Number(r.cost) || 0;
       merchantMap[merchant].count++;
@@ -1032,7 +1038,7 @@
     }
     $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
 
-    const currentValid = cardCurrentRecords.filter(r => (r.category || '') !== TRANSPORT_CATEGORY);
+    const currentValid = cardCurrentRecords.filter(r => !isTransportRecord(r));
     let usedSum = 0;
     currentValid.forEach(r => { usedSum += Number(r.cost) || 0; });
 
@@ -1042,7 +1048,7 @@
     const usedPct = budget > 0 ? Math.min((usedSum / budget) * 100, 100) : 0;
 
     // 교통비 별도 집계
-    const transportRecords = cardCurrentRecords.filter(r => (r.category || '') === TRANSPORT_CATEGORY);
+    const transportRecords = cardCurrentRecords.filter(r => isTransportRecord(r));
     let transportSum = 0;
     transportRecords.forEach(r => { transportSum += Number(r.cost) || 0; });
     const transportEl = $('cardTransportSummary');
@@ -1123,7 +1129,7 @@
       statsWrap.classList.add('hidden');
       recordsWrap.classList.remove('hidden');
       if (ratingWrap) ratingWrap.classList.add('hidden');
-      const displayRecords = cardRecords.filter(r => (r.category || '') !== TRANSPORT_CATEGORY);
+      const displayRecords = cardRecords.filter(r => !isTransportRecord(r));
       renderCardRecords(displayRecords);
     }
   }
