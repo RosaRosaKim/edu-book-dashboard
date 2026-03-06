@@ -9,7 +9,8 @@ const SHEET_NAME = {
   NOTICE: "공지사항",
   BOARD: "게시판",
   RATING: "맛집평가",
-  CARD_INFO: "사용자카드정보"
+  CARD_INFO: "사용자카드정보",
+  RELEASE: "릴리즈노트"
 };
 
 const DATA_COL = {
@@ -352,6 +353,24 @@ const doGet = (e) => {
     const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     return TOKEN_ACTIONS[action](entry.row, e);
+  }
+
+  // [릴리즈노트] 인증 불요
+  if (action === 'releaseNotes') {
+    try {
+      const rnSheet = ss.getSheetByName(SHEET_NAME.RELEASE);
+      if (!rnSheet || rnSheet.getLastRow() < 2) return createResponse({ status: 'success', notes: [] });
+      const rnData = rnSheet.getDataRange().getValues();
+      rnData.shift();
+      const notes = rnData.filter(r => r[0]).map(r => ({
+        version: String(r[0]),
+        date: r[1] ? Utilities.formatDate(new Date(r[1]), 'Asia/Seoul', 'yyyy-MM-dd') : '',
+        content: String(r[2] || '')
+      }));
+      return createResponse({ status: 'success', notes: notes });
+    } catch (rnErr) {
+      return createResponse({ status: 'success', notes: [] });
+    }
   }
 
   // [기능 3] 통합 데이터 조회
