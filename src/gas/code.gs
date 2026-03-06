@@ -91,6 +91,11 @@ const doGet = (e) => {
     return handleAdminSyncBook(e);
   }
 
+  // [기능 19] 식단 OCR → menu-ocr.gs
+  if (action === "ocrMenu") {
+    return handleOcrMenu(e);
+  }
+
   // [기능 4] 관리자 → 사용자에게 잔액 정보 Flow 발송
   if (action === "sendBalanceInfo" && token && e.parameter.targetKnoxId) {
     const entry = _verifyToken(token, adminByKnoxId);
