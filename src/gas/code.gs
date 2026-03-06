@@ -148,6 +148,15 @@ const doGet = (e) => {
     return createResponse({ status: "success" });
   }
 
+  // [기능 20] 식단 메뉴 알람 수신 동의 변경
+  if (action === "updateMenuAlarm" && token) {
+    const entry = _verifyToken(token, adminByKnoxId);
+    if (!entry) return createResponse({ error: "UNAUTHORIZED" });
+    const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
+    adminSheet.getRange(entry.idx + 1, 11).setValue(newVal);  // K열: 식단 메뉴 알람
+    return createResponse({ status: "success" });
+  }
+
   // [기능 15] 밥카 자동결재 모드 변경
   if (action === "updateCardAutoMode" && token) {
     const entry = _verifyToken(token, adminByKnoxId);
@@ -421,7 +430,7 @@ const doGet = (e) => {
       try { cardInfo = _getUserCards(currentKnoxId); } catch (ciErr) {}
 
       const resp = {
-        userInfo: { name: adminRow[ADMIN_COL.NAME] || '사용자', isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: null, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
+        userInfo: { name: adminRow[ADMIN_COL.NAME] || '사용자', isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: null, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", isMenuAlarmAgreed: adminRow[10] === "Y", hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
         myHistory: null,
         cardInfo: cardInfo,
         phase: 1

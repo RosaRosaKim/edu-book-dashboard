@@ -35,8 +35,8 @@ function _ocrImageToText(imageUrl) {
   blob.setName('menu_ocr_temp.jpg');
 
   // Drive API로 이미지를 Google Doc으로 변환 (OCR 자동 적용)
-  var resource = { title: 'menu_ocr_temp', mimeType: 'application/vnd.google-apps.document' };
-  var file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'ko' });
+  var resource = { title: 'menu_ocr_temp' };
+  var file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'ko', convert: true });
 
   // Doc에서 텍스트 추출
   var doc = DocumentApp.openById(file.id);
@@ -104,19 +104,18 @@ function _writeMenuToSheet(parsed) {
   var menuText = parsed.menus.join('\n');
   var dateKey = parsed.date;
 
-  // 같은 날짜 중복 체크 (A열)
+  // 같은 날짜 중복 체크 (A열) → 이미 있으면 스킵
   if (sheet.getLastRow() > 1) {
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim() === dateKey) {
-        sheet.getRange(i + 1, 2).setValue(menuText);
-        return { updated: true, row: i + 1 };
+        return { skipped: true, row: i + 1 };
       }
     }
   }
 
   sheet.appendRow([dateKey, menuText]);
-  return { updated: false, row: sheet.getLastRow() };
+  return { skipped: false, row: sheet.getLastRow() };
 }
 
 /**
@@ -138,7 +137,7 @@ function handleOcrMenu(e) {
 
     return createResponse({
       status: 'success',
-      message: parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴 ' + (result.updated ? '업데이트' : '등록'),
+      message: parsed.date + ' ' + parsed.meal + ' - ' + (result.skipped ? '이미 등록됨 (스킵)' : parsed.menus.length + '개 메뉴 등록'),
       parsed: parsed,
       rawText: text
     });
@@ -152,6 +151,12 @@ function handleOcrMenu(e) {
  * 카카오 채널 → 이미지 URL 추출 → OCR → 시트 기록
  */
 function syncMenu() {
+  // 평일만 실행 (주말·공휴일 스킵)
+  var now = new Date();
+  var dow = now.getDay();
+  if (dow === 0 || dow === 6) { Logger.log('[menu] 주말 스킵'); return; }
+  if (_isHolidayServer(now)) { Logger.log('[menu] 공휴일 스킵'); return; }
+
   var imageUrl = _getKakaoMenuImageUrl();
   if (!imageUrl) {
     Logger.log('[menu] 카카오 채널에서 이미지 URL을 찾을 수 없음');
@@ -174,5 +179,54 @@ function syncMenu() {
   Logger.log('[menu] 파싱: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
 
   var result = _writeMenuToSheet(parsed);
-  Logger.log('[menu] 시트 기록 완료: row ' + result.row + (result.updated ? ' (업데이트)' : ' (신규)'));
+  if (result.skipped) {
+    Logger.log('[menu] ' + parsed.date + ' 이미 등록됨 (스킵)');
+    return;
+  }
+  Logger.log('[menu] 시트 기록 완료: row ' + result.row + ' (신규)');
+
+  // 신규 등록 후 오늘 날짜 식단이 있으면 Flow 발송
+  _sendMenuFlowIfToday();
+}
+
+/**
+ * 오늘 날짜 식단이 시트에 있으면 Flow 알림 발송 (웹페이지관리 K열=Y 사용자)
+ */
+function _sendMenuFlowIfToday() {
+  var now = new Date();
+  var todayStr = (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
+  if (!menuSheet || menuSheet.getLastRow() <= 1) return;
+
+  // 당산푸드스토리 시트에서 오늘 날짜 메뉴 찾기
+  var menuData = menuSheet.getDataRange().getValues();
+  var todayMenu = null;
+  for (var i = 1; i < menuData.length; i++) {
+    if (String(menuData[i][0]).trim() === todayStr) {
+      todayMenu = String(menuData[i][1] || '');
+      break;
+    }
+  }
+  if (!todayMenu) {
+    Logger.log('[menu] 오늘(' + todayStr + ') 식단 없음, Flow 발송 스킵');
+    return;
+  }
+
+  // 웹페이지관리 K열=Y 사용자에게 발송
+  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  if (!adminSheet) return;
+
+  var data = adminSheet.getDataRange().getValues();
+  var sent = 0;
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
+    var menuAlarm = String(data[i][10] || '').trim().toUpperCase(); // K열 = index 10
+    if (!knoxId || menuAlarm !== 'Y') continue;
+
+    sendFlowMsg(knoxId, FLOW_MSG.todayMenu(todayStr, todayMenu));
+    sent++;
+  }
+  Logger.log('[menu] Flow 발송 완료: ' + sent + '명');
 }

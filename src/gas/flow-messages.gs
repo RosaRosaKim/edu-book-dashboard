@@ -127,6 +127,15 @@ var FLOW_MSG = {
     };
   },
   // #9 교육/도서 신청서 동기화 실패
+  // #10 오늘의 식단 알림
+  todayMenu: function(date, menus) {
+    return {
+      content: '🍽 오늘의 식단 (' + date + ')\n\n' + menus,
+      link: '',
+      previewTitle: '오늘의 당산푸드스토리'
+    };
+  },
+
   syncFail: function(reason) {
     return {
       content: '교육/도서 신청서 자동 동기화 실패\n사유: ' + reason,
