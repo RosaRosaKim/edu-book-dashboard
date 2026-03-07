@@ -37,15 +37,15 @@
   - 복수 선택 허용 (기본 OFF = 단일)
   - 익명 투표 (기본 OFF)
   - 항목 추가 허용 (기본 OFF)
-- **마감시간**: 기본 60분 (30분/1시간/2시간/4시간/24시간 선택)
-- **멤버 선택**: 이쏜미와 동일 (프리로드 캐시 기반)
+- **마감시간**: 슬라이더 10~120분 (기본 30분)
+- **멤버 선택**: `getBizFlowUserList` API로 dept 포함 유저 로드, 부서원 기본 표시
 - **템플릿**: 저장/불러오기 (이쏜미 템플릿과 동일 패턴)
 
 ### 2-2. 투표 화면 (투표자)
 
 - 제목 + 마감시간 표시
 - 항목 목록 (단일: 라디오 / 복수: 체크박스)
-- 투표 버튼 → `confirm('투표하면 변경할 수 없어. 투표할까?')` → 확정
+- 투표 버튼 → `showConfirm()` 커스텀 확인 → 확정
 - 항목 추가 허용 시 하단에 직접 입력 필드 + 추가 버튼 (추가 즉시 자동 투표)
 - **실시간 결과**: 투표 후 또는 비익명 투표 시 바 차트로 표시
 - **익명 투표**: 마감 전에는 "투표 완료" 표시만, 마감 후 결과 공개
@@ -147,7 +147,8 @@ https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=lif
 | `getVoteTemplates` | `handleGetVoteTemplates` | 템플릿 목록 |
 | `saveVoteTemplate` | `handleSaveVoteTemplate` | 템플릿 저장 |
 | `deleteVoteTemplate` | `handleDeleteVoteTemplate` | 템플릿 삭제 |
-| `pollVoteClose` | (5분 트리거) | 마감 + 리마인드 |
+| `closeVote` | `handleCloseVote` | 수동 마감 (생성자만) |
+| `pollVoteClose` | (5분 트리거) | 자동 마감 + 리마인드 |
 
 ---
 
@@ -155,13 +156,23 @@ https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=lif
 
 | 메시지 | 함수 | 제목 | 본문 |
 |--------|------|------|------|
-| 초대 | `voteInvite` | `📊 {이름} 프로가 투표를 요청했어` | `{제목} · {시간} 마감` + 링크 |
+| 초대 | `voteInvite` | `📊 {제목}` | `{시간} 마감` + 링크 |
 | 리마인드 | `voteReminder` | `⏰ 투표 마감 5분 전!` | `아직 투표 안 했어! {시간}에 마감이야.` |
 | 결과 | `voteResult` | `📊 {제목} 결과 ({N}명 참여)` | 항목별 득표수 + 비율 |
 
 ---
 
-## 5. 파일 구조
+## 5. UX 상세
+
+- **딥링크 진입 시**: 투표 섹션만 표시 (식단 알람, 이쏜미 숨김), 뒤로가기 시 전체 복원
+- **모든 통신 버튼에 스피너**: 다음, 투표 시작, 투표하기, 항목 추가, 투표 마감 등
+- **멤버 선택**: 로딩 완료 후 본인 부서원 기본 표시, 검색으로 전체 멤버 탐색
+- **수동 마감**: 생성자만 가능, `showConfirm` 확인 후 즉시 마감 + 결과 발송
+- **confirm/prompt 미사용**: 모든 확인은 `window.showConfirm()` 커스텀 UI 사용
+
+---
+
+## 6. 파일 구조
 
 | 파일 | 역할 |
 |------|------|

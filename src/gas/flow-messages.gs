@@ -201,9 +201,9 @@ var FLOW_MSG = {
   // #13 투표 초대
   voteInvite: function(creatorName, title, deadlineStr, sessionId) {
     return {
-      content: title + '\n' + deadlineStr + ' 마감\n\n링크 눌러서 투표해줘',
+      content: deadlineStr + ' 마감\n\n링크 눌러서 투표해줘',
       link: FLOW_LINK.LIFE + '&vote=' + sessionId,
-      previewTitle: '📊 ' + creatorName + ' 프로가 투표를 요청했어'
+      previewTitle: '📊 ' + title
     };
   },
   // #14 투표 리마인드

@@ -151,6 +151,8 @@ https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=lif
 
 라우팅: URL params → `sessionStorage` 임시 저장 → 로그인 확인 → `switchTab('life')` → `openItsOnMeOrder(sessionId)`
 
+딥링크 진입 시 이쏜미 섹션만 표시 (식단 알람, 투표 숨김), 뒤로가기(홈) 시 전체 복원
+
 ### 2-8. 취합 결과 메시지
 
 같은 **메뉴+옵션** 조합 기준으로 그룹핑 + **총 금액** 표시:

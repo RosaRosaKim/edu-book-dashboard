@@ -1,5 +1,5 @@
 <!-- ═══════════════ 엠로생활 모듈 ═══════════════ -->
-<section class="mb-6">
+<section id="sectionMenuAlarm" class="mb-6">
   <div class="bg-surface border border-border rounded-2xl p-5">
     <!-- 당산 푸드스토리 메뉴 알람 -->
     <div class="flex items-center gap-2.5 mb-3">
@@ -116,6 +116,19 @@
     }
   };
 
+  function _showOnlySection(sectionId) {
+    ['sectionMenuAlarm','sectionItsOnMe','sectionVote'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = (id === sectionId) ? '' : 'none';
+    });
+  }
+  window._restoreAllSections = function() {
+    ['sectionMenuAlarm','sectionItsOnMe','sectionVote'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
+  };
+
   window.initLife = function() {
     var on = !!(window._menuAlarmOn);
     setMenuAlarmBtnState(on);
@@ -123,11 +136,13 @@
     var pendingSid = sessionStorage.getItem('itsOnMe');
     if (pendingSid) {
       sessionStorage.removeItem('itsOnMe');
+      _showOnlySection('sectionItsOnMe');
       window.openItsOnMeOrder(pendingSid);
     }
     var pendingVote = sessionStorage.getItem('vote');
     if (pendingVote) {
       sessionStorage.removeItem('vote');
+      _showOnlySection('sectionVote');
       window.openVoteView(pendingVote);
     }
   };
@@ -135,7 +150,7 @@
 </script>
 
 <!-- ═══════════════ 이쏜미 ═══════════════ -->
-<section class="mb-6">
+<section id="sectionItsOnMe" class="mb-6">
   <div class="bg-surface border border-border rounded-2xl p-5">
     <div class="flex items-center gap-2.5 mb-3">
       <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
@@ -457,6 +472,7 @@
     $('iomCustom').classList.add('hidden');
     if (target === 'home') {
       _store = ''; _members = []; _selectedMenu = null; _currentSessionId = null; _customMenus = [];
+      window._restoreAllSections();
     }
   };
 
@@ -1145,7 +1161,7 @@
 </script>
 
 <!-- ═══════════════ 투표 ═══════════════ -->
-<section class="mb-6">
+<section id="sectionVote" class="mb-6">
   <div class="bg-surface border border-border rounded-2xl p-5">
     <div class="flex items-center gap-2.5 mb-3">
       <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
@@ -1239,18 +1255,27 @@
         <div class="text-sm font-semibold">멤버 선택</div>
       </div>
 
-      <div class="mb-3">
-        <div class="relative">
-          <input id="voteUserSearch" type="text" placeholder="이름 또는 ID로 검색" oninput="voteSearchUsers()"
-            class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
-        </div>
-        <div id="voteSearchResults" class="mt-1 max-h-32 overflow-y-auto"></div>
-        <div id="voteSelectedMembers" class="flex flex-wrap gap-1.5 mt-2"></div>
+      <!-- 멤버 로딩 중 -->
+      <div id="voteMemberLoading" class="flex flex-col items-center justify-center py-8 gap-3 text-[#9ab0ab]">
+        <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        <div class="text-[13px]">멤버 목록을 불러오는 중...</div>
       </div>
 
-      <button onclick="voteCreate()" id="voteCreateBtn" class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-        투표 시작
-      </button>
+      <!-- 멤버 검색/선택 (로드 후 표시) -->
+      <div id="voteMemberBody" class="hidden">
+        <div class="mb-3">
+          <div class="relative">
+            <input id="voteUserSearch" type="text" placeholder="이름 또는 ID로 검색" oninput="voteSearchUsers()"
+              class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          </div>
+          <div id="voteSearchResults" class="mt-1 max-h-32 overflow-y-auto"></div>
+          <div id="voteSelectedMembers" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+
+        <button onclick="voteCreate()" id="voteCreateBtn" class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          투표 시작
+        </button>
+      </div>
     </div>
 
     <!-- 투표 화면 (참여 / 결과) -->
@@ -1319,6 +1344,8 @@
   var _voteIsCreator = false;
   var _voteTplFavorites = JSON.parse(localStorage.getItem('voteTplFav') || '[]');
   var _voteTimer = null;
+  var _voteUserCache = null; // [{knoxId, name, dept}]
+  var _voteMyDept = '';
 
   /* ═══════════════ 네비게이션 ═══════════════ */
 
@@ -1335,9 +1362,13 @@
       _voteItems = [];
       _voteMembers = [];
       _voteSession = null;
+      window._restoreAllSections();
     } else if (target === 'setup') {
       _voteShowOnly('voteSetup');
     }
+    // 멤버 선택 화면 초기화 (다음 진입 시 로딩부터 표시)
+    $('voteMemberLoading').classList.remove('hidden');
+    $('voteMemberBody').classList.add('hidden');
   };
 
   window.voteOpenSetup = function() {
@@ -1443,7 +1474,7 @@
   };
 
   window.voteDeleteTpl = async function(title) {
-    if (!confirm('"' + title + '" 템플릿을 삭제할까?')) return;
+    if (!(await window.showConfirm('"' + title + '" 템플릿을 삭제할까?'))) return;
     try {
       var token = localStorage.getItem('token');
       await window.gasFetch(window.API_URL + '?action=deleteVoteTemplate&token=' + encodeURIComponent(token) + '&title=' + encodeURIComponent(title));
@@ -1470,55 +1501,100 @@
     var title = $('voteTitle').value.trim();
     if (!title) { window.showToast('제목을 입력해줘.', 'sad'); return; }
     if (_voteItems.length < 2) { window.showToast('항목을 2개 이상 추가해줘.', 'sad'); return; }
-    // 자동 저장
-    await _autoSaveVoteTpl();
-    _voteMembers = [];
-    $('voteSelectedMembers').innerHTML = '';
-    $('voteUserSearch').value = '';
-    $('voteSearchResults').innerHTML = '';
-    $('voteCreateBtn').disabled = true;
-    _voteShowOnly('voteMemberSelect');
-    // 유저 캐시 로드
-    if (!window._iomUserCache || !window._iomUserCache.length) {
-      try {
-        var token = localStorage.getItem('token');
-        var data = await window.gasFetch(window.API_URL + '?action=getTeamMembers&token=' + encodeURIComponent(token));
-        window._iomUserCache = data.members || [];
-      } catch (_) { window._iomUserCache = []; }
+    var btn = document.querySelector('#voteSetup > button[onclick*="voteNext"]');
+    _btnSpin(btn, '준비중...');
+    try {
+      var token = localStorage.getItem('token');
+      // 자동 저장 + 유저 캐시 병렬 로드
+      var promises = [_autoSaveVoteTpl()];
+      if (!_voteUserCache) {
+        promises.push(window.gasFetch(window.API_URL + '?action=getBizFlowUserList&token=' + encodeURIComponent(token)));
+      }
+      var results = await Promise.all(promises);
+      if (!_voteUserCache && results[1] && results[1].ok && results[1].d) {
+        var b64 = results[1].d.split('').reverse().join('');
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        var arr = JSON.parse(new TextDecoder().decode(bytes));
+        _voteUserCache = arr.map(function(u) { return { knoxId: u[0], name: u[1], dept: u[2] }; });
+        var myKnox = (results[1].m || '').toLowerCase();
+        for (var j = 0; j < _voteUserCache.length; j++) {
+          if (_voteUserCache[j].knoxId.toLowerCase() === myKnox) { _voteMyDept = _voteUserCache[j].dept; break; }
+        }
+      }
+      // 멤버 선택 화면 전환
+      _voteMembers = [];
+      $('voteSelectedMembers').innerHTML = '';
+      $('voteUserSearch').value = '';
+      $('voteSearchResults').innerHTML = '';
+      $('voteCreateBtn').disabled = true;
+      $('voteMemberLoading').classList.add('hidden');
+      $('voteMemberBody').classList.remove('hidden');
+      _voteShowOnly('voteMemberSelect');
+      _voteShowDeptMembers();
+    } catch (_) {
+      _voteUserCache = _voteUserCache || [];
+      $('voteMemberLoading').classList.add('hidden');
+      $('voteMemberBody').classList.remove('hidden');
+      _voteShowOnly('voteMemberSelect');
+    } finally {
+      _btnReset(btn, '다음');
     }
   };
 
   /* ═══════════════ 멤버 검색/선택 ═══════════════ */
 
+  /* ─── 부서원 기본 표시 ─── */
+  function _voteShowDeptMembers() {
+    if (!_voteUserCache || !_voteMyDept || $('voteUserSearch').value.trim()) return;
+    var selectedIds = {};
+    _voteMembers.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+    var deptUsers = _voteUserCache.filter(function(u) {
+      return u.dept === _voteMyDept && !selectedIds[u.knoxId.toLowerCase()];
+    });
+    if (deptUsers.length) _voteRenderSearchResults(deptUsers);
+    else $('voteSearchResults').innerHTML = '';
+  }
+
+  function _voteRenderSearchResults(users) {
+    var box = $('voteSearchResults');
+    if (!users.length) { box.innerHTML = '<div class="text-[11px] text-[#9ab0ab] px-1 py-2">검색 결과가 없어.</div>'; return; }
+    box.innerHTML = users.map(function(u) {
+      return '<button onclick=\'voteSelectMember(' + JSON.stringify(u).replace(/'/g, "\\'") + ')\' class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-accent/10 transition text-left">' +
+        '<div><span class="text-[13px] font-medium text-[#47635f]">' + _esc(u.name) + '</span> <span class="text-[11px] text-[#9ab0ab]">' + _esc(u.dept) + '</span></div>' +
+        '<span class="text-accent text-lg leading-none">+</span></button>';
+    }).join('');
+  }
+
   window.voteSearchUsers = function() {
     var q = $('voteUserSearch').value.trim().toLowerCase();
-    var box = $('voteSearchResults');
-    if (!q || q.length < 1) { box.innerHTML = ''; return; }
-    var myKnox = (window._myKnoxId || '').toLowerCase();
-    var results = (window._iomUserCache || []).filter(function(u) {
-      if (u.knoxId.toLowerCase() === myKnox) return false;
-      if (_voteMembers.some(function(m) { return m.knoxId === u.knoxId; })) return false;
+    if (!q) { _voteShowDeptMembers(); return; }
+    if (!_voteUserCache) { $('voteSearchResults').innerHTML = ''; return; }
+    var selectedIds = {};
+    _voteMembers.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+    var results = _voteUserCache.filter(function(u) {
+      if (selectedIds[u.knoxId.toLowerCase()]) return false;
       return u.name.toLowerCase().indexOf(q) !== -1 || u.knoxId.toLowerCase().indexOf(q) !== -1;
-    }).slice(0, 8);
-    box.innerHTML = results.map(function(u) {
-      return '<button onclick="voteSelectMember(\'' + u.knoxId + '\',\'' + _esc(u.name) + '\')" class="w-full text-left px-3 py-2 text-[13px] text-[#47635f] hover:bg-accent/10 rounded-lg transition">' + _esc(u.name) + ' <span class="text-[#9ab0ab]">' + u.knoxId + '</span></button>';
-    }).join('');
+    }).slice(0, 20);
+    _voteRenderSearchResults(results);
   };
 
-  window.voteSelectMember = function(knoxId, name) {
-    if (_voteMembers.some(function(m) { return m.knoxId === knoxId; })) return;
-    _voteMembers.push({ knoxId: knoxId, name: name });
-    $('voteUserSearch').value = '';
-    $('voteSearchResults').innerHTML = '';
+  window.voteSelectMember = function(user) {
+    if (typeof user === 'string') user = JSON.parse(user);
+    if (_voteMembers.some(function(m) { return m.knoxId.toLowerCase() === user.knoxId.toLowerCase(); })) return;
+    _voteMembers.push({ knoxId: user.knoxId, name: user.name, dept: user.dept });
     _renderVoteMembers();
+    var q = $('voteUserSearch').value.trim();
+    if (q) { voteSearchUsers(); } else { _voteShowDeptMembers(); }
   };
 
   function _renderVoteMembers() {
     var box = $('voteSelectedMembers');
     box.innerHTML = _voteMembers.map(function(m, i) {
-      return '<span class="inline-flex items-center gap-1 bg-accent/10 text-accent rounded-full px-2.5 py-1 text-[12px]">' +
+      return '<span class="inline-flex items-center gap-1 bg-accent/10 text-accent text-[12px] font-medium px-2.5 py-1 rounded-full">' +
         _esc(m.name) +
-        '<button onclick="voteRemoveMember(' + i + ')" class="hover:text-red-400 transition text-[14px] leading-none">&times;</button>' +
+        '<button onclick="voteRemoveMember(' + i + ')" class="ml-0.5 text-accent/60 hover:text-accent text-sm leading-none">&times;</button>' +
         '</span>';
     }).join('');
     $('voteCreateBtn').disabled = _voteMembers.length === 0;
@@ -1527,6 +1603,8 @@
   window.voteRemoveMember = function(i) {
     _voteMembers.splice(i, 1);
     _renderVoteMembers();
+    var q = $('voteUserSearch').value.trim();
+    if (q) { voteSearchUsers(); } else { _voteShowDeptMembers(); }
   };
 
   /* ═══════════════ 투표 생성 ═══════════════ */
@@ -1534,8 +1612,7 @@
   window.voteCreate = async function() {
     var btn = $('voteCreateBtn');
     if (btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = '생성중...';
+    _btnSpin(btn, '생성중...');
     try {
       var token = localStorage.getItem('token');
       var opts = { multi: $('voteOptMulti').checked, anon: $('voteOptAnon').checked, addable: $('voteOptAddable').checked };
@@ -1545,7 +1622,7 @@
         '&minutes=' + $('voteMinutes').value +
         '&members=' + encodeURIComponent(JSON.stringify(_voteMembers)) +
         '&options=' + encodeURIComponent(JSON.stringify(opts)));
-      if (data.error) { window.showToast(data.error, 'sad'); btn.disabled = false; btn.textContent = '투표 시작'; return; }
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '투표 시작'); return; }
       window.showToast('투표가 시작됐어!', 'smail');
       if (data.failedUsers && data.failedUsers.length) {
         window.showToast(data.failedUsers.join(', ') + ' 알림 실패', 'sad');
@@ -1553,8 +1630,7 @@
       window.openVoteView(data.sessionId);
     } catch (e) {
       window.showToast('투표 생성 실패', 'sad');
-      btn.disabled = false;
-      btn.textContent = '투표 시작';
+      _btnReset(btn, '투표 시작');
     }
   };
 
@@ -1563,7 +1639,7 @@
   window.openVoteView = async function(sessionId) {
     _voteShowOnly('voteView');
     $('voteViewTitle').textContent = '투표';
-    $('voteStatusText').textContent = '불러오는 중...';
+    $('voteStatusText').innerHTML = _spinSvg + ' <span class="ml-1">불러오는 중...</span>';
     $('voteDeadlineText').textContent = '';
     $('voteChoices').innerHTML = '';
     $('voteResultArea').innerHTML = '';
@@ -1725,24 +1801,21 @@
     var choices = [];
     checked.forEach(function(el) { choices.push(el.value); });
 
-    if (!confirm(choices.join(', ') + '\n\n이대로 투표할까? (변경 불가)')) return;
+    if (!(await window.showConfirm(choices.join(', ') + ' — 투표할까? (변경 불가)'))) return;
 
     var btn = $('voteSubmitBtn');
-    btn.disabled = true;
-    btn.textContent = '제출중...';
+    _btnSpin(btn, '제출중...');
     try {
       var token = localStorage.getItem('token');
       var data = await window.gasFetch(window.API_URL + '?action=submitVote&token=' + encodeURIComponent(token) +
         '&sessionId=' + encodeURIComponent(_voteSession.sessionId) +
         '&choices=' + encodeURIComponent(JSON.stringify(choices)));
-      if (data.error) { window.showToast(data.error, 'sad'); btn.disabled = false; btn.textContent = '투표하기'; return; }
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '투표하기'); return; }
       window.showToast('투표 완료!', 'smail');
-      // 새로고침
       window.openVoteView(_voteSession.sessionId);
     } catch (e) {
       window.showToast('투표 실패', 'sad');
-      btn.disabled = false;
-      btn.textContent = '투표하기';
+      _btnReset(btn, '투표하기');
     }
   };
 
@@ -1752,33 +1825,42 @@
     var input = $('voteAddItemInput');
     var val = input.value.trim();
     if (!val) return;
+    var btn = $('voteAddArea').querySelector('button');
+    _btnSpin(btn, '추가중...');
     try {
       var token = localStorage.getItem('token');
       var data = await window.gasFetch(window.API_URL + '?action=addVoteItem&token=' + encodeURIComponent(token) +
         '&sessionId=' + encodeURIComponent(_voteSession.sessionId) +
         '&item=' + encodeURIComponent(val));
-      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '추가'); return; }
       window.showToast('항목 추가 + 자동 투표됨!', 'smail');
       input.value = '';
+      _btnReset(btn, '추가');
       window.openVoteView(_voteSession.sessionId);
-    } catch (_) { window.showToast('추가 실패', 'sad'); }
+    } catch (_) { window.showToast('추가 실패', 'sad'); _btnReset(btn, '추가'); }
   };
 
   /* ═══════════════ 투표 마감 ═══════════════ */
 
   window.voteClose = async function() {
-    if (!confirm('투표를 마감할까? 결과가 전원에게 발송돼.')) return;
+    if (!(await window.showConfirm('투표를 마감할까? 결과가 전원에게 발송돼.'))) return;
+    var btn = $('voteCloseArea').querySelector('button');
+    _btnSpin(btn, '마감중...');
     try {
       var token = localStorage.getItem('token');
       var data = await window.gasFetch(window.API_URL + '?action=closeVote&token=' + encodeURIComponent(token) +
         '&sessionId=' + encodeURIComponent(_voteSession.sessionId));
-      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '투표 마감'); return; }
       window.showToast('투표가 마감됐어!', 'smail');
       window.openVoteView(_voteSession.sessionId);
-    } catch (_) { window.showToast('마감 실패', 'sad'); }
+    } catch (_) { window.showToast('마감 실패', 'sad'); _btnReset(btn, '투표 마감'); }
   };
 
   /* ═══════════════ 유틸 ═══════════════ */
+
+  var _spinSvg = '<svg class="animate-spin h-4 w-4 inline-block align-middle" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>';
+  function _btnSpin(btn, label) { btn._origLabel = btn.textContent; btn.disabled = true; btn.innerHTML = _spinSvg + ' ' + (label || ''); }
+  function _btnReset(btn, label) { btn.disabled = false; btn.textContent = label || btn._origLabel || ''; }
 
   function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
