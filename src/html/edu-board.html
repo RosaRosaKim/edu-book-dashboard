@@ -355,7 +355,7 @@ async function replyPost(id) {
 async function deleteReply(id) {
   const token = localStorage.getItem(TOKEN_KEY);
   if (!token) return;
-  if (!confirm('답변을 삭제할까?')) return;
+  if (!await window.showConfirm('답변을 삭제할까?')) return;
   const btn = document.getElementById('replyDelBtn-' + id);
   if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, '삭제 중...'); }
   try {

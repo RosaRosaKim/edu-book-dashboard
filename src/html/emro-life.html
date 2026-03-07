@@ -23,7 +23,7 @@ window._lifeAnimate = function(id, type) {
       </div>
       <div>
         <div class="text-sm font-semibold">당산 푸드스토리 메뉴 알람</div>
-        <div class="text-[11px] text-[#6e7f7b]">평일 오늘의 식단 알림</div>
+        <div class="text-[11px] text-[#6e7f7b]">평일 오늘의 식단 알림 - 이미지에서 글자를 읽어오다 보니 오타가 있을 수 있어</div>
       </div>
     </div>
     <div id="menuAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative overflow-hidden">
@@ -563,7 +563,7 @@ window._lifeAnimate = function(id, type) {
 
   window.iomDeleteTemplate = async function(idx) {
     var t = _templates[idx];
-    if (!t || !confirm(t.store + ' 템플릿을 삭제할까?')) return;
+    if (!t || !await window.showConfirm(t.store + ' 템플릿을 삭제할까?')) return;
     try {
       var token = localStorage.getItem('token');
       await window.gasFetch(window.API_URL + '?action=deleteItsOnMeTemplate&token=' + encodeURIComponent(token) + '&store=' + encodeURIComponent(t.store));
@@ -1112,7 +1112,7 @@ window._lifeAnimate = function(id, type) {
   /* ─── 시간 연장 (+10분) ─── */
   window.iomExtendTime = async function() {
     if (!_currentSessionId) return;
-    if (!confirm('마감시간을 10분 연장할까?')) return;
+    if (!await window.showConfirm('마감시간을 10분 연장할까?')) return;
     try {
       var token = localStorage.getItem('token');
       var data = await window.gasFetch(window.API_URL + '?action=extendItsOnMe&token=' + encodeURIComponent(token) +
@@ -1187,7 +1187,7 @@ window._lifeAnimate = function(id, type) {
       </div>
       <div>
         <div class="text-sm font-semibold">투표</div>
-        <div class="text-[11px] text-[#6e7f7b]">팀원들과 빠르게 의견 모으기</div>
+        <div class="text-[11px] text-[#6e7f7b]">구글폼 좀 그만 쓰자</div>
       </div>
     </div>
 
