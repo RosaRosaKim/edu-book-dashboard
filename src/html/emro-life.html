@@ -1,0 +1,876 @@
+<!-- ═══════════════ 엠로생활 모듈 ═══════════════ -->
+<section class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <!-- 당산 푸드스토리 메뉴 알람 -->
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">당산 푸드스토리 메뉴 알람</div>
+        <div class="text-[11px] text-[#6e7f7b]">평일 오늘의 식단 알림</div>
+      </div>
+    </div>
+    <div id="menuAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative overflow-hidden">
+      <button onclick="setMenuAlarmValue(true)" id="menuAlarmBtnOn"
+        class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+        좋아
+      </button>
+      <button onclick="setMenuAlarmValue(false)" id="menuAlarmBtnOff"
+        class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 5.714 0m-5.714 0a3 3 0 1 1 5.714 0M3.688 15.772A8.966 8.966 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75c0 2.344.9 4.476 2.312 6.022"/></svg>
+        싫어
+      </button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var _menuAlarmLoading = false;
+  var _menuAlarmBtnOnIcon = '';
+  var _menuAlarmBtnOffIcon = '';
+
+  function _moveSlider(container, sliderId, activeBtn) {
+    if (!container || !activeBtn) return;
+    if (activeBtn.offsetWidth === 0) {
+      requestAnimationFrame(function() { _moveSlider(container, sliderId, activeBtn); });
+      return;
+    }
+    var slider = document.getElementById(sliderId);
+    if (!slider) {
+      slider = document.createElement('div');
+      slider.id = sliderId;
+      slider.className = 'absolute rounded-lg bg-accent shadow-sm';
+      slider.style.cssText = 'top:4px;bottom:4px;pointer-events:none;z-index:0;transition:left .25s cubic-bezier(.4,0,.2,1),width .25s cubic-bezier(.4,0,.2,1)';
+      container.insertBefore(slider, container.firstChild);
+    }
+    slider.style.left = activeBtn.offsetLeft + 'px';
+    slider.style.width = activeBtn.offsetWidth + 'px';
+  }
+
+  function setMenuAlarmBtnState(on) {
+    var btnOn = $('menuAlarmBtnOn');
+    var btnOff = $('menuAlarmBtnOff');
+    if (!btnOn || !btnOff) return;
+    var el = $('menuAlarmToggle');
+    el.dataset.on = on ? '1' : '0';
+
+    if (!_menuAlarmBtnOnIcon) _menuAlarmBtnOnIcon = btnOn.querySelector('svg')?.outerHTML || '';
+    if (!_menuAlarmBtnOffIcon) _menuAlarmBtnOffIcon = btnOff.querySelector('svg')?.outerHTML || '';
+
+    var activeClass = 'text-white';
+    var inactiveClass = 'text-[#6e7f7b]';
+    var disabledClass = ' opacity-35 cursor-not-allowed';
+    var spinnerSvg = '<svg class="animate-spin h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
+
+    var base = 'flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold ';
+    btnOn.className = base + (on ? activeClass : inactiveClass) + (_menuAlarmLoading ? disabledClass : '');
+    btnOff.className = base + (!on ? activeClass : inactiveClass) + (_menuAlarmLoading ? disabledClass : '');
+
+    var onIconEl = btnOn.querySelector('svg');
+    var offIconEl = btnOff.querySelector('svg');
+    if (_menuAlarmLoading) {
+      if (on && onIconEl) onIconEl.outerHTML = spinnerSvg;
+      if (!on && offIconEl) offIconEl.outerHTML = spinnerSvg;
+      btnOn.disabled = true;
+      btnOff.disabled = true;
+    } else {
+      if (onIconEl) onIconEl.outerHTML = _menuAlarmBtnOnIcon;
+      if (offIconEl) offIconEl.outerHTML = _menuAlarmBtnOffIcon;
+      btnOn.disabled = false;
+      btnOff.disabled = false;
+    }
+
+    requestAnimationFrame(function() {
+      _moveSlider(el, 'menuAlarmSlider', on ? btnOn : btnOff);
+    });
+  }
+
+  window.setMenuAlarmValue = async function(newVal) {
+    var el = $('menuAlarmToggle');
+    var isOn = el.dataset.on === '1';
+    if (_menuAlarmLoading || newVal === isOn) return;
+
+    _menuAlarmLoading = true;
+    setMenuAlarmBtnState(newVal);
+    var token = localStorage.getItem('token');
+
+    try {
+      var data = await window.gasFetch(window.API_URL + '?action=updateMenuAlarm&token=' + encodeURIComponent(token) + '&isAgreed=' + newVal);
+      if (data.status === 'success') {
+        window._menuAlarmOn = newVal;
+        window.showToast(newVal ? '식단 알람 보내줄게!' : '식단 알람 안 보낼게.', 'smail');
+      } else {
+        setMenuAlarmBtnState(isOn);
+        window.showToast('알람 설정 변경에 실패했어.', 'sad');
+      }
+    } catch (e) {
+      setMenuAlarmBtnState(isOn);
+      window.showToast('서버 연결에 실패했어.', 'sad');
+    } finally {
+      _menuAlarmLoading = false;
+      setMenuAlarmBtnState(el.dataset.on === '1');
+    }
+  };
+
+  window.initLife = function() {
+    var on = !!(window._menuAlarmOn);
+    setMenuAlarmBtnState(on);
+    // 딥링크 체크
+    var pendingSid = sessionStorage.getItem('itsOnMe');
+    if (pendingSid) {
+      sessionStorage.removeItem('itsOnMe');
+      window.openItsOnMeOrder(pendingSid);
+    }
+  };
+})();
+</script>
+
+<!-- ═══════════════ 이쏜미 ═══════════════ -->
+<section class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">이쏜미</div>
+        <div class="text-[11px] text-[#6e7f7b]">팀원 메뉴를 모아서 한번에 주문</div>
+      </div>
+    </div>
+
+    <!-- 메인 화면: 가게 선택 -->
+    <div id="iomHome">
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="iomSelectStore('당산 바나프레소')" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+          <span class="text-2xl">☕</span>
+          <span class="text-[12px] font-semibold text-[#47635f]">당산 바나프레소</span>
+        </button>
+        <button onclick="window.showToast('차후 구현 예정이야!','smail')" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 opacity-40 cursor-not-allowed border border-transparent">
+          <span class="text-2xl">✏️</span>
+          <span class="text-[12px] font-semibold text-[#6e7f7b]">수동입력</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 1: 사용자 선택 + 마감시간 -->
+    <!-- 로딩 화면 -->
+    <div id="iomLoading" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold" id="iomLoadingStore"></div>
+      </div>
+      <div class="flex flex-col items-center justify-center py-12 gap-3 text-[#9ab0ab]">
+        <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        <div class="text-[13px]">조금만 기다려줘. 기능을 로드할게</div>
+      </div>
+    </div>
+
+    <div id="iomSetup" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold" id="iomStoreName"></div>
+      </div>
+
+      <!-- 사용자 검색 -->
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="text-[11px] text-[#6e7f7b]">함께할 멤버</div>
+          <button id="iomPrevBtn" onclick="iomTogglePrevPanel()" class="hidden text-[11px] text-accent hover:underline">이전 발송내역</button>
+        </div>
+        <!-- 이전 발송내역 패널 -->
+        <div id="iomPrevPanel" class="hidden mb-2 rounded-lg border border-border bg-surface-2 overflow-hidden">
+          <div id="iomPrevList" class="max-h-40 overflow-y-auto"></div>
+        </div>
+        <div class="relative">
+          <input id="iomUserSearch" type="text" placeholder="이름 또는 ID로 검색" oninput="iomSearchUsers()"
+            class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+        </div>
+        <div id="iomSearchResults" class="mt-1 max-h-32 overflow-y-auto"></div>
+        <!-- 선택된 멤버 태그 -->
+        <div id="iomSelectedMembers" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <!-- 마감시간 -->
+      <div class="mb-4">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">마감시간</div>
+        <div class="flex items-center gap-3">
+          <input id="iomMinutes" type="range" min="10" max="60" step="5" value="20" oninput="$('iomMinLabel').textContent=this.value+'분 후'"
+            class="flex-1 accent-[#2d8a7e]">
+          <span id="iomMinLabel" class="text-sm font-mono font-semibold text-[#47635f] w-16 text-right">20분 후</span>
+        </div>
+      </div>
+
+      <!-- 발송 버튼 -->
+      <button id="iomSendBtn" onclick="iomCreate()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        보내기
+      </button>
+    </div>
+
+    <!-- Step 2: 메뉴 선택 (수신자용) -->
+    <div id="iomOrder" class="hidden">
+      <div class="flex items-center gap-2 mb-2">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold" id="iomOrderStore"></div>
+          <div class="text-[11px] text-[#6e7f7b]" id="iomOrderDeadline"></div>
+        </div>
+      </div>
+      <!-- 현황 바 (n/m명 선택완료 + 액션 버튼) -->
+      <div id="iomStatusBar" class="hidden flex items-center justify-between mb-3 px-3 py-2 rounded-lg bg-surface-2 border border-border">
+        <span id="iomStatusText" class="text-[12px] text-[#47635f] font-medium"></span>
+        <div class="flex gap-1.5">
+          <button onclick="iomShowAddMember()" class="text-[11px] text-accent hover:underline">+멤버</button>
+          <button onclick="iomExtendTime()" class="text-[11px] text-accent hover:underline">+10분</button>
+        </div>
+      </div>
+      <!-- 먹던대로 -->
+      <div id="iomLastOrder" class="hidden mb-3">
+        <button id="iomLastOrderBtn" onclick="iomUseLastOrder()" class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 hover:bg-amber-100 transition text-left">
+          <span class="text-lg">🔄</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] text-amber-600 font-semibold">먹던대로</div>
+            <div class="text-[12px] text-[#47635f] truncate" id="iomLastOrderLabel"></div>
+          </div>
+        </button>
+      </div>
+      <!-- 멤버 추가 패널 -->
+      <div id="iomAddMemberPanel" class="hidden mb-3 rounded-lg border border-border bg-surface-2 p-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">멤버 추가</div>
+        <input id="iomAddMemberSearch" type="text" placeholder="이름 검색" oninput="iomAddMemberSearchFn()"
+          class="w-full bg-surface border border-border rounded-lg px-3 py-2 text-[12px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#9ab0ab] mb-1">
+        <div id="iomAddMemberResults" class="max-h-28 overflow-y-auto"></div>
+      </div>
+      <!-- 메뉴 검색 -->
+      <div id="iomMenuSearchWrap" class="hidden mb-2">
+        <div class="relative">
+          <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ab0ab]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+          <input id="iomMenuSearch" type="text" placeholder="메뉴 검색" oninput="iomSearchMenu()"
+            class="w-full bg-surface-2 border border-border rounded-lg pl-8 pr-3 py-2 text-[12px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#9ab0ab]">
+        </div>
+      </div>
+      <!-- 카테고리 필터 + 즐겨찾기 -->
+      <div id="iomFilterBar" class="hidden mb-2">
+        <div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide" id="iomCatTabs"></div>
+      </div>
+      <div id="iomMenuList" class="space-y-2 mb-3 max-h-[420px] overflow-y-auto"></div>
+      <div id="iomOptionArea" class="hidden mb-3"></div>
+      <button id="iomSubmitBtn" onclick="iomSubmitMenu()" class="hidden w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        선택 완료
+      </button>
+      <div id="iomOrderDone" class="hidden text-center py-4 text-[13px] text-accent font-semibold"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var _store = '';
+  var _members = []; // [{knoxId, name, dept}]
+  var _searchTimer = null;
+  var _menuData = null;
+  var _optionsData = null;
+  var _selectedMenu = null;
+  var _selectedOptions = {};
+  var _currentSessionId = null;
+  var _currentCat = ''; // 현재 필터 카테고리 ('' = 전체, '★' = 즐겨찾기)
+  var _favorites = {}; // { menuId: true }
+  var _menuSearchWord = ''; // 메뉴 검색어
+  var _lastOrder = null; // { menu, options, price }
+  var _orderSession = null; // 현재 주문 세션 정보
+  var _orderResponses = []; // 현재 주문 응답 목록
+  var _userCache = null; // 사용자 목록 로컬 캐시
+  var _myDept = ''; // 내 부서
+  var _prevSessions = []; // 이전 세션 목록 [{sid, store, created, members:[knoxId]}]
+
+  /* ─── 사용자 목록 프리로드 (인코딩 전송 → 디코드) ─── */
+  function _preloadUsers() {
+    if (_userCache) { _onUsersReady(); return; }
+    var token = localStorage.getItem('token');
+    if (!token) { _onUsersReady(); return; }
+    window.gasFetch(window.API_URL + '?action=getBizFlowUserList&token=' + encodeURIComponent(token)).then(function(res) {
+      if (!res || !res.ok || !res.d) { _onUsersReady(); return; }
+      try {
+        var b64 = res.d.split('').reverse().join('');
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        var arr = JSON.parse(new TextDecoder().decode(bytes));
+        _userCache = arr.map(function(u) { return { knoxId: u[0], name: u[1], dept: u[2] }; });
+        var myKnox = (res.m || '').toLowerCase();
+        for (var j = 0; j < _userCache.length; j++) {
+          if (_userCache[j].knoxId.toLowerCase() === myKnox) { _myDept = _userCache[j].dept; break; }
+        }
+        // 이전 세션 목록: knoxId → 유저 정보 매핑
+        _prevSessions = [];
+        if (res.p && res.p.length) {
+          var cacheMap = {};
+          _userCache.forEach(function(u) { cacheMap[u.knoxId.toLowerCase()] = u; });
+          res.p.forEach(function(s) {
+            var resolved = [];
+            (s.members || []).forEach(function(k) {
+              var u = cacheMap[k.toLowerCase()];
+              if (u) resolved.push(u);
+            });
+            if (resolved.length) _prevSessions.push({ store: s.store, created: s.created, members: resolved });
+          });
+        }
+      } catch (_) {}
+      _onUsersReady();
+    }).catch(function() { _onUsersReady(); });
+  }
+
+  function _onUsersReady() {
+    $('iomLoading').classList.add('hidden');
+    $('iomSetup').classList.remove('hidden');
+    _showPrevBtn();
+    _showDeptMembers();
+  }
+
+  /* ─── 이전 발송내역 ─── */
+  function _showPrevBtn() {
+    $('iomPrevBtn').classList.toggle('hidden', !_prevSessions.length);
+    $('iomPrevPanel').classList.add('hidden');
+  }
+
+  window.iomTogglePrevPanel = function() {
+    var panel = $('iomPrevPanel');
+    if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+    // 세션 목록 렌더
+    $('iomPrevList').innerHTML = _prevSessions.map(function(s, i) {
+      var names = s.members.map(function(m) { return m.name; }).join(', ');
+      return '<button onclick="iomSelectPrevSession(' + i + ')" class="w-full text-left px-3 py-2.5 hover:bg-accent/10 transition border-b border-border last:border-0">' +
+        '<div class="flex items-center justify-between">' +
+          '<span class="text-[12px] font-medium text-[#47635f]">' + s.store + '</span>' +
+          '<span class="text-[10px] text-[#9ab0ab]">' + s.created + '</span>' +
+        '</div>' +
+        '<div class="text-[11px] text-[#6e7f7b] mt-0.5 truncate">' + names + ' (' + s.members.length + '명)</div>' +
+      '</button>';
+    }).join('');
+    panel.classList.remove('hidden');
+  };
+
+  window.iomSelectPrevSession = function(idx) {
+    var s = _prevSessions[idx];
+    if (!s) return;
+    _members = s.members.map(function(u) { return { knoxId: u.knoxId, name: u.name, dept: u.dept }; });
+    _renderSelectedMembers();
+    $('iomPrevPanel').classList.add('hidden');
+    _showDeptMembers();
+  };
+
+  /* ─── 부서원 기본 표시 ─── */
+  function _showDeptMembers() {
+    if (!_userCache || !_myDept || $('iomUserSearch').value.trim()) return;
+    var selectedIds = {};
+    _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+    var deptUsers = _userCache.filter(function(u) {
+      return u.dept === _myDept && !selectedIds[u.knoxId.toLowerCase()];
+    });
+    if (deptUsers.length) _renderSearchResults(deptUsers);
+  }
+
+  /* ─── 가게 선택 ─── */
+  window.iomSelectStore = function(store) {
+    _store = store;
+    _members = [];
+    $('iomStoreName').textContent = store;
+    $('iomLoadingStore').textContent = store;
+    $('iomSelectedMembers').innerHTML = '';
+    $('iomUserSearch').value = '';
+    $('iomSearchResults').innerHTML = '';
+
+    // 캐시 있으면 바로 설정 화면, 없으면 로딩 표시 후 프리로드
+    $('iomHome').classList.add('hidden');
+    if (_userCache) {
+      $('iomSetup').classList.remove('hidden');
+      _showDeptMembers();
+    } else {
+      $('iomLoading').classList.remove('hidden');
+      _preloadUsers();
+    }
+  };
+
+  window.iomBack = function(target) {
+    $('iomHome').classList.toggle('hidden', target !== 'home');
+    $('iomLoading').classList.add('hidden');
+    $('iomSetup').classList.add('hidden');
+    $('iomOrder').classList.add('hidden');
+    if (target === 'home') {
+      _store = ''; _members = []; _selectedMenu = null; _currentSessionId = null;
+    }
+  };
+
+  /* ─── 사용자 검색 (로컬 캐시 우선 → API 폴백) ─── */
+  window.iomSearchUsers = function() {
+    clearTimeout(_searchTimer);
+    var word = $('iomUserSearch').value.trim().toLowerCase();
+    if (word.length < 1) { _showDeptMembers(); return; }
+
+    // 캐시 있으면 즉시 로컬 검색
+    if (_userCache) {
+      var selectedIds = {};
+      _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+      var results = [];
+      for (var i = 0; i < _userCache.length; i++) {
+        var u = _userCache[i];
+        if (selectedIds[u.knoxId.toLowerCase()]) continue;
+        if (u.name.toLowerCase().indexOf(word) !== -1 || u.knoxId.toLowerCase().indexOf(word) !== -1) {
+          results.push(u);
+        }
+        if (results.length >= 20) break;
+      }
+      _renderSearchResults(results);
+      return;
+    }
+
+    // 캐시 없으면 API 폴백 (debounce)
+    _searchTimer = setTimeout(async function() {
+      $('iomSearchResults').innerHTML = '<div class="flex items-center justify-center py-3 gap-2 text-[12px] text-[#9ab0ab]"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>검색 중...</div>';
+      try {
+        var token = localStorage.getItem('token');
+        var data = await window.gasFetch(window.API_URL + '?action=searchBizFlowUsers&token=' + encodeURIComponent(token) + '&searchWord=' + encodeURIComponent(word));
+        if (!data || !data.users) { $('iomSearchResults').innerHTML = ''; return; }
+        var selectedIds = {};
+        _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+        var filtered = data.users.filter(function(u) { return !selectedIds[u.knoxId.toLowerCase()]; });
+        _renderSearchResults(filtered);
+      } catch (_) { $('iomSearchResults').innerHTML = ''; }
+    }, 400);
+  };
+
+  function _renderSearchResults(users) {
+    var container = $('iomSearchResults');
+    if (!users.length) { container.innerHTML = '<div class="text-[11px] text-[#9ab0ab] px-1 py-2">검색 결과가 없어.</div>'; return; }
+    container.innerHTML = users.map(function(u) {
+      return '<button onclick=\'iomAddMember(' + JSON.stringify(u).replace(/'/g, "\\'") + ')\' class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-accent/10 transition text-left">' +
+        '<div><span class="text-[13px] font-medium text-[#47635f]">' + u.name + '</span> <span class="text-[11px] text-[#9ab0ab]">' + u.dept + '</span></div>' +
+        '<span class="text-accent text-lg leading-none">+</span></button>';
+    }).join('');
+  }
+
+  window.iomAddMember = function(user) {
+    if (_members.some(function(m) { return m.knoxId.toLowerCase() === user.knoxId.toLowerCase(); })) return;
+    _members.push(user);
+    _renderSelectedMembers();
+    // 검색 결과 유지 (선택된 사람만 업데이트)
+    var word = $('iomUserSearch').value.trim().toLowerCase();
+    if (word) { iomSearchUsers(); } else { _showDeptMembers(); }
+  };
+
+  function _renderSelectedMembers() {
+    $('iomSelectedMembers').innerHTML = _members.map(function(m, i) {
+      return '<span class="inline-flex items-center gap-1 bg-accent/10 text-accent text-[12px] font-medium px-2.5 py-1 rounded-full">' +
+        m.name + '<button onclick="iomRemoveMember(' + i + ')" class="ml-0.5 text-accent/60 hover:text-accent text-sm leading-none">&times;</button></span>';
+    }).join('');
+  }
+
+  window.iomRemoveMember = function(idx) {
+    _members.splice(idx, 1);
+    _renderSelectedMembers();
+    var word = $('iomUserSearch').value.trim().toLowerCase();
+    if (word) { iomSearchUsers(); } else { _showDeptMembers(); }
+  };
+
+  /* ─── 세션 생성 ─── */
+  window.iomCreate = async function() {
+    if (!_members.length) { window.showToast('멤버를 선택해줘!', 'sad'); return; }
+    var btn = $('iomSendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-1.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>발송 중...';
+    try {
+      var token = localStorage.getItem('token');
+      var minutes = $('iomMinutes').value;
+      var data = await window.gasFetch(window.API_URL + '?action=createItsOnMe&token=' + encodeURIComponent(token) +
+        '&store=' + encodeURIComponent(_store) + '&minutes=' + minutes +
+        '&members=' + encodeURIComponent(JSON.stringify(_members)));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      // 본인도 메뉴 선택 화면으로
+      _currentSessionId = data.sessionId;
+      _showOrderView(data.sessionId);
+      setTimeout(function() { window.showToast('너도 주문해야지? 메뉴판을 보여줄게', 'smail'); }, 1000);
+    } catch (err) {
+      window.showToast('발송 실패: ' + err.message, 'sad');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '보내기';
+    }
+  };
+
+  /* ─── 메뉴 선택 화면 (딥링크 / 생성 후) ─── */
+  window.openItsOnMeOrder = function(sessionId) {
+    _currentSessionId = sessionId;
+    _showOrderView(sessionId);
+  };
+
+  async function _showOrderView(sessionId) {
+    $('iomHome').classList.add('hidden');
+    $('iomSetup').classList.add('hidden');
+    $('iomOrder').classList.remove('hidden');
+    $('iomMenuList').innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">불러오는 중...</div>';
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.add('hidden');
+    $('iomOrderDone').classList.add('hidden');
+    $('iomStatusBar').classList.add('hidden');
+    $('iomLastOrder').classList.add('hidden');
+    $('iomAddMemberPanel').classList.add('hidden');
+
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=getItsOnMe&token=' + encodeURIComponent(token) + '&sessionId=' + encodeURIComponent(sessionId));
+      if (data.error) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">' + data.error + '</div>'; return; }
+
+      var session = data.session;
+      _orderSession = session;
+      _orderResponses = data.responses || [];
+      $('iomOrderStore').textContent = session.store;
+      var dl = new Date(session.deadline);
+      var dlStr = dl.getHours().toString().padStart(2,'0') + ':' + dl.getMinutes().toString().padStart(2,'0');
+      $('iomOrderDeadline').textContent = session.status === 'closed' ? '마감됨' : dlStr + ' 마감';
+
+      // 현황 바
+      if (session.status !== 'closed') {
+        $('iomStatusBar').classList.remove('hidden');
+        $('iomStatusText').textContent = (data.doneCount || 0) + '/' + session.total + '명 선택완료';
+      }
+
+      if (session.status === 'closed') {
+        var myMenu = data.myResponse.menu || '미선택';
+        var myOpts = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
+        $('iomMenuList').innerHTML = '';
+        $('iomOrderDone').classList.remove('hidden');
+        $('iomOrderDone').textContent = '마감된 주문이야. 내 선택: ' + myMenu + myOpts;
+        return;
+      }
+
+      // 이미 선택한 메뉴가 있으면 표시
+      if (data.myResponse && data.myResponse.menu) {
+        $('iomOrderDone').classList.remove('hidden');
+        var optStr = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
+        $('iomOrderDone').innerHTML = '선택 완료: <strong>' + data.myResponse.menu + optStr + '</strong><br><button onclick="iomChangeMenu()" class="text-[11px] text-accent mt-1 underline">변경하기</button>';
+        $('iomMenuList').innerHTML = '';
+        return;
+      }
+
+      // 먹던대로
+      _lastOrder = data.lastOrder;
+      if (_lastOrder) {
+        var loLabel = _lastOrder.menu + (_lastOrder.options ? ' (' + _lastOrder.options + ')' : '');
+        $('iomLastOrderLabel').textContent = loLabel;
+        $('iomLastOrder').classList.remove('hidden');
+      }
+
+      // 메뉴 로드
+      await _loadMenuData(session.store);
+    } catch (err) {
+      $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">로드 실패</div>';
+    }
+  }
+
+  window.iomChangeMenu = function() {
+    $('iomOrderDone').classList.add('hidden');
+    _renderMenuList();
+  };
+
+  /* ─── 메뉴 데이터 로드 (GAS API → 정적 JSON 폴백) ─── */
+  async function _loadMenuData(store) {
+    if (!_menuData || !_optionsData) {
+      try {
+        var token = localStorage.getItem('token') || '';
+        var res = await window.gasFetch(window.API_URL + '?action=getBanapressoMenu&token=' + encodeURIComponent(token));
+        if (res && res.ok && res.menu) {
+          _menuData = res.menu;
+          _optionsData = res.options || {};
+        }
+      } catch (_) {}
+      // 폴백: 정적 JSON
+      if (!_menuData) {
+        try { var r1 = await fetch('../data/menu.json'); _menuData = await r1.json(); } catch (_) { _menuData = []; }
+      }
+      if (!_optionsData) {
+        try { var r2 = await fetch('../data/refined_options.json'); _optionsData = await r2.json(); } catch (_) { _optionsData = {}; }
+      }
+    }
+    _renderMenuList();
+  }
+
+  /* ─── 즐겨찾기 로드/저장 (localStorage) ─── */
+  function _loadFavorites() {
+    try { _favorites = JSON.parse(localStorage.getItem('iom_fav') || '{}'); } catch(_) { _favorites = {}; }
+  }
+  function _saveFavorites() {
+    localStorage.setItem('iom_fav', JSON.stringify(_favorites));
+  }
+  window.iomToggleFav = function(menuId, ev) {
+    ev.stopPropagation();
+    if (_favorites[menuId]) delete _favorites[menuId]; else _favorites[menuId] = true;
+    _saveFavorites();
+    _renderCatTabs();
+    _renderMenuItems();
+  };
+
+  /* ─── 메뉴 검색 ─── */
+  window.iomSearchMenu = function() {
+    _menuSearchWord = ($('iomMenuSearch').value || '').trim().toLowerCase();
+    _renderMenuItems();
+  };
+
+  /* ─── 카테고리 필터 탭 ─── */
+  function _renderCatTabs() {
+    if (!_menuData || !_menuData.length) return;
+    var cats = [];
+    var seen = {};
+    _menuData.forEach(function(m) {
+      if (!seen[m.category]) { seen[m.category] = true; cats.push(m.category); }
+    });
+    var favCount = _menuData.filter(function(m) { return _favorites[m.id]; }).length;
+    var tabs = [{ key: '', label: '전체' }];
+    if (favCount) tabs.push({ key: '★', label: '★ ' + favCount });
+    cats.forEach(function(c) { tabs.push({ key: c, label: c }); });
+
+    $('iomCatTabs').innerHTML = tabs.map(function(t) {
+      var active = _currentCat === t.key;
+      return '<button onclick="iomFilterCat(\'' + t.key.replace(/'/g,"\\'") + '\')" class="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition ' +
+        (active ? 'bg-accent text-white' : 'bg-surface-2 text-[#6e7f7b] hover:bg-accent/10') + '">' + t.label + '</button>';
+    }).join('');
+    $('iomFilterBar').classList.remove('hidden');
+  }
+  window.iomFilterCat = function(cat) {
+    _currentCat = cat;
+    _renderCatTabs();
+    _renderMenuItems();
+  };
+
+  /* ─── 메뉴 목록 렌더 ─── */
+  function _renderMenuList() {
+    _loadFavorites();
+    _menuSearchWord = '';
+    var favCount = _menuData ? _menuData.filter(function(m) { return _favorites[m.id]; }).length : 0;
+    _currentCat = favCount ? '★' : '';
+    var container = $('iomMenuList');
+    if (!_menuData || !_menuData.length) {
+      container.innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">메뉴를 불러올 수 없어.</div>';
+      $('iomFilterBar').classList.add('hidden');
+      $('iomMenuSearchWrap').classList.add('hidden');
+      return;
+    }
+    $('iomMenuSearch').value = '';
+    $('iomMenuSearchWrap').classList.remove('hidden');
+    _renderCatTabs();
+    _renderMenuItems();
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.add('hidden');
+  }
+
+  function _renderMenuItems() {
+    var container = $('iomMenuList');
+    var filtered = _menuData;
+    if (_currentCat === '★') {
+      filtered = _menuData.filter(function(m) { return _favorites[m.id]; });
+    } else if (_currentCat) {
+      filtered = _menuData.filter(function(m) { return m.category === _currentCat; });
+    }
+    // 텍스트 검색 적용
+    if (_menuSearchWord) {
+      filtered = filtered.filter(function(m) { return m.name.toLowerCase().indexOf(_menuSearchWord) !== -1; });
+    }
+    if (!filtered.length) {
+      var msg = _menuSearchWord ? '검색 결과가 없어.' : (_currentCat === '★' ? '즐겨찾기한 메뉴가 없어.' : '해당 카테고리에 메뉴가 없어.');
+      container.innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">' + msg + '</div>';
+      return;
+    }
+    container.innerHTML = filtered.map(function(item) {
+      var isFav = !!_favorites[item.id];
+      var imgHtml = item.img ? '<img src="' + item.img + '" alt="" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '';
+      return '<button onclick=\'iomPickMenu(' + JSON.stringify({id:item.id,name:item.name,price:item.price}).replace(/'/g,"\\'") + ')\' class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-surface-2 hover:bg-accent/10 transition text-left border border-transparent hover:border-accent/20">' +
+        imgHtml +
+        '<div class="flex-1 min-w-0"><div class="text-[13px] font-medium text-[#47635f]">' + item.name + '</div>' +
+        '<div class="text-[11px] text-[#9ab0ab]">' + (item.price ? item.price.toLocaleString() + '원' : '') + '</div></div>' +
+        '<span onclick="iomToggleFav(' + item.id + ',event)" class="shrink-0 ml-1 w-8 h-8 flex items-center justify-center rounded-full transition ' +
+        (isFav ? 'text-red-500 bg-red-50' : 'text-[#c5d5d2] hover:text-red-400 hover:bg-red-50/50') + '">' +
+        '<svg class="w-5 h-5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="' + (isFav ? 'currentColor' : 'none') + '">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>' +
+        '</span></button>';
+    }).join('');
+  }
+
+  /* ─── 메뉴 선택 → 옵션 표시 ─── */
+  function _hideMenuFilters() {
+    $('iomFilterBar').classList.add('hidden');
+    $('iomMenuSearchWrap').classList.add('hidden');
+    $('iomLastOrder').classList.add('hidden');
+  }
+  window.iomPickMenu = function(item) {
+    _selectedMenu = item;
+    _selectedOptions = {};
+    _hideMenuFilters();
+    var opts = _optionsData && _optionsData[String(item.id)];
+    if (!opts || !opts.length) {
+      // 옵션 없음 → 바로 제출 가능
+      $('iomOptionArea').classList.add('hidden');
+      $('iomSubmitBtn').classList.remove('hidden');
+      $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent">' + item.name + '</div>';
+      return;
+    }
+    // 옵션 렌더링
+    $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent flex items-center justify-between">' + item.name +
+      ' <button onclick="iomChangeMenu()" class="text-[11px] text-accent/60 underline">다른 메뉴</button></div>';
+    var html = '';
+    opts.forEach(function(cat) {
+      html += '<div class="mb-3"><div class="text-[11px] font-semibold text-[#6e7f7b] mb-1.5">' + cat.name + (cat.required ? ' *' : '') + '</div>';
+      html += '<div class="flex flex-wrap gap-1.5">';
+      cat.options.forEach(function(opt) {
+        var priceStr = opt.price ? (opt.price > 0 ? '+' + opt.price.toLocaleString() : opt.price.toLocaleString()) + '원' : '';
+        html += '<button onclick=\'iomPickOption("' + cat.id + '","' + opt.name + '","' + cat.type + '")\' id="iomOpt_' + cat.id + '_' + opt.name.replace(/\s/g,'_') + '"' +
+          ' class="px-2.5 py-1.5 rounded-lg text-[12px] border transition ' +
+          (opt.isDefault ? 'bg-accent text-white border-accent' : 'bg-surface-2 text-[#47635f] border-border hover:border-accent/40') + '">' +
+          opt.name + (priceStr ? ' <span class="text-[10px] opacity-70">' + priceStr + '</span>' : '') + '</button>';
+        if (opt.isDefault) _selectedOptions[cat.id] = opt.name;
+      });
+      html += '</div></div>';
+    });
+    $('iomOptionArea').innerHTML = html;
+    $('iomOptionArea').classList.remove('hidden');
+    $('iomSubmitBtn').classList.remove('hidden');
+  };
+
+  window.iomPickOption = function(catId, optName, type) {
+    _selectedOptions[catId] = optName;
+    // UI 업데이트: 해당 카테고리의 모든 버튼 리셋 후 선택 표시
+    var prefix = 'iomOpt_' + catId + '_';
+    var allBtns = $('iomOptionArea').querySelectorAll('[id^="' + prefix + '"]');
+    allBtns.forEach(function(btn) {
+      var isActive = btn.id === prefix + optName.replace(/\s/g,'_');
+      btn.className = 'px-2.5 py-1.5 rounded-lg text-[12px] border transition ' +
+        (isActive ? 'bg-accent text-white border-accent' : 'bg-surface-2 text-[#47635f] border-border hover:border-accent/40');
+    });
+  };
+
+  /* ─── 메뉴 제출 ─── */
+  window.iomSubmitMenu = async function() {
+    if (!_selectedMenu || !_currentSessionId) return;
+    var btn = $('iomSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-1.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>저장 중...';
+    try {
+      var token = localStorage.getItem('token');
+      var optStr = Object.values(_selectedOptions).filter(Boolean).join(', ');
+      var data = await window.gasFetch(window.API_URL + '?action=submitItsOnMeMenu&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_currentSessionId) +
+        '&menu=' + encodeURIComponent(_selectedMenu.name) +
+        '&options=' + encodeURIComponent(optStr) +
+        '&price=' + (_selectedMenu.price || 0));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      var doneText = '선택 완료: <strong>' + _selectedMenu.name + (optStr ? ' (' + optStr + ')' : '') + '</strong>';
+      if (data.allDone) doneText += '<br><span class="text-[11px] text-[#9ab0ab]">전원 선택 완료! 취합 결과가 발송됐어.</span>';
+      else doneText += '<br><button onclick="iomChangeMenu()" class="text-[11px] text-accent mt-1 underline">변경하기</button>';
+      $('iomOrderDone').innerHTML = doneText;
+      $('iomOrderDone').classList.remove('hidden');
+      $('iomMenuList').innerHTML = '';
+      $('iomOptionArea').classList.add('hidden');
+      $('iomSubmitBtn').classList.add('hidden');
+      window.showToast('메뉴 선택 완료!', 'smail');
+    } catch (err) {
+      window.showToast('저장 실패', 'sad');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '선택 완료';
+    }
+  };
+
+  /* ─── 먹던대로 ─── */
+  window.iomUseLastOrder = function() {
+    if (!_lastOrder || !_lastOrder.menu) return;
+    // 메뉴 데이터에서 매칭
+    var found = _menuData && _menuData.find(function(m) { return m.name === _lastOrder.menu; });
+    _selectedMenu = found ? { id: found.id, name: found.name, price: found.price } : { id: 0, name: _lastOrder.menu, price: _lastOrder.price || 0 };
+    _selectedOptions = {};
+    if (_lastOrder.options) {
+      _lastOrder.options.split(',').forEach(function(o, i) { _selectedOptions['last_' + i] = o.trim(); });
+    }
+    $('iomLastOrder').classList.add('hidden');
+    _hideMenuFilters();
+    $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent flex items-center justify-between">' +
+      _selectedMenu.name + (_lastOrder.options ? ' <span class="text-[11px] text-accent/60">(' + _lastOrder.options + ')</span>' : '') +
+      ' <button onclick="iomChangeMenu()" class="text-[11px] text-accent/60 underline">다른 메뉴</button></div>';
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.remove('hidden');
+  };
+
+  /* ─── 시간 연장 (+10분) ─── */
+  window.iomExtendTime = async function() {
+    if (!_currentSessionId) return;
+    if (!confirm('마감시간을 10분 연장할까?')) return;
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=extendItsOnMe&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_currentSessionId) + '&minutes=10');
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      $('iomOrderDeadline').textContent = data.deadlineStr + ' 마감';
+      window.showToast(data.deadlineStr + '까지 연장했어!', 'smail');
+    } catch (_) { window.showToast('연장 실패', 'sad'); }
+  };
+
+  /* ─── 멤버 추가 (참여자도 가능) ─── */
+  window.iomShowAddMember = function() {
+    var panel = $('iomAddMemberPanel');
+    if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+    $('iomAddMemberSearch').value = '';
+    $('iomAddMemberResults').innerHTML = '';
+    panel.classList.remove('hidden');
+    $('iomAddMemberSearch').focus();
+  };
+
+  window.iomAddMemberSearchFn = function() {
+    var word = ($('iomAddMemberSearch').value || '').trim().toLowerCase();
+    if (word.length < 1) { $('iomAddMemberResults').innerHTML = ''; return; }
+    if (!_userCache) { $('iomAddMemberResults').innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-1">사용자 목록 로드 중...</div>'; return; }
+    // 기존 멤버 제외
+    var existingKnox = {};
+    _orderResponses.forEach(function(r) { existingKnox[r.knoxId.toLowerCase()] = true; });
+    var results = _userCache.filter(function(u) {
+      if (existingKnox[u.knoxId.toLowerCase()]) return false;
+      return u.name.toLowerCase().indexOf(word) !== -1 || u.knoxId.toLowerCase().indexOf(word) !== -1;
+    }).slice(0, 10);
+    if (!results.length) { $('iomAddMemberResults').innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-1">결과 없음</div>'; return; }
+    $('iomAddMemberResults').innerHTML = results.map(function(u) {
+      return '<button onclick=\'iomAddNewMember(' + JSON.stringify(u).replace(/'/g, "\\'") + ')\' class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-accent/10 transition text-left">' +
+        '<span class="text-[12px] text-[#47635f]">' + u.name + ' <span class="text-[10px] text-[#9ab0ab]">' + u.dept + '</span></span>' +
+        '<span class="text-accent text-sm">+</span></button>';
+    }).join('');
+  };
+
+  window.iomAddNewMember = async function(user) {
+    if (!_currentSessionId) return;
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=addItsOnMeMembers&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_currentSessionId) +
+        '&members=' + encodeURIComponent(JSON.stringify([user])));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      if (data.addedCount > 0) {
+        _orderResponses.push({ knoxId: user.knoxId, name: user.name, menu: '', options: '' });
+        var newTotal = (_orderSession ? _orderSession.total : 0) + data.addedCount;
+        if (_orderSession) _orderSession.total = newTotal;
+        var doneCount = _orderResponses.filter(function(r) { return r.menu; }).length;
+        $('iomStatusText').textContent = doneCount + '/' + newTotal + '명 선택완료';
+        window.showToast(user.name + ' 추가 완료!', 'smail');
+        $('iomAddMemberSearch').value = '';
+        $('iomAddMemberResults').innerHTML = '';
+      } else {
+        window.showToast('이미 참여 중인 멤버야.', 'smail');
+      }
+    } catch (_) { window.showToast('추가 실패', 'sad'); }
+  };
+})();
+</script>

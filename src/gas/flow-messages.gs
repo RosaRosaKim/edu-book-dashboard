@@ -7,7 +7,8 @@
 var FLOW_LINK = {
   DASHBOARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=dashboard',
        CARD: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=card',
-   APPROVAL: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=approval'
+   APPROVAL: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=approval',
+       LIFE: 'https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=life'
 };
 
 var FLOW_MSG = {
@@ -133,6 +134,67 @@ var FLOW_MSG = {
       content: '🍽 오늘의 식단 (' + date + ')\n\n' + menus,
       link: '',
       previewTitle: '오늘의 당산푸드스토리'
+    };
+  },
+
+  // #11 이쏜미 초대 메시지
+  itsOnMeInvite: function(creatorName, store, deadlineStr, sessionId) {
+    return {
+      content: creatorName + ' 프로가 메뉴를 골라달래',
+      link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
+      previewTitle: '☕ ' + store + ' ' + deadlineStr + '까지 메뉴선택해'
+    };
+  },
+  // #12 이쏜미 취합 결과
+  itsOnMeSummary: function(store, responses) {
+    var total = responses.length;
+    var totalPrice = 0;
+    // 메뉴+옵션 조합으로 그룹핑
+    var groups = {};
+    var noChoice = [];
+    for (var i = 0; i < responses.length; i++) {
+      var r = responses[i];
+      if (!r.menu) { noChoice.push(r.name); continue; }
+      totalPrice += (r.price || 0);
+      var key = r.menu + (r.options ? ' (' + r.options + ')' : '');
+      if (!groups[key]) groups[key] = { label: key, names: [], price: r.price || 0 };
+      groups[key].names.push(r.name);
+    }
+    var lines = [];
+    var idx = 1;
+    var keys = Object.keys(groups);
+    for (var j = 0; j < keys.length; j++) {
+      var g = groups[keys[j]];
+      var priceTag = g.price ? ' ' + g.price.toLocaleString() + '원' : '';
+      lines.push(idx + '. ' + g.label + priceTag + ' x' + g.names.length + '\n   - ' + g.names.join(', '));
+      idx++;
+    }
+    if (noChoice.length) {
+      lines.push('\n미선택 x' + noChoice.length + '\n   - ' + noChoice.join(', '));
+    }
+    if (totalPrice > 0) {
+      lines.push('\n총 금액: ' + totalPrice.toLocaleString() + '원');
+    }
+    return {
+      content: lines.join('\n\n'),
+      link: '',
+      previewTitle: '☕ ' + store + ' 주문 취합 (' + total + '명' + (totalPrice ? ', ' + totalPrice.toLocaleString() + '원' : '') + ')'
+    };
+  },
+  // #12b 이쏜미 세션 변경 알림 (발송자에게)
+  itsOnMeUpdate: function(actorName, action) {
+    return {
+      content: actorName + ' 프로가 ' + action,
+      link: '',
+      previewTitle: '☕ 이쏜미 ' + action
+    };
+  },
+  // #12c 이쏜미 마감 임박 리마인드
+  itsOnMeReminder: function(store, deadlineStr, sessionId) {
+    return {
+      content: '아직 메뉴를 안 골랐어! ' + deadlineStr + '에 마감이야.',
+      link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
+      previewTitle: '⏰ ' + store + ' 마감 5분 전!'
     };
   },
 

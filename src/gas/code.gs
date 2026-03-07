@@ -376,7 +376,15 @@ const doGet = (e) => {
     boardReact: handleBoardReact,
     boardReply: (row, ev) => handleBoardReply(row, ev, managerSet),
     boardReplyDelete: (row, ev) => handleBoardReplyDelete(row, ev, managerSet),
-    boardPin: (row, ev) => handleBoardPin(row, ev, managerSet)
+    boardPin: (row, ev) => handleBoardPin(row, ev, managerSet),
+    searchBizFlowUsers: handleSearchBizFlowUsers,
+    getBizFlowUserList: handleGetBizFlowUserList,
+    createItsOnMe: handleCreateItsOnMe,
+    getItsOnMe: handleGetItsOnMe,
+    submitItsOnMeMenu: handleSubmitItsOnMeMenu,
+    addItsOnMeMembers: handleAddItsOnMeMembers,
+    extendItsOnMe: handleExtendItsOnMe,
+    getBanapressoMenu: handleGetBanapressoMenu
   };
   if (TOKEN_ACTIONS[action] && token) {
     const entry = _verifyToken(token, adminByKnoxId);
@@ -391,12 +399,16 @@ const doGet = (e) => {
       if (!rnSheet || rnSheet.getLastRow() < 2) return createResponse({ status: 'success', notes: [] });
       const rnData = rnSheet.getDataRange().getValues();
       rnData.shift();
-      const notes = rnData.filter(r => r[0]).map(r => ({
-        version: String(r[0]),
-        date: r[1] ? Utilities.formatDate(new Date(r[1]), 'Asia/Seoul', 'yyyy-MM-dd') : '',
-        content: String(r[2] || '')
-      }));
-      return createResponse({ status: 'success', notes: notes });
+      const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+      var currentVersion = '';
+      const notes = rnData.filter(r => r[0]).map(r => {
+        var d = r[1] ? Utilities.formatDate(new Date(r[1]), 'Asia/Seoul', 'yyyy-MM-dd') : '';
+        if (d && d <= today && (!currentVersion || parseFloat(r[0]) > parseFloat(currentVersion))) {
+          currentVersion = String(r[0]);
+        }
+        return { version: String(r[0]), date: d, content: String(r[2] || '') };
+      });
+      return createResponse({ status: 'success', notes: notes, currentVersion: currentVersion });
     } catch (rnErr) {
       return createResponse({ status: 'success', notes: [] });
     }

@@ -36,6 +36,7 @@ async function buildFile(inputFile, outputFile) {
   html = html.replace(/\.\.\/css\//g, 'css/');
   html = html.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
   html = html.replace(/dev-admin-dashboard\.html/g, 'admin-dashboard.html');
+  html = html.replace(/\.\.\/data\//g, 'data/');
 
   const $ = cheerio.load(html, { decodeEntities: false });
 
@@ -164,6 +165,7 @@ async function buildModule(inputFile, outputFile) {
   // ── Replace dev paths before obfuscation ──
   html = html.replace(/\.\.\/img\//g, 'img/');
   html = html.replace(/\.\.\/css\//g, 'css/');
+  html = html.replace(/\.\.\/data\//g, 'data/');
   const $ = cheerio.load(html, { decodeEntities: false });
 
   // ── Process inline <script> blocks: console 삭제 + 난독화 ──
@@ -293,7 +295,7 @@ async function build() {
 
   // 3. 모듈 HTML 빌드
   console.log('\n========== Building modules ==========');
-  const modules = ['edu-bizplay.html', 'card-babka.html', 'edu-draft.html', 'edu-expense.html', 'edu-timesheet.html', 'edu-board.html'];
+  const modules = ['edu-bizplay.html', 'card-babka.html', 'edu-draft.html', 'edu-expense.html', 'edu-timesheet.html', 'edu-board.html', 'emro-life.html'];
   for (const mod of modules) {
     const src = path.join(SRC_DIR, mod);
     if (fs.existsSync(src)) {
@@ -323,6 +325,15 @@ async function build() {
     console.log(`  ${cssFiles.length} files → ${DIST_DIR}/css/ (minified)`);
   }
 
+  // 4-2. data 복사
+  const DATA_DIR = 'src/data';
+  if (fs.existsSync(DATA_DIR)) {
+    console.log(`\n========== Copying ${DATA_DIR}/ ==========`);
+    copyDirSync(DATA_DIR, path.join(DIST_DIR, 'data'));
+    const dataCount = fs.readdirSync(DATA_DIR).length;
+    console.log(`  ${dataCount} files → ${DIST_DIR}/data/`);
+  }
+
   // 5. PWA 파일 복사 (html/ → dist/ 경로 보정)
   console.log('\n========== Copying PWA files ==========');
   const pwaSource = path.join(SRC_DIR, 'manifest.json');
@@ -338,6 +349,7 @@ async function build() {
     let sw = fs.readFileSync(swSource, 'utf-8');
     sw = sw.replace(/dev-edu-book-dashboard\.html/g, 'edu-book-dashboard.html');
     sw = sw.replace(/\.\.\/img\//g, 'img/');
+    sw = sw.replace(/\.\.\/data\//g, 'data/');
     fs.writeFileSync(path.join(DIST_DIR, 'sw.js'), sw, 'utf-8');
     console.log('  sw.js (path adjusted)');
   }
