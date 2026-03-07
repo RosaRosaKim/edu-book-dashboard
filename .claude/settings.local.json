@@ -46,7 +46,14 @@
       "Bash(grep:*)",
       "WebFetch(domain:emplinfo.appplay.co.kr)",
       "WebFetch(domain:query1.finance.yahoo.com)",
-      "Bash(openssl rand:*)"
+      "Bash(openssl rand:*)",
+      "WebFetch(domain:pf.kakao.com)",
+      "WebFetch(domain:talkchannel-static.kakao.com)",
+      "WebFetch(domain:www.banapresso.com)",
+      "WebFetch(domain:order.banapresso.com)",
+      "WebFetch(domain:m.banapresso.com)",
+      "Bash(git pull:*)",
+      "Bash(git:*)"
     ]
   }
 }
