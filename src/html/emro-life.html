@@ -934,7 +934,7 @@ window._lifeAnimate = function(id, type) {
     });
     var favCount = _menuData.filter(function(m) { return _favorites[m.id]; }).length;
     var tabs = [{ key: '', label: '전체' }];
-    if (favCount) tabs.push({ key: '★', label: '★ ' + favCount });
+    if (favCount) tabs.push({ key: '★', label: '♥ ' + favCount });
     cats.forEach(function(c) { tabs.push({ key: c, label: c }); });
 
     $('iomCatTabs').innerHTML = tabs.map(function(t) {
@@ -1461,7 +1461,7 @@ window._lifeAnimate = function(id, type) {
         var ownerTag = t.isMine ? '' : ' <span class="text-[10px] text-[#9ab0ab]">by ' + _esc(t.ownerName) + '</span>';
         var deleteBtn = t.isMine ? '<button onclick="event.stopPropagation();voteDeleteTpl(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[#6e7f7b] hover:text-red-400 transition text-[14px] leading-none shrink-0">&times;</button>' : '';
         return '<div class="flex items-center gap-2 bg-surface-2 rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/10 transition" onclick="voteLoadTpl(this)" data-title="' + _esc(t.title) + '" data-items=\'' + _esc(t.items) + '\' data-options=\'' + _esc(t.options || '{}') + '\'>' +
-          '<button onclick="event.stopPropagation();voteToggleTplFav(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[14px] shrink-0 ' + (isFav ? 'text-yellow-400' : 'text-[#ccc]') + '">' + (isFav ? '★' : '☆') + '</button>' +
+          '<button onclick="event.stopPropagation();voteToggleTplFav(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[14px] shrink-0 ' + (isFav ? 'text-red-500' : 'text-[#ccc]') + '">' + (isFav ? '♥' : '♡') + '</button>' +
           '<div class="flex-1 min-w-0"><div class="text-[12px] font-semibold text-[#47635f] truncate">' + _esc(t.title) + ownerTag + '</div>' +
           '<div class="text-[10px] text-[#9ab0ab] truncate">' + items.join(', ') + '</div></div>' +
           deleteBtn + '</div>';
