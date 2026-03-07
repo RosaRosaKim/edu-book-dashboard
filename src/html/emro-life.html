@@ -1,3 +1,18 @@
+<style>
+@keyframes lifeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes lifeFade { from { opacity: 0; } to { opacity: 1; } }
+#sectionMenuAlarm button:active, #sectionItsOnMe button:active, #sectionVote button:active { transform: scale(0.96); }
+</style>
+<script>
+window._lifeAnimate = function(id, type) {
+  var el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!el || el.classList.contains('hidden')) return;
+  var a = type === 'fade' ? 'lifeFade .2s ease-out' : 'lifeIn .25s ease-out';
+  el.style.animation = 'none';
+  void el.offsetHeight;
+  el.style.animation = a;
+};
+</script>
 <!-- ═══════════════ 엠로생활 모듈 ═══════════════ -->
 <section id="sectionMenuAlarm" class="mb-6">
   <div class="bg-surface border border-border rounded-2xl p-5">
@@ -121,11 +136,12 @@
       var el = document.getElementById(id);
       if (el) el.style.display = (id === sectionId) ? '' : 'none';
     });
+    window._lifeAnimate(sectionId);
   }
   window._restoreAllSections = function() {
     ['sectionMenuAlarm','sectionItsOnMe','sectionVote'].forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.style.display = '';
+      if (el) { el.style.display = ''; window._lifeAnimate(el); }
     });
   };
 
@@ -388,6 +404,7 @@
   function _onUsersReady() {
     $('iomLoading').classList.add('hidden');
     $('iomSetup').classList.remove('hidden');
+    window._lifeAnimate('iomSetup');
     _showPrevMemberList();
     _showDeptMembers();
   }
@@ -417,10 +434,12 @@
     $('iomHome').classList.add('hidden');
     if (_userCache) {
       $('iomSetup').classList.remove('hidden');
+      window._lifeAnimate('iomSetup');
       _showPrevMemberList();
       _showDeptMembers();
     } else {
       $('iomLoading').classList.remove('hidden');
+      window._lifeAnimate('iomLoading');
       _preloadUsers();
     }
   };
@@ -461,6 +480,7 @@
     if (target === 'home') {
       _store = ''; _members = []; _selectedMenu = null; _currentSessionId = null; _customMenus = [];
       window._restoreAllSections();
+      window._lifeAnimate('iomHome');
     }
   };
 
@@ -469,6 +489,7 @@
     _customMenus = [];
     $('iomHome').classList.add('hidden');
     $('iomCustom').classList.remove('hidden');
+    window._lifeAnimate('iomCustom');
     $('iomCustomStore').value = '';
     $('iomCustomMenuName').value = '';
     $('iomCustomMenuPrice').value = '';
@@ -614,10 +635,12 @@
     $('iomCustom').classList.add('hidden');
     if (_userCache) {
       $('iomSetup').classList.remove('hidden');
+      window._lifeAnimate('iomSetup');
       _showPrevMemberList();
       _showDeptMembers();
     } else {
       $('iomLoading').classList.remove('hidden');
+      window._lifeAnimate('iomLoading');
       _preloadUsers();
     }
   };
@@ -733,6 +756,7 @@
     $('iomHome').classList.add('hidden');
     $('iomSetup').classList.add('hidden');
     $('iomOrder').classList.remove('hidden');
+    window._lifeAnimate('iomOrder');
     $('iomMenuList').innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">불러오는 중...</div>';
     $('iomOptionArea').classList.add('hidden');
     $('iomSubmitBtn').classList.add('hidden');
@@ -864,6 +888,7 @@
         '<button onclick="iomPickFreeMenu()" class="shrink-0 px-3 py-2 rounded-lg bg-accent text-white text-[12px] font-semibold hover:brightness-110 transition">선택</button>' +
       '</div></div>';
     container.innerHTML = html;
+    window._lifeAnimate(container, 'fade');
   }
 
   window.iomPickFreeMenu = function() {
@@ -976,6 +1001,7 @@
         '<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>' +
         '</span></button>';
     }).join('');
+    window._lifeAnimate(container, 'fade');
   }
 
   /* ─── 메뉴 선택 → 옵션 표시 ─── */
@@ -1015,6 +1041,7 @@
     });
     $('iomOptionArea').innerHTML = html;
     $('iomOptionArea').classList.remove('hidden');
+    window._lifeAnimate('iomOptionArea');
     $('iomSubmitBtn').classList.remove('hidden');
   };
 
@@ -1050,6 +1077,7 @@
       else doneText += '<br><button onclick="iomChangeMenu()" class="text-[11px] text-accent mt-1 underline">변경하기</button>';
       $('iomOrderDone').innerHTML = doneText;
       $('iomOrderDone').classList.remove('hidden');
+      window._lifeAnimate('iomOrderDone');
       $('iomMenuList').innerHTML = '';
       $('iomOptionArea').classList.add('hidden');
       $('iomSubmitBtn').classList.add('hidden');
@@ -1102,6 +1130,7 @@
     $('iomAddMemberSearch').value = '';
     $('iomAddMemberResults').innerHTML = '';
     panel.classList.remove('hidden');
+    window._lifeAnimate(panel);
     $('iomAddMemberSearch').focus();
   };
 
@@ -1342,6 +1371,7 @@
     ['voteHome','voteSetup','voteMemberSelect','voteView'].forEach(function(s) {
       $(s).classList.toggle('hidden', s !== id);
     });
+    window._lifeAnimate(id);
   }
 
   window.voteBack = function(target) {
@@ -1395,6 +1425,7 @@
         '<button onclick="voteRemoveItem(' + i + ')" class="text-[#6e7f7b] hover:text-red-400 transition text-[16px] leading-none">&times;</button>' +
         '</div>';
     }).join('');
+    window._lifeAnimate(list, 'fade');
   }
 
   window.voteRemoveItem = function(i) {
@@ -1517,12 +1548,14 @@
       $('voteCreateBtn').disabled = true;
       $('voteMemberLoading').classList.add('hidden');
       $('voteMemberBody').classList.remove('hidden');
+      window._lifeAnimate('voteMemberBody');
       _voteShowOnly('voteMemberSelect');
       _voteShowDeptMembers();
     } catch (_) {
       _voteUserCache = _voteUserCache || [];
       $('voteMemberLoading').classList.add('hidden');
       $('voteMemberBody').classList.remove('hidden');
+      window._lifeAnimate('voteMemberBody');
       _voteShowOnly('voteMemberSelect');
     } finally {
       _btnReset(btn, '다음');
@@ -1689,6 +1722,7 @@
     // 투표 폼 (미투표 + 진행중)
     if (!isClosed && !hasVoted) {
       $('voteFormArea').classList.remove('hidden');
+      window._lifeAnimate('voteFormArea');
       var isMulti = !!opts.multi;
       var inputType = isMulti ? 'checkbox' : 'radio';
       $('voteChoices').innerHTML = items.map(function(item, i) {
@@ -1770,6 +1804,7 @@
     }
 
     area.innerHTML = html;
+    window._lifeAnimate(area, 'fade');
   }
 
   /* ═══════════════ 투표 선택 변경 ═══════════════ */
