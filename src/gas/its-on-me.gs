@@ -6,9 +6,12 @@
 /* ═══════════════ 상수 ═══════════════ */
 var IOM_SHEET   = '이쏜미';
 var IOM_RESP    = '이쏜미응답';
+var IOM_TPL     = '이쏜미템플릿';
 
 // 이쏜미 시트 컬럼 (0-based)
-var IOM_COL = { SID: 0, CREATOR_KNOX: 1, CREATOR_NAME: 2, STORE: 3, DEADLINE: 4, STATUS: 5, CREATED: 6, TOTAL: 7 };
+var IOM_COL = { SID: 0, CREATOR_KNOX: 1, CREATOR_NAME: 2, STORE: 3, DEADLINE: 4, STATUS: 5, CREATED: 6, TOTAL: 7, CUSTOM_MENUS: 8 };
+// 이쏜미템플릿 시트 컬럼 (0-based)
+var IOM_TPL_COL = { KNOX: 0, STORE: 1, MENUS: 2, UPDATED: 3 };
 // 이쏜미응답 시트 컬럼 (0-based)
 var IOM_R_COL = { SID: 0, KNOX: 1, NAME: 2, MENU: 3, OPTIONS: 4, PRICE: 5, UPDATED: 6 };
 
@@ -32,8 +35,7 @@ function handleSearchBizFlowUsers(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    // 본인 제외 (생성자는 자동 포함되므로) — 테스트용 주석처리
-    // if (knoxId.toLowerCase() === myKnox) continue;
+    if (knoxId.toLowerCase() === myKnox) continue;
     if (name.toLowerCase().indexOf(word) !== -1 || knoxId.toLowerCase().indexOf(word) !== -1) {
       results.push({ knoxId: knoxId, name: name, dept: dept });
     }
@@ -60,9 +62,8 @@ function handleGetBizFlowUserList(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    // 본인 제외
-    // if (knoxId.toLowerCase() === myKnox) continue;
-    users.push([knoxId, name, dept]); // 배열로 최소화
+    if (knoxId.toLowerCase() === myKnox) continue;
+    users.push([knoxId, name, dept]);
   }
   // JSON → base64 → 문자열 반전 (평문 노출 방지)
   var json = JSON.stringify(users);
@@ -95,8 +96,7 @@ function handleGetBizFlowUserList(adminRow, e) {
           var rSid = String(respData[r][IOM_R_COL.SID]);
           if (!sidMap[rSid]) continue;
           var rKnox = String(respData[r][IOM_R_COL.KNOX]).trim();
-          // 본인 제외 — 테스트용 주석처리
-          // if (rKnox.toLowerCase() === myKnox) continue;
+          if (rKnox.toLowerCase() === myKnox) continue;
           sidMap[rSid].members.push(rKnox);
         }
       }
@@ -112,6 +112,7 @@ function handleCreateItsOnMe(adminRow, e) {
   var store    = String(e.parameter.store || '').trim();
   var minutes  = parseInt(e.parameter.minutes) || 30;
   var membersJson = String(e.parameter.members || '[]');
+  var customMenus = String(e.parameter.customMenus || '');
 
   if (!store) return createResponse({ error: '가게를 선택해줘.' });
 
@@ -145,7 +146,7 @@ function handleCreateItsOnMe(adminRow, e) {
   }
 
   masterSheet.appendRow([sid, creatorKnox, creatorName, store,
-    deadline, 'open', now, allMembers.length]);
+    deadline, 'open', now, allMembers.length, customMenus]);
 
   // 응답 시트에 전원 행 삽입
   var respSheet = ss.getSheetByName(IOM_RESP);
@@ -163,8 +164,7 @@ function handleCreateItsOnMe(adminRow, e) {
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
   var failedUsers = [];
   for (var k = 0; k < allMembers.length; k++) {
-    // 테스트용 주석처리 — 운영 시 원복: 생성자에게는 발송 안 함
-    // if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
+    if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
     try {
       var msg = FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
       sendFlowMsg(allMembers[k].knoxId, msg);
@@ -206,7 +206,8 @@ function handleGetItsOnMe(adminRow, e) {
         store: String(masterData[i][IOM_COL.STORE]),
         deadline: new Date(masterData[i][IOM_COL.DEADLINE]).toISOString(),
         status: String(masterData[i][IOM_COL.STATUS]),
-        total: Number(masterData[i][IOM_COL.TOTAL])
+        total: Number(masterData[i][IOM_COL.TOTAL]),
+        customMenus: String(masterData[i][IOM_COL.CUSTOM_MENUS] || '')
       };
       break;
     }
@@ -504,6 +505,82 @@ function _closeItsOnMeSession(ss, masterSheet, respSheet, sid, masterIdx) {
   var list = pending ? pending.split(',') : [];
   list.push(sid);
   PropertiesService.getScriptProperties().setProperty('IOM_CLEANUP', list.join(','));
+}
+
+/* ═══════════════ 커스텀 가게 템플릿 ═══════════════ */
+
+function _getOrCreateTplSheet(ss) {
+  var sheet = ss.getSheetByName(IOM_TPL);
+  if (!sheet) {
+    sheet = ss.insertSheet(IOM_TPL);
+    sheet.appendRow(['knoxId','상호명','메뉴목록JSON','수정시각']);
+  }
+  return sheet;
+}
+
+function handleGetItsOnMeTemplates(adminRow, e) {
+  var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(IOM_TPL);
+  if (!sheet || sheet.getLastRow() < 2) return createResponse({ ok: true, templates: [] });
+
+  var data = sheet.getDataRange().getValues();
+  var templates = [];
+  for (var i = 1; i < data.length; i++) {
+    var knox = String(data[i][IOM_TPL_COL.KNOX]).trim().toLowerCase();
+    templates.push({
+      idx: i,
+      store: String(data[i][IOM_TPL_COL.STORE]),
+      menus: String(data[i][IOM_TPL_COL.MENUS]),
+      updated: data[i][IOM_TPL_COL.UPDATED] ? Utilities.formatDate(new Date(data[i][IOM_TPL_COL.UPDATED]), 'Asia/Seoul', 'M/d HH:mm') : '',
+      isMine: knox === myKnox
+    });
+  }
+  return createResponse({ ok: true, templates: templates });
+}
+
+function handleSaveItsOnMeTemplate(adminRow, e) {
+  var store = String(e.parameter.store || '').trim();
+  var menus = String(e.parameter.menus || '[]');
+  if (!store) return createResponse({ error: '상호명을 입력해줘.' });
+
+  var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _getOrCreateTplSheet(ss);
+  var data = sheet.getDataRange().getValues();
+
+  // 같은 상호명이 있으면 덮어쓰기
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][IOM_TPL_COL.KNOX]).trim().toLowerCase() === myKnox &&
+        String(data[i][IOM_TPL_COL.STORE]).trim() === store) {
+      sheet.getRange(i + 1, IOM_TPL_COL.MENUS + 1).setValue(menus);
+      sheet.getRange(i + 1, IOM_TPL_COL.UPDATED + 1).setValue(new Date());
+      return createResponse({ ok: true });
+    }
+  }
+  // 신규
+  sheet.appendRow([myKnox, store, menus, new Date()]);
+  return createResponse({ ok: true });
+}
+
+function handleDeleteItsOnMeTemplate(adminRow, e) {
+  var store = String(e.parameter.store || '').trim();
+  if (!store) return createResponse({ error: '상호명이 없어.' });
+
+  var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(IOM_TPL);
+  if (!sheet || sheet.getLastRow() < 2) return createResponse({ error: '템플릿이 없어.' });
+
+  var data = sheet.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][IOM_TPL_COL.KNOX]).trim().toLowerCase() === myKnox &&
+        String(data[i][IOM_TPL_COL.STORE]).trim() === store) {
+      sheet.deleteRow(i + 1);
+      return createResponse({ ok: true });
+    }
+  }
+  return createResponse({ error: '템플릿을 찾을 수 없어.' });
 }
 
 /* ═══════════════ 5분 폴링 트리거 ═══════════════ */

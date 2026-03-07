@@ -46,6 +46,20 @@ function _verifyToken(token, adminByKnoxId) {
 }
 
 /**
+ * POST 요청 처리 — JSON body → e.parameter 병합 후 doGet 위임
+ */
+function doPost(e) {
+  if (!e.parameter) e.parameter = {};
+  if (e.postData && e.postData.contents) {
+    try {
+      var body = JSON.parse(e.postData.contents);
+      for (var k in body) { if (body.hasOwnProperty(k)) e.parameter[k] = String(body[k]); }
+    } catch (_) {}
+  }
+  return doGet(e);
+}
+
+/**
  * 웹 요청 처리 (교육/도서 병합 및 AI 3컬럼 분류 반영)
  */
 const doGet = (e) => {
@@ -384,6 +398,9 @@ const doGet = (e) => {
     submitItsOnMeMenu: handleSubmitItsOnMeMenu,
     addItsOnMeMembers: handleAddItsOnMeMembers,
     extendItsOnMe: handleExtendItsOnMe,
+    getItsOnMeTemplates: handleGetItsOnMeTemplates,
+    saveItsOnMeTemplate: handleSaveItsOnMeTemplate,
+    deleteItsOnMeTemplate: handleDeleteItsOnMeTemplate,
     getBanapressoMenu: handleGetBanapressoMenu
   };
   if (TOKEN_ACTIONS[action] && token) {

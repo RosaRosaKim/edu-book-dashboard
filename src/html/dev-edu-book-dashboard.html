@@ -49,7 +49,14 @@ tailwind.config = {
 
 <!-- ====== 인증 화면 ====== -->
 <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-5" style="background:var(--body-bg);">
-  <div class="bg-surface border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl fade-in">
+  <div class="max-w-md w-full">
+  <div class="mb-1 text-right">
+    <button onclick="document.getElementById('introModal').classList.remove('hidden')" class="text-[11px] text-[#9ab0ab]/70 hover:text-accent transition inline-flex items-center gap-1">
+      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/></svg>
+      BizFlow가 뭐하는거야?
+    </button>
+  </div>
+  <div class="bg-surface border border-border rounded-2xl p-8 w-full shadow-2xl fade-in">
     <!-- 브랜딩 -->
     <div class="text-center mb-8">
       <img id="mascotImg" src="../img/preview-full-256.png" alt="QuickLogin" class="w-16 h-16 mx-auto mb-4 object-contain">
@@ -133,14 +140,13 @@ tailwind.config = {
     </div>
 
     <!-- 시스템 안내 -->
-    <div class="mt-6 border-t" style="border-color:rgba(204,235,226,0.5); font-size:11px; color:rgba(110,127,123,0.6);">
+    <div class="mt-3" style="font-size:11px; color:rgba(110,127,123,0.6);">
       <p class="mb-2 leading-relaxed text-center">
-        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라(GAS)라 느려..</span><br>
-        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">시스템 초기라 오류가 있을 수 있어!</span>
+        <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라라 좀 느려! 참아줘</span><br>
       </p>
       <div class="bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
-      <button onclick="document.getElementById('introModal').classList.remove('hidden')" class="mt-1.5 w-full text-[11px] text-[#9ab0ab] hover:text-accent transition">BizFlow가 뭐하는거야?</button>
     </div>
+  </div>
   </div>
 </div>
 
