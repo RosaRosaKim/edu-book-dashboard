@@ -178,15 +178,15 @@ tailwind.config = {
     <!-- 탭 (로딩 중 비활성화) -->
     <div id="tabBar" class="max-w-2xl mx-auto px-5 flex overflow-x-auto scrollbar-hide opacity-40 pointer-events-none">
       <button id="tabBtnEdu" onclick="switchTab('edu')"
-        class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap">📚 교육비</button>
+        class="px-2.5 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap">📚 교육</button>
       <button id="tabBtnCard" onclick="switchTab('card')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💳 밥카</button>
+        class="px-2.5 py-2 text-sm font-semibold border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💳 밥카</button>
       <button id="tabBtnDraft" onclick="switchTab('draft')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">📋 기안문서</button>
+        class="px-2.5 py-2 text-sm font-semibold border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">📋 기안</button>
       <button id="tabBtnLife" onclick="switchTab('life')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">🏢 엠로생활</button>
+        class="px-2.5 py-2 text-sm font-semibold border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">🏢 엠로생활</button>
       <button id="tabBtnBoard" onclick="switchTab('board')"
-        class="px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💬 게시판</button>
+        class="px-2.5 py-2 text-sm font-semibold border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap">💬 게시판</button>
     </div>
   </header>
 
@@ -613,10 +613,10 @@ window.switchTab = async function(tabId) {
   if (tabId === 'approval' || tabId === 'bizplay') tabId = 'draft'; // URL alias
   const tabs = ['edu', 'card', 'life', 'draft', 'board'];
   const comingSoon = [];
-  const activeClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';
-  const inactiveClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap';
-  const activeGrayClass = 'px-4 py-2 text-sm font-semibold border-b-2 border-[#aab5b2] text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
-  const inactiveGrayClass = 'px-4 py-2 text-sm border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
+  const activeClass = 'px-2.5 py-2 text-sm font-semibold border-b-2 border-accent text-accent whitespace-nowrap';
+  const inactiveClass = 'px-2.5 py-2 text-sm font-semibold border-b-2 border-transparent text-[#6e7f7b] hover:text-accent whitespace-nowrap';
+  const activeGrayClass = 'px-2.5 py-2 text-sm font-semibold border-b-2 border-[#aab5b2] text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
+  const inactiveGrayClass = 'px-2.5 py-2 text-sm font-semibold border-b-2 border-transparent text-[#aab5b2] hover:text-[#6e7f7b] whitespace-nowrap grayscale opacity-40';
 
   tabs.forEach(t => {
     const panel = document.getElementById('tabPanel' + t.charAt(0).toUpperCase() + t.slice(1));
