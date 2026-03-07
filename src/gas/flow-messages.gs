@@ -198,6 +198,47 @@ var FLOW_MSG = {
     };
   },
 
+  // #13 투표 초대
+  voteInvite: function(creatorName, title, deadlineStr, sessionId) {
+    return {
+      content: title + '\n' + deadlineStr + ' 마감\n\n링크 눌러서 투표해줘',
+      link: FLOW_LINK.LIFE + '&vote=' + sessionId,
+      previewTitle: '📊 ' + creatorName + ' 프로가 투표를 요청했어'
+    };
+  },
+  // #14 투표 리마인드
+  voteReminder: function(title, deadlineStr, sessionId) {
+    return {
+      content: '아직 투표 안 했어! ' + deadlineStr + '에 마감이야.',
+      link: FLOW_LINK.LIFE + '&vote=' + sessionId,
+      previewTitle: '⏰ 투표 마감 5분 전!'
+    };
+  },
+  // #15 투표 결과 (전원 발송)
+  voteResult: function(title, items, tally, totalVoters, isAnon) {
+    var lines = [];
+    var totalVotes = 0;
+    for (var i = 0; i < items.length; i++) {
+      var t = tally[items[i]];
+      if (t) totalVotes += t.count;
+    }
+    for (var j = 0; j < items.length; j++) {
+      var entry = tally[items[j]];
+      var count = entry ? entry.count : 0;
+      var pct = totalVotes > 0 ? Math.round(count / totalVotes * 100) : 0;
+      var line = (j + 1) + '. ' + items[j] + ' — ' + count + '표 (' + pct + '%)';
+      if (!isAnon && entry && entry.names && entry.names.length) {
+        line += '\n   ' + entry.names.join(', ');
+      }
+      lines.push(line);
+    }
+    return {
+      content: lines.join('\n\n'),
+      link: '',
+      previewTitle: '📊 ' + title + ' 결과 (' + totalVoters + '명 참여)'
+    };
+  },
+
   syncFail: function(reason) {
     return {
       content: '교육/도서 신청서 자동 동기화 실패\n사유: ' + reason,

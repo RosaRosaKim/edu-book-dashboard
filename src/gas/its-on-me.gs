@@ -35,7 +35,7 @@ function handleSearchBizFlowUsers(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    // if (knoxId.toLowerCase() === myKnox) continue; // 테스트용 주석
+    if (knoxId.toLowerCase() === myKnox) continue;
     if (name.toLowerCase().indexOf(word) !== -1 || knoxId.toLowerCase().indexOf(word) !== -1) {
       results.push({ knoxId: knoxId, name: name, dept: dept });
     }
@@ -62,7 +62,7 @@ function handleGetBizFlowUserList(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    // if (knoxId.toLowerCase() === myKnox) continue; // 테스트용 주석
+    if (knoxId.toLowerCase() === myKnox) continue;
     users.push([knoxId, name, dept]);
   }
   // JSON → base64 → 문자열 반전 (평문 노출 방지)
@@ -96,7 +96,7 @@ function handleGetBizFlowUserList(adminRow, e) {
           var rSid = String(respData[r][IOM_R_COL.SID]);
           if (!sidMap[rSid]) continue;
           var rKnox = String(respData[r][IOM_R_COL.KNOX]).trim();
-          // if (rKnox.toLowerCase() === myKnox) continue; // 테스트용 주석
+          if (rKnox.toLowerCase() === myKnox) continue;
           sidMap[rSid].members.push(rKnox);
         }
       }
@@ -164,7 +164,7 @@ function handleCreateItsOnMe(adminRow, e) {
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
   var failedUsers = [];
   for (var k = 0; k < allMembers.length; k++) {
-    // if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue; // 테스트용 주석
+    if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
     try {
       var msg = FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
       sendFlowMsg(allMembers[k].knoxId, msg);

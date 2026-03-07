@@ -815,10 +815,12 @@ function init() {
   }
   // tab 파라미터가 있으면 저장 후 URL 정리
   if (urlTab) localStorage.setItem('init_tab', urlTab);
-  // 이쏜미 딥링크: sessionStorage에 저장 (로그인 후 라우팅)
+  // 이쏜미/투표 딥링크: sessionStorage에 저장 (로그인 후 라우팅)
   var urlItsOnMe = params.get('itsOnMe');
+  var urlVote = params.get('vote');
   if (urlItsOnMe) sessionStorage.setItem('itsOnMe', urlItsOnMe);
-  if (urlToken || urlTab || urlItsOnMe) {
+  if (urlVote) sessionStorage.setItem('vote', urlVote);
+  if (urlToken || urlTab || urlItsOnMe || urlVote) {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
@@ -1053,9 +1055,10 @@ async function loadDashboard() {
     initIdleWatcher();
     showNoticeIfNeeded(p1.notice);
     const urlTab = new URLSearchParams(location.search).get('tab');
-    // 이쏜미 딥링크가 있으면 life 탭으로
+    // 이쏜미/투표 딥링크가 있으면 life 탭으로
     var pendingItsOnMe = sessionStorage.getItem('itsOnMe');
-    const initTab = pendingItsOnMe ? 'life' : (urlTab || localStorage.getItem('init_tab') || 'edu');
+    var pendingVote = sessionStorage.getItem('vote');
+    const initTab = (pendingItsOnMe || pendingVote) ? 'life' : (urlTab || localStorage.getItem('init_tab') || 'edu');
     localStorage.removeItem('init_tab');
 
     // ── Phase 2: 교육비 내역 + Bizplay + 모듈 로드 (병렬) ──

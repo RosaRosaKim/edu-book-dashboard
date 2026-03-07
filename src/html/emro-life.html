@@ -125,6 +125,11 @@
       sessionStorage.removeItem('itsOnMe');
       window.openItsOnMeOrder(pendingSid);
     }
+    var pendingVote = sessionStorage.getItem('vote');
+    if (pendingVote) {
+      sessionStorage.removeItem('vote');
+      window.openVoteView(pendingVote);
+    }
   };
 })();
 </script>
@@ -1136,5 +1141,646 @@
       }
     } catch (_) { window.showToast('추가 실패', 'sad'); }
   };
+})();
+</script>
+
+<!-- ═══════════════ 투표 ═══════════════ -->
+<section class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">투표</div>
+        <div class="text-[11px] text-[#6e7f7b]">팀원들과 빠르게 의견 모으기</div>
+      </div>
+    </div>
+
+    <!-- 투표 홈 -->
+    <div id="voteHome">
+      <button onclick="voteOpenSetup()" class="w-full flex items-center justify-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+        <span class="text-lg">+</span>
+        <span class="text-[12px] font-semibold text-[#47635f]">새 투표 만들기</span>
+      </button>
+    </div>
+
+    <!-- 투표 설정 -->
+    <div id="voteSetup" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="voteBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold">새 투표</div>
+      </div>
+
+      <!-- 저장된 템플릿 -->
+      <div id="voteTplArea" class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">저장된 투표</div>
+        <div id="voteTplList" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+      </div>
+
+      <!-- 제목 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">제목</div>
+        <input id="voteTitle" type="text" placeholder="예: 점심 뭐 먹을까?"
+          class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+      </div>
+
+      <!-- 항목 추가 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">항목</div>
+        <div class="flex gap-2 mb-2">
+          <input id="voteNewItem" type="text" placeholder="항목 입력" onkeydown="if(event.key==='Enter'){voteAddItem();event.preventDefault();}"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          <button onclick="voteAddItem()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold flex items-center justify-center hover:brightness-110 transition">추가</button>
+        </div>
+        <div id="voteItemList" class="space-y-1.5"></div>
+      </div>
+
+      <!-- 옵션 토글 -->
+      <div class="mb-3 space-y-2">
+        <div class="text-[11px] text-[#6e7f7b] mb-1">옵션</div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="voteOptMulti" class="accent-[#2d8a7e] w-4 h-4">
+          <span class="text-[12px] text-[#47635f]">복수 선택 허용</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="voteOptAnon" class="accent-[#2d8a7e] w-4 h-4">
+          <span class="text-[12px] text-[#47635f]">익명 투표</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="voteOptAddable" checked class="accent-[#2d8a7e] w-4 h-4">
+          <span class="text-[12px] text-[#47635f]">항목 추가 허용</span>
+        </label>
+      </div>
+
+      <!-- 마감시간 -->
+      <div class="mb-4">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">마감시간</div>
+        <div class="flex items-center gap-3">
+          <input id="voteMinutes" type="range" min="10" max="120" step="5" value="30" oninput="document.getElementById('voteMinLabel').textContent=this.value+'분 후'"
+            class="flex-1 accent-[#2d8a7e]">
+          <span id="voteMinLabel" class="text-sm font-mono font-semibold text-[#47635f] w-16 text-right">30분 후</span>
+        </div>
+      </div>
+
+      <button onclick="voteNext()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition">
+        다음
+      </button>
+    </div>
+
+    <!-- 멤버 선택 -->
+    <div id="voteMemberSelect" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="voteBack('setup')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold">멤버 선택</div>
+      </div>
+
+      <div class="mb-3">
+        <div class="relative">
+          <input id="voteUserSearch" type="text" placeholder="이름 또는 ID로 검색" oninput="voteSearchUsers()"
+            class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+        </div>
+        <div id="voteSearchResults" class="mt-1 max-h-32 overflow-y-auto"></div>
+        <div id="voteSelectedMembers" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <button onclick="voteCreate()" id="voteCreateBtn" class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+        투표 시작
+      </button>
+    </div>
+
+    <!-- 투표 화면 (참여 / 결과) -->
+    <div id="voteView" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="voteBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold" id="voteViewTitle"></div>
+      </div>
+
+      <!-- 상태 바 -->
+      <div class="flex items-center justify-between mb-3">
+        <span id="voteStatusText" class="text-[11px] text-[#6e7f7b]"></span>
+        <span id="voteDeadlineText" class="text-[11px] text-accent font-mono"></span>
+      </div>
+
+      <!-- 투표 폼 -->
+      <div id="voteFormArea">
+        <div id="voteChoices" class="space-y-2 mb-3"></div>
+        <button onclick="voteSubmit()" id="voteSubmitBtn" class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          투표하기
+        </button>
+      </div>
+
+      <!-- 항목 추가 (허용 시) -->
+      <div id="voteAddArea" class="hidden mt-3">
+        <div class="flex gap-2">
+          <input id="voteAddItemInput" type="text" placeholder="새 항목 추가" onkeydown="if(event.key==='Enter'){voteAddNewItem();event.preventDefault();}"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          <button onclick="voteAddNewItem()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold hover:brightness-110 transition">추가</button>
+        </div>
+      </div>
+
+      <!-- 결과 영역 -->
+      <div id="voteResultArea" class="mt-4"></div>
+
+      <!-- 마감 버튼 (생성자만) -->
+      <div id="voteCloseArea" class="hidden mt-3">
+        <button onclick="voteClose()" class="w-full py-2 rounded-lg bg-red-500/10 text-red-500 font-semibold text-[12px] hover:bg-red-500/20 transition">
+          투표 마감
+        </button>
+      </div>
+
+      <!-- 멤버 추가 (생성자만, 진행중) -->
+      <div id="voteAddMemberArea" class="hidden mt-3 border-t border-border pt-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">멤버 추가</div>
+        <div class="flex gap-2">
+          <input id="voteAddMemberSearch" type="text" placeholder="이름 검색" oninput="voteSearchAddMember()"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+        </div>
+        <div id="voteAddMemberResults" class="mt-1 max-h-24 overflow-y-auto"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var _voteItems = [];
+  var _voteMembers = [];
+  var _voteSession = null;
+  var _voteMyResponse = null;
+  var _voteIsCreator = false;
+  var _voteTplFavorites = JSON.parse(localStorage.getItem('voteTplFav') || '[]');
+  var _voteTimer = null;
+
+  /* ═══════════════ 네비게이션 ═══════════════ */
+
+  function _voteShowOnly(id) {
+    ['voteHome','voteSetup','voteMemberSelect','voteView'].forEach(function(s) {
+      $(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  window.voteBack = function(target) {
+    if (_voteTimer) { clearInterval(_voteTimer); _voteTimer = null; }
+    if (target === 'home') {
+      _voteShowOnly('voteHome');
+      _voteItems = [];
+      _voteMembers = [];
+      _voteSession = null;
+    } else if (target === 'setup') {
+      _voteShowOnly('voteSetup');
+    }
+  };
+
+  window.voteOpenSetup = function() {
+    _voteItems = [];
+    $('voteTitle').value = '';
+    $('voteNewItem').value = '';
+    $('voteItemList').innerHTML = '';
+    $('voteOptMulti').checked = false;
+    $('voteOptAnon').checked = false;
+    $('voteOptAddable').checked = true;
+    $('voteMinutes').value = 30;
+    $('voteMinLabel').textContent = '30분 후';
+    _voteShowOnly('voteSetup');
+    _loadVoteTemplates();
+  };
+
+  /* ═══════════════ 항목 관리 ═══════════════ */
+
+  window.voteAddItem = function() {
+    var input = $('voteNewItem');
+    var val = input.value.trim();
+    if (!val) return;
+    if (_voteItems.indexOf(val) !== -1) { window.showToast('이미 있는 항목이야.', 'sad'); return; }
+    _voteItems.push(val);
+    input.value = '';
+    input.focus();
+    _renderVoteItems();
+  };
+
+  function _renderVoteItems() {
+    var list = $('voteItemList');
+    list.innerHTML = _voteItems.map(function(item, i) {
+      return '<div class="flex items-center gap-2 bg-surface-2 rounded-lg px-3 py-2">' +
+        '<span class="flex-1 text-[13px] text-[#47635f]">' + _esc(item) + '</span>' +
+        '<button onclick="voteRemoveItem(' + i + ')" class="text-[#6e7f7b] hover:text-red-400 transition text-[16px] leading-none">&times;</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  window.voteRemoveItem = function(i) {
+    _voteItems.splice(i, 1);
+    _renderVoteItems();
+  };
+
+  /* ═══════════════ 템플릿 ═══════════════ */
+
+  async function _loadVoteTemplates() {
+    var area = $('voteTplArea');
+    var list = $('voteTplList');
+    list.innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-2 text-center">불러오는 중...</div>';
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=getVoteTemplates&token=' + encodeURIComponent(token));
+      if (!data.templates || !data.templates.length) {
+        list.innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-2 text-center">저장된 투표가 없어</div>';
+        return;
+      }
+      var tpls = data.templates.slice();
+      tpls.sort(function(a, b) {
+        var af = _voteTplFavorites.indexOf(a.title) !== -1 ? 0 : 1;
+        var bf = _voteTplFavorites.indexOf(b.title) !== -1 ? 0 : 1;
+        if (af !== bf) return af - bf;
+        if (a.isMine !== b.isMine) return a.isMine ? -1 : 1;
+        return 0;
+      });
+      list.innerHTML = tpls.map(function(t) {
+        var isFav = _voteTplFavorites.indexOf(t.title) !== -1;
+        var items = [];
+        try { items = JSON.parse(t.items); } catch(_) {}
+        var ownerTag = t.isMine ? '' : ' <span class="text-[10px] text-[#9ab0ab]">by ' + _esc(t.ownerName) + '</span>';
+        var deleteBtn = t.isMine ? '<button onclick="event.stopPropagation();voteDeleteTpl(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[#6e7f7b] hover:text-red-400 transition text-[14px] leading-none shrink-0">&times;</button>' : '';
+        return '<div class="flex items-center gap-2 bg-surface-2 rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/10 transition" onclick="voteLoadTpl(this)" data-title="' + _esc(t.title) + '" data-items=\'' + _esc(t.items) + '\' data-options=\'' + _esc(t.options || '{}') + '\'>' +
+          '<button onclick="event.stopPropagation();voteToggleTplFav(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[14px] shrink-0 ' + (isFav ? 'text-yellow-400' : 'text-[#ccc]') + '">' + (isFav ? '★' : '☆') + '</button>' +
+          '<div class="flex-1 min-w-0"><div class="text-[12px] font-semibold text-[#47635f] truncate">' + _esc(t.title) + ownerTag + '</div>' +
+          '<div class="text-[10px] text-[#9ab0ab] truncate">' + items.join(', ') + '</div></div>' +
+          deleteBtn + '</div>';
+      }).join('');
+    } catch (_) {
+      list.innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-2 text-center">템플릿 로드 실패</div>';
+    }
+  }
+
+  window.voteLoadTpl = function(el) {
+    var title = el.dataset.title;
+    var items = [];
+    try { items = JSON.parse(el.dataset.items); } catch(_) {}
+    var opts = {};
+    try { opts = JSON.parse(el.dataset.options); } catch(_) {}
+    $('voteTitle').value = title;
+    _voteItems = items.slice();
+    _renderVoteItems();
+    $('voteOptMulti').checked = !!opts.multi;
+    $('voteOptAnon').checked = !!opts.anon;
+    $('voteOptAddable').checked = opts.addable !== false;
+  };
+
+  window.voteToggleTplFav = function(title) {
+    var idx = _voteTplFavorites.indexOf(title);
+    if (idx === -1) _voteTplFavorites.push(title);
+    else _voteTplFavorites.splice(idx, 1);
+    localStorage.setItem('voteTplFav', JSON.stringify(_voteTplFavorites));
+    _loadVoteTemplates();
+  };
+
+  window.voteDeleteTpl = async function(title) {
+    if (!confirm('"' + title + '" 템플릿을 삭제할까?')) return;
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=deleteVoteTemplate&token=' + encodeURIComponent(token) + '&title=' + encodeURIComponent(title));
+      window.showToast('삭제 완료', 'smail');
+      _loadVoteTemplates();
+    } catch (_) { window.showToast('삭제 실패', 'sad'); }
+  };
+
+  async function _autoSaveVoteTpl() {
+    var title = $('voteTitle').value.trim();
+    if (!title || _voteItems.length < 2) return;
+    var opts = { multi: $('voteOptMulti').checked, anon: $('voteOptAnon').checked, addable: $('voteOptAddable').checked };
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=saveVoteTemplate&token=' + encodeURIComponent(token) +
+        '&title=' + encodeURIComponent(title) + '&items=' + encodeURIComponent(JSON.stringify(_voteItems)) +
+        '&options=' + encodeURIComponent(JSON.stringify(opts)));
+    } catch (_) {}
+  }
+
+  /* ═══════════════ 다음 → 멤버 선택 ═══════════════ */
+
+  window.voteNext = async function() {
+    var title = $('voteTitle').value.trim();
+    if (!title) { window.showToast('제목을 입력해줘.', 'sad'); return; }
+    if (_voteItems.length < 2) { window.showToast('항목을 2개 이상 추가해줘.', 'sad'); return; }
+    // 자동 저장
+    await _autoSaveVoteTpl();
+    _voteMembers = [];
+    $('voteSelectedMembers').innerHTML = '';
+    $('voteUserSearch').value = '';
+    $('voteSearchResults').innerHTML = '';
+    $('voteCreateBtn').disabled = true;
+    _voteShowOnly('voteMemberSelect');
+    // 유저 캐시 로드
+    if (!window._iomUserCache || !window._iomUserCache.length) {
+      try {
+        var token = localStorage.getItem('token');
+        var data = await window.gasFetch(window.API_URL + '?action=getTeamMembers&token=' + encodeURIComponent(token));
+        window._iomUserCache = data.members || [];
+      } catch (_) { window._iomUserCache = []; }
+    }
+  };
+
+  /* ═══════════════ 멤버 검색/선택 ═══════════════ */
+
+  window.voteSearchUsers = function() {
+    var q = $('voteUserSearch').value.trim().toLowerCase();
+    var box = $('voteSearchResults');
+    if (!q || q.length < 1) { box.innerHTML = ''; return; }
+    var myKnox = (window._myKnoxId || '').toLowerCase();
+    var results = (window._iomUserCache || []).filter(function(u) {
+      if (u.knoxId.toLowerCase() === myKnox) return false;
+      if (_voteMembers.some(function(m) { return m.knoxId === u.knoxId; })) return false;
+      return u.name.toLowerCase().indexOf(q) !== -1 || u.knoxId.toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 8);
+    box.innerHTML = results.map(function(u) {
+      return '<button onclick="voteSelectMember(\'' + u.knoxId + '\',\'' + _esc(u.name) + '\')" class="w-full text-left px-3 py-2 text-[13px] text-[#47635f] hover:bg-accent/10 rounded-lg transition">' + _esc(u.name) + ' <span class="text-[#9ab0ab]">' + u.knoxId + '</span></button>';
+    }).join('');
+  };
+
+  window.voteSelectMember = function(knoxId, name) {
+    if (_voteMembers.some(function(m) { return m.knoxId === knoxId; })) return;
+    _voteMembers.push({ knoxId: knoxId, name: name });
+    $('voteUserSearch').value = '';
+    $('voteSearchResults').innerHTML = '';
+    _renderVoteMembers();
+  };
+
+  function _renderVoteMembers() {
+    var box = $('voteSelectedMembers');
+    box.innerHTML = _voteMembers.map(function(m, i) {
+      return '<span class="inline-flex items-center gap-1 bg-accent/10 text-accent rounded-full px-2.5 py-1 text-[12px]">' +
+        _esc(m.name) +
+        '<button onclick="voteRemoveMember(' + i + ')" class="hover:text-red-400 transition text-[14px] leading-none">&times;</button>' +
+        '</span>';
+    }).join('');
+    $('voteCreateBtn').disabled = _voteMembers.length === 0;
+  }
+
+  window.voteRemoveMember = function(i) {
+    _voteMembers.splice(i, 1);
+    _renderVoteMembers();
+  };
+
+  /* ═══════════════ 투표 생성 ═══════════════ */
+
+  window.voteCreate = async function() {
+    var btn = $('voteCreateBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = '생성중...';
+    try {
+      var token = localStorage.getItem('token');
+      var opts = { multi: $('voteOptMulti').checked, anon: $('voteOptAnon').checked, addable: $('voteOptAddable').checked };
+      var data = await window.gasFetch(window.API_URL + '?action=createVote&token=' + encodeURIComponent(token) +
+        '&title=' + encodeURIComponent($('voteTitle').value.trim()) +
+        '&items=' + encodeURIComponent(JSON.stringify(_voteItems)) +
+        '&minutes=' + $('voteMinutes').value +
+        '&members=' + encodeURIComponent(JSON.stringify(_voteMembers)) +
+        '&options=' + encodeURIComponent(JSON.stringify(opts)));
+      if (data.error) { window.showToast(data.error, 'sad'); btn.disabled = false; btn.textContent = '투표 시작'; return; }
+      window.showToast('투표가 시작됐어!', 'smail');
+      if (data.failedUsers && data.failedUsers.length) {
+        window.showToast(data.failedUsers.join(', ') + ' 알림 실패', 'sad');
+      }
+      window.openVoteView(data.sessionId);
+    } catch (e) {
+      window.showToast('투표 생성 실패', 'sad');
+      btn.disabled = false;
+      btn.textContent = '투표 시작';
+    }
+  };
+
+  /* ═══════════════ 투표 화면 열기 ═══════════════ */
+
+  window.openVoteView = async function(sessionId) {
+    _voteShowOnly('voteView');
+    $('voteViewTitle').textContent = '투표';
+    $('voteStatusText').textContent = '불러오는 중...';
+    $('voteDeadlineText').textContent = '';
+    $('voteChoices').innerHTML = '';
+    $('voteResultArea').innerHTML = '';
+    $('voteFormArea').classList.add('hidden');
+    $('voteAddArea').classList.add('hidden');
+    $('voteCloseArea').classList.add('hidden');
+    $('voteAddMemberArea').classList.add('hidden');
+    $('voteSubmitBtn').disabled = true;
+
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=getVote&token=' + encodeURIComponent(token) + '&sessionId=' + encodeURIComponent(sessionId));
+      if (data.error) { window.showToast(data.error, 'sad'); voteBack('home'); return; }
+      _voteSession = data.session;
+      _voteMyResponse = data.myResponse;
+      _voteIsCreator = data.isCreator;
+      _renderVoteView(data);
+    } catch (e) {
+      window.showToast('투표 로드 실패', 'sad');
+      voteBack('home');
+    }
+  };
+
+  function _renderVoteView(data) {
+    var s = data.session;
+    var items = [];
+    try { items = JSON.parse(s.items); } catch(_) {}
+    var opts = s.options || {};
+    var isClosed = s.status === 'closed';
+    var hasVoted = !!(_voteMyResponse && _voteMyResponse.choices);
+    var myChoices = [];
+    if (hasVoted) { try { myChoices = JSON.parse(_voteMyResponse.choices); } catch(_) {} }
+
+    $('voteViewTitle').textContent = s.title;
+    $('voteStatusText').textContent = data.votedCount + '/' + s.total + '명 투표완료';
+
+    // 타이머
+    if (_voteTimer) clearInterval(_voteTimer);
+    if (!isClosed) {
+      var dl = new Date(s.deadline);
+      function _updateTimer() {
+        var remain = dl.getTime() - Date.now();
+        if (remain <= 0) {
+          $('voteDeadlineText').textContent = '마감됨';
+          clearInterval(_voteTimer);
+          _voteTimer = null;
+          // 자동 새로고침
+          window.openVoteView(_voteSession.sessionId);
+          return;
+        }
+        var m = Math.floor(remain / 60000);
+        var sec = Math.floor((remain % 60000) / 1000);
+        $('voteDeadlineText').textContent = m + ':' + (sec < 10 ? '0' : '') + sec + ' 남음';
+      }
+      _updateTimer();
+      _voteTimer = setInterval(_updateTimer, 1000);
+    } else {
+      $('voteDeadlineText').textContent = '마감됨';
+    }
+
+    // 투표 폼 (미투표 + 진행중)
+    if (!isClosed && !hasVoted) {
+      $('voteFormArea').classList.remove('hidden');
+      var isMulti = !!opts.multi;
+      var inputType = isMulti ? 'checkbox' : 'radio';
+      $('voteChoices').innerHTML = items.map(function(item, i) {
+        return '<label class="flex items-center gap-3 bg-surface-2 rounded-lg px-3 py-3 cursor-pointer hover:bg-accent/10 transition">' +
+          '<input type="' + inputType + '" name="voteChoice" value="' + _esc(item) + '" class="accent-[#2d8a7e] w-4 h-4" onchange="voteOnChoiceChange()">' +
+          '<span class="text-[13px] text-[#47635f]">' + _esc(item) + '</span>' +
+          '</label>';
+      }).join('');
+      $('voteSubmitBtn').disabled = true;
+    } else {
+      $('voteFormArea').classList.add('hidden');
+    }
+
+    // 항목 추가
+    if (!isClosed && opts.addable) {
+      $('voteAddArea').classList.remove('hidden');
+      $('voteAddItemInput').value = '';
+    } else {
+      $('voteAddArea').classList.add('hidden');
+    }
+
+    // 결과 표시
+    _renderVoteResults(data, items, opts, isClosed, hasVoted, myChoices);
+
+    // 마감 버튼 (생성자 + 진행중)
+    if (_voteIsCreator && !isClosed) {
+      $('voteCloseArea').classList.remove('hidden');
+    } else {
+      $('voteCloseArea').classList.add('hidden');
+    }
+
+    // 멤버 추가 영역 (진행중에만 표시하지 않음 - 이쏜미와 다르게 투표는 멤버 추가 불가)
+    $('voteAddMemberArea').classList.add('hidden');
+  }
+
+  function _renderVoteResults(data, items, opts, isClosed, hasVoted, myChoices) {
+    var area = $('voteResultArea');
+    var tally = data.tally;
+    var isAnon = !!opts.anon;
+
+    // 익명 + 진행중이면 결과 비노출
+    if (isAnon && !isClosed) {
+      if (hasVoted) {
+        area.innerHTML = '<div class="text-[12px] text-[#9ab0ab] text-center py-3">익명 투표는 마감 후 결과를 확인할 수 있어.</div>';
+        // 내 선택 표시
+        if (myChoices.length) {
+          area.innerHTML += '<div class="text-[11px] text-[#6e7f7b] mt-2">내 선택: ' + myChoices.map(_esc).join(', ') + '</div>';
+        }
+      }
+      return;
+    }
+
+    if (!tally && !isClosed) return;
+    if (!tally) tally = {};
+
+    // 총 투표수
+    var totalVotes = 0;
+    for (var k in tally) totalVotes += tally[k].count;
+
+    var html = '<div class="text-[11px] text-[#6e7f7b] mb-2">' + (isClosed ? '최종 결과' : '실시간 현황') + '</div>';
+    html += '<div class="space-y-2">';
+    items.forEach(function(item) {
+      var entry = tally[item] || { count: 0, names: [] };
+      var pct = totalVotes > 0 ? Math.round(entry.count / totalVotes * 100) : 0;
+      var isMyChoice = myChoices.indexOf(item) !== -1;
+      var nameStr = (!isAnon && entry.names && entry.names.length) ? '<div class="text-[10px] text-[#9ab0ab] mt-0.5">' + entry.names.map(_esc).join(', ') + '</div>' : '';
+      html += '<div class="bg-surface-2 rounded-lg px-3 py-2 relative overflow-hidden">' +
+        '<div class="absolute inset-0 bg-accent/10 rounded-lg" style="width:' + pct + '%"></div>' +
+        '<div class="relative flex items-center justify-between">' +
+        '<span class="text-[12px] text-[#47635f]' + (isMyChoice ? ' font-bold' : '') + '">' + _esc(item) + (isMyChoice ? ' ✓' : '') + '</span>' +
+        '<span class="text-[11px] text-[#6e7f7b] font-mono">' + entry.count + '표 (' + pct + '%)</span>' +
+        '</div>' + nameStr + '</div>';
+    });
+    html += '</div>';
+
+    // 투표 완료 메시지
+    if (hasVoted && !isClosed) {
+      html += '<div class="text-[11px] text-[#9ab0ab] text-center mt-3">투표 완료! 결과는 실시간으로 업데이트돼.</div>';
+    }
+
+    area.innerHTML = html;
+  }
+
+  /* ═══════════════ 투표 선택 변경 ═══════════════ */
+
+  window.voteOnChoiceChange = function() {
+    var checked = document.querySelectorAll('#voteChoices input:checked');
+    $('voteSubmitBtn').disabled = checked.length === 0;
+  };
+
+  /* ═══════════════ 투표 제출 ═══════════════ */
+
+  window.voteSubmit = async function() {
+    var checked = document.querySelectorAll('#voteChoices input:checked');
+    if (!checked.length) return;
+    var choices = [];
+    checked.forEach(function(el) { choices.push(el.value); });
+
+    if (!confirm(choices.join(', ') + '\n\n이대로 투표할까? (변경 불가)')) return;
+
+    var btn = $('voteSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '제출중...';
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=submitVote&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_voteSession.sessionId) +
+        '&choices=' + encodeURIComponent(JSON.stringify(choices)));
+      if (data.error) { window.showToast(data.error, 'sad'); btn.disabled = false; btn.textContent = '투표하기'; return; }
+      window.showToast('투표 완료!', 'smail');
+      // 새로고침
+      window.openVoteView(_voteSession.sessionId);
+    } catch (e) {
+      window.showToast('투표 실패', 'sad');
+      btn.disabled = false;
+      btn.textContent = '투표하기';
+    }
+  };
+
+  /* ═══════════════ 항목 추가 (진행중) ═══════════════ */
+
+  window.voteAddNewItem = async function() {
+    var input = $('voteAddItemInput');
+    var val = input.value.trim();
+    if (!val) return;
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=addVoteItem&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_voteSession.sessionId) +
+        '&item=' + encodeURIComponent(val));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      window.showToast('항목 추가 + 자동 투표됨!', 'smail');
+      input.value = '';
+      window.openVoteView(_voteSession.sessionId);
+    } catch (_) { window.showToast('추가 실패', 'sad'); }
+  };
+
+  /* ═══════════════ 투표 마감 ═══════════════ */
+
+  window.voteClose = async function() {
+    if (!confirm('투표를 마감할까? 결과가 전원에게 발송돼.')) return;
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=closeVote&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_voteSession.sessionId));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      window.showToast('투표가 마감됐어!', 'smail');
+      window.openVoteView(_voteSession.sessionId);
+    } catch (_) { window.showToast('마감 실패', 'sad'); }
+  };
+
+  /* ═══════════════ 유틸 ═══════════════ */
+
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
 })();
 </script>

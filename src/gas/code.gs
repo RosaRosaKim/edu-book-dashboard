@@ -401,7 +401,15 @@ const doGet = (e) => {
     getItsOnMeTemplates: handleGetItsOnMeTemplates,
     saveItsOnMeTemplate: handleSaveItsOnMeTemplate,
     deleteItsOnMeTemplate: handleDeleteItsOnMeTemplate,
-    getBanapressoMenu: handleGetBanapressoMenu
+    getBanapressoMenu: handleGetBanapressoMenu,
+    createVote: handleCreateVote,
+    getVote: handleGetVote,
+    submitVote: handleSubmitVote,
+    addVoteItem: handleAddVoteItem,
+    getVoteTemplates: handleGetVoteTemplates,
+    saveVoteTemplate: handleSaveVoteTemplate,
+    deleteVoteTemplate: handleDeleteVoteTemplate,
+    closeVote: handleCloseVote
   };
   if (TOKEN_ACTIONS[action] && token) {
     const entry = _verifyToken(token, adminByKnoxId);
