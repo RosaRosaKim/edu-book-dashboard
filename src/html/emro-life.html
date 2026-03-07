@@ -23,7 +23,7 @@ window._lifeAnimate = function(id, type) {
       </div>
       <div>
         <div class="text-sm font-semibold">당산 푸드스토리 메뉴 알람</div>
-        <div class="text-[11px] text-[#6e7f7b]">평일 오늘의 식단 알림 - 이미지에서 글자를 읽어오다 보니 오타가 있을 수 있어</div>
+        <div class="text-[11px] text-[#6e7f7b]">평일 오늘의 식단 알림 - 이미지를 읽어와서 오타가 있을 수 있어</div>
       </div>
     </div>
     <div id="menuAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative overflow-hidden">
@@ -174,7 +174,7 @@ window._lifeAnimate = function(id, type) {
       </div>
       <div>
         <div class="text-sm font-semibold">이쏜미</div>
-        <div class="text-[11px] text-[#6e7f7b]">팀원 메뉴를 모아서 한번에 주문</div>
+        <div class="text-[11px] text-[#6e7f7b]">Flow를 연동해서 편리하게 사줄 수 있어</div>
       </div>
     </div>
 
@@ -220,8 +220,12 @@ window._lifeAnimate = function(id, type) {
         <div class="flex gap-2 mb-2">
           <input id="iomCustomMenuName" type="text" placeholder="메뉴명"
             class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
-          <input id="iomCustomMenuPrice" type="number" placeholder="가격" inputmode="numeric"
-            class="w-20 bg-surface-2 border border-border rounded-lg px-2 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60 text-right">
+          <div class="relative w-40">
+            <input id="iomCustomMenuPrice" type="text" placeholder="가격" inputmode="numeric"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'');if(this.value)this.value=Number(this.value).toLocaleString()"
+              class="w-full bg-surface-2 border border-border rounded-lg px-2 pr-7 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60 text-right">
+            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-[#9ab0ab] pointer-events-none">원</span>
+          </div>
           <button onclick="iomAddCustomMenu()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold flex items-center justify-center hover:brightness-110 transition">추가</button>
         </div>
         <div id="iomCustomMenuList" class="space-y-1.5"></div>
@@ -575,7 +579,7 @@ window._lifeAnimate = function(id, type) {
 
   window.iomAddCustomMenu = function() {
     var name = ($('iomCustomMenuName').value || '').trim();
-    var price = parseInt($('iomCustomMenuPrice').value) || 0;
+    var price = parseInt(($('iomCustomMenuPrice').value || '').replace(/,/g, '')) || 0;
     if (!name) { window.showToast('메뉴명을 입력해줘', 'sad'); return; }
     _customMenus.push({ name: name, price: price });
     $('iomCustomMenuName').value = '';
@@ -1187,7 +1191,7 @@ window._lifeAnimate = function(id, type) {
       </div>
       <div>
         <div class="text-sm font-semibold">투표</div>
-        <div class="text-[11px] text-[#6e7f7b]">구글폼 좀 그만 쓰자</div>
+        <div class="text-[11px] text-[#6e7f7b]">구글폼 좀 그만 - Flow로 투표요청</div>
       </div>
     </div>
 
@@ -1217,7 +1221,7 @@ window._lifeAnimate = function(id, type) {
       <!-- 제목 -->
       <div class="mb-3">
         <div class="text-[11px] text-[#6e7f7b] mb-1.5">제목</div>
-        <input id="voteTitle" type="text" placeholder="예: 점심 뭐 먹을까?"
+        <input id="voteTitle" type="text" placeholder="예: 아..퇴사할까?"
           class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
       </div>
 
@@ -1225,7 +1229,7 @@ window._lifeAnimate = function(id, type) {
       <div class="mb-3">
         <div class="text-[11px] text-[#6e7f7b] mb-1.5">항목</div>
         <div class="flex gap-2 mb-2">
-          <input id="voteNewItem" type="text" placeholder="항목 입력" onkeydown="if(event.key==='Enter'){voteAddItem();event.preventDefault();}"
+          <input id="voteNewItem" type="text" placeholder="GPT에게 물어본다" onkeydown="if(event.key==='Enter'){voteAddItem();event.preventDefault();}"
             class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
           <button onclick="voteAddItem()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold flex items-center justify-center hover:brightness-110 transition">추가</button>
         </div>
