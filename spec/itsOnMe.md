@@ -209,7 +209,7 @@ https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=lif
 | `submitItsOnMeMenu` | `handleSubmitItsOnMeMenu` | 메뉴 선택/수정 (가격 포함) |
 | `addItsOnMeMembers` | `handleAddItsOnMeMembers` | 멤버 추가 (참여자 누구나) |
 | `extendItsOnMe` | `handleExtendItsOnMe` | 마감시간 연장 |
-| `getBizFlowUserList` | `handleGetBizFlowUserList` | 사용자 목록 일괄 (인코딩) + 이전 세션 |
+| `getBizFlowUserList` | `handleGetBizFlowUserList` | 사용자 목록 일괄 (인코딩) + 이전 세션 + 내 부서(`dept`) |
 | `searchBizFlowUsers` | `handleSearchBizFlowUsers` | 사용자 개별 검색 (API 폴백) |
 | `getBanapressoMenu` | `handleGetBanapressoMenu` | 캐시된 메뉴/옵션 반환 |
 | `getItsOnMeTemplates` | `handleGetItsOnMeTemplates` | 전체 템플릿 목록 (ownerName, isMine 포함) |

@@ -56,13 +56,14 @@ function handleGetBizFlowUserList(adminRow, e) {
   var data = sheet.getDataRange().getValues();
   data.shift();
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
+  var myDept = '';
   var users = [];
   for (var i = 0; i < data.length; i++) {
     var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    if (knoxId.toLowerCase() === myKnox) continue;
+    if (knoxId.toLowerCase() === myKnox) { myDept = dept; continue; }
     users.push([knoxId, name, dept]);
   }
   // JSON → base64 → 문자열 반전 (평문 노출 방지)
@@ -103,7 +104,7 @@ function handleGetBizFlowUserList(adminRow, e) {
     }
   }
 
-  return createResponse({ ok: true, d: reversed, m: myKnox, p: prevSessions });
+  return createResponse({ ok: true, d: reversed, m: myKnox, dept: myDept, p: prevSessions });
 }
 
 /* ═══════════════ 세션 생성 ═══════════════ */

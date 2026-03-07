@@ -166,7 +166,7 @@ https://rosarosakim.github.io/edu-book-dashboard/edu-book-dashboard.html?tab=lif
 
 - **딥링크 진입 시**: 투표 섹션만 표시 (식단 알람, 이쏜미 숨김), 뒤로가기 시 전체 복원
 - **모든 통신 버튼에 스피너**: 다음, 투표 시작, 투표하기, 항목 추가, 투표 마감 등
-- **멤버 선택**: 로딩 완료 후 본인 부서원 기본 표시, 검색으로 전체 멤버 탐색
+- **멤버 선택**: `getBizFlowUserList` 응답의 `dept` 필드로 본인 부서원 기본 표시, 검색으로 전체 멤버 탐색
 - **수동 마감**: 생성자만 가능, `showConfirm` 확인 후 즉시 마감 + 결과 발송
 - **confirm/prompt 미사용**: 모든 확인은 `window.showConfirm()` 커스텀 UI 사용
 
