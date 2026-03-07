@@ -140,9 +140,9 @@ var FLOW_MSG = {
   // #11 이쏜미 초대 메시지
   itsOnMeInvite: function(creatorName, store, deadlineStr, sessionId) {
     return {
-      content: creatorName + ' 프로가 메뉴를 골라달래',
+      content: store + ' · ' + deadlineStr + ' 마감\n\n링크 눌러서 메뉴 골라줘',
       link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
-      previewTitle: '☕ ' + store + ' ' + deadlineStr + '까지 메뉴선택해'
+      previewTitle: '☕ ' + creatorName + ' 프로가 메뉴 주문을 받고 있어'
     };
   },
   // #12 이쏜미 취합 결과

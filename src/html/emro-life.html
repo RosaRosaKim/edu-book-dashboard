@@ -145,9 +145,9 @@
     <!-- 메인 화면: 가게 선택 -->
     <div id="iomHome">
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="iomSelectStore('당산 바나프레소')" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+        <button onclick="iomSelectStore('당산SKV1 바나프레소')" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
           <span class="text-2xl">☕</span>
-          <span class="text-[12px] font-semibold text-[#47635f]">당산 바나프레소</span>
+          <span class="text-[12px] font-semibold text-[#47635f]">당산SKV1 바나프레소</span>
         </button>
         <button onclick="iomOpenCustom()" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
           <span class="text-2xl">✏️</span>
@@ -186,20 +186,14 @@
             class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
           <input id="iomCustomMenuPrice" type="number" placeholder="가격" inputmode="numeric"
             class="w-20 bg-surface-2 border border-border rounded-lg px-2 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60 text-right">
-          <button onclick="iomAddCustomMenu()" class="shrink-0 w-9 h-9 rounded-lg bg-accent text-white flex items-center justify-center text-lg leading-none hover:brightness-110 transition">+</button>
+          <button onclick="iomAddCustomMenu()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold flex items-center justify-center hover:brightness-110 transition">추가</button>
         </div>
         <div id="iomCustomMenuList" class="space-y-1.5"></div>
       </div>
 
-      <!-- 저장 & 다음 -->
-      <div class="flex gap-2">
-        <button onclick="iomSaveTemplate()" class="flex-1 py-2.5 rounded-lg border border-accent text-accent font-semibold text-sm hover:bg-accent/10 transition">
-          저장
-        </button>
-        <button onclick="iomCustomNext()" class="flex-1 py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition">
-          다음
-        </button>
-      </div>
+      <button onclick="iomCustomNext()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition">
+        다음
+      </button>
     </div>
 
     <!-- Step 1: 사용자 선택 + 마감시간 -->
@@ -337,6 +331,7 @@
   var _orderResponses = []; // 현재 주문 응답 목록
   var _customMenus = []; // 수동입력 메뉴 [{name, price}]
   var _templates = []; // 저장된 템플릿
+  var _tplFavorites = {}; // 템플릿 즐겨찾기 { "store_name": true }
   var _userCache = null; // 사용자 목록 로컬 캐시
   var _myDept = ''; // 내 부서
   var _prevSessions = []; // 이전 세션 목록 [{sid, store, created, members:[knoxId]}]
@@ -485,21 +480,48 @@
       return;
     }
     $('iomTplArea').classList.remove('hidden');
-    $('iomTplList').innerHTML = _templates.map(function(t, i) {
+    // 즐겨찾기 로드
+    try { _tplFavorites = JSON.parse(localStorage.getItem('iomTplFav') || '{}'); } catch(_) { _tplFavorites = {}; }
+    // 정렬: 즐겨찾기 → 내 것 → 나머지
+    var sorted = _templates.map(function(t, i) { return { t: t, i: i }; });
+    sorted.sort(function(a, b) {
+      var af = _tplFavorites[a.t.store] ? 0 : 1, bf = _tplFavorites[b.t.store] ? 0 : 1;
+      if (af !== bf) return af - bf;
+      var am = a.t.isMine ? 0 : 1, bm = b.t.isMine ? 0 : 1;
+      return am - bm;
+    });
+    $('iomTplList').innerHTML = sorted.map(function(s) {
+      var t = s.t, i = s.i;
       var menus = [];
       try { menus = JSON.parse(t.menus); } catch(_) {}
       var preview = menus.map(function(m) { return m.name; }).slice(0, 3).join(', ');
       if (menus.length > 3) preview += ' 외 ' + (menus.length - 3) + '개';
+      var isFav = !!_tplFavorites[t.store];
+      var favBtn = '<button onclick="iomToggleTplFav(' + i + ',event)" class="shrink-0 w-7 h-7 rounded-full transition flex items-center justify-center ' +
+        (isFav ? 'text-yellow-500 bg-yellow-50' : 'text-[#c5d5d2] hover:text-yellow-400 hover:bg-yellow-50/50') + '">' +
+        '<svg class="w-4 h-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="' + (isFav ? 'currentColor' : 'none') + '">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg></button>';
       var delBtn = t.isMine ? '<button onclick="iomDeleteTemplate(' + i + ')" class="shrink-0 w-7 h-7 rounded-full text-[#c5d5d2] hover:text-red-400 hover:bg-red-50 transition flex items-center justify-center">' +
           '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>' +
         '</button>' : '';
-      return '<div class="flex items-center gap-2">' +
-        '<button onclick="iomLoadTemplate(' + i + ')" class="flex-1 text-left px-3 py-2 rounded-lg bg-surface-2 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">' +
-          '<div class="text-[12px] font-medium text-[#47635f]">' + t.store + '</div>' +
+      var ownerTag = !t.isMine ? '<span class="text-[9px] text-[#9ab0ab] ml-1">by ' + (t.ownerName || '다른사람') + '</span>' : '';
+      return '<div class="flex items-center gap-1">' + favBtn +
+        '<button onclick="iomLoadTemplate(' + i + ')" class="flex-1 text-left px-3 py-2 rounded-lg bg-surface-2 hover:bg-accent/10 transition border border-transparent hover:border-accent/20 min-w-0">' +
+          '<div class="text-[12px] font-medium text-[#47635f] truncate">' + t.store + ownerTag + '</div>' +
           '<div class="text-[10px] text-[#9ab0ab] truncate">' + preview + '</div>' +
         '</button>' + delBtn + '</div>';
     }).join('');
   }
+
+  window.iomToggleTplFav = function(idx, ev) {
+    ev.stopPropagation();
+    var t = _templates[idx];
+    if (!t) return;
+    if (_tplFavorites[t.store]) delete _tplFavorites[t.store];
+    else _tplFavorites[t.store] = true;
+    localStorage.setItem('iomTplFav', JSON.stringify(_tplFavorites));
+    _renderTemplates();
+  };
 
   window.iomLoadTemplate = function(idx) {
     var t = _templates[idx];
@@ -563,10 +585,16 @@
     } catch (_) { window.showToast('저장 실패', 'sad'); }
   };
 
-  window.iomCustomNext = function() {
+  window.iomCustomNext = async function() {
     var store = ($('iomCustomStore').value || '').trim();
     if (!store) { window.showToast('상호명을 입력해줘', 'sad'); return; }
     if (!_customMenus.length) { window.showToast('메뉴를 추가해줘', 'sad'); return; }
+    // 자동 저장
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=saveItsOnMeTemplate&token=' + encodeURIComponent(token) +
+        '&store=' + encodeURIComponent(store) + '&menus=' + encodeURIComponent(JSON.stringify(_customMenus)));
+    } catch (_) {}
     _store = store;
     _members = [];
     $('iomStoreName').textContent = store;
@@ -757,10 +785,10 @@
           _optionsData = {};
           _renderCustomOrderMenu();
         } catch(_) {
-          if (session.store === '당산 바나프레소') { await _loadMenuData(session.store); }
+          if (session.store === '당산SKV1 바나프레소') { await _loadMenuData(session.store); }
           else { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">커스텀 메뉴 로드 실패</div>'; }
         }
-      } else if (session.store === '당산 바나프레소') {
+      } else if (session.store === '당산SKV1 바나프레소') {
         await _loadMenuData(session.store);
       } else {
         $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 정보가 없어. 발송자에게 문의해줘.</div>';

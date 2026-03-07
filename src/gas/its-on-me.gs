@@ -35,7 +35,7 @@ function handleSearchBizFlowUsers(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    if (knoxId.toLowerCase() === myKnox) continue;
+    // if (knoxId.toLowerCase() === myKnox) continue; // 테스트용 주석
     if (name.toLowerCase().indexOf(word) !== -1 || knoxId.toLowerCase().indexOf(word) !== -1) {
       results.push({ knoxId: knoxId, name: name, dept: dept });
     }
@@ -62,7 +62,7 @@ function handleGetBizFlowUserList(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    if (knoxId.toLowerCase() === myKnox) continue;
+    // if (knoxId.toLowerCase() === myKnox) continue; // 테스트용 주석
     users.push([knoxId, name, dept]);
   }
   // JSON → base64 → 문자열 반전 (평문 노출 방지)
@@ -96,7 +96,7 @@ function handleGetBizFlowUserList(adminRow, e) {
           var rSid = String(respData[r][IOM_R_COL.SID]);
           if (!sidMap[rSid]) continue;
           var rKnox = String(respData[r][IOM_R_COL.KNOX]).trim();
-          if (rKnox.toLowerCase() === myKnox) continue;
+          // if (rKnox.toLowerCase() === myKnox) continue; // 테스트용 주석
           sidMap[rSid].members.push(rKnox);
         }
       }
@@ -164,7 +164,7 @@ function handleCreateItsOnMe(adminRow, e) {
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
   var failedUsers = [];
   for (var k = 0; k < allMembers.length; k++) {
-    if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
+    // if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue; // 테스트용 주석
     try {
       var msg = FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
       sendFlowMsg(allMembers[k].knoxId, msg);
@@ -524,6 +524,17 @@ function handleGetItsOnMeTemplates(adminRow, e) {
   var sheet = ss.getSheetByName(IOM_TPL);
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ ok: true, templates: [] });
 
+  // knoxId → 이름 맵 구축
+  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var nameMap = {};
+  if (adminSheet) {
+    var ad = adminSheet.getDataRange().getValues();
+    for (var a = 1; a < ad.length; a++) {
+      var ak = String(ad[a][ADMIN_COL.KNOX_ID] || '').trim().toLowerCase();
+      if (ak) nameMap[ak] = String(ad[a][ADMIN_COL.NAME] || '').trim();
+    }
+  }
+
   var data = sheet.getDataRange().getValues();
   var templates = [];
   for (var i = 1; i < data.length; i++) {
@@ -533,7 +544,8 @@ function handleGetItsOnMeTemplates(adminRow, e) {
       store: String(data[i][IOM_TPL_COL.STORE]),
       menus: String(data[i][IOM_TPL_COL.MENUS]),
       updated: data[i][IOM_TPL_COL.UPDATED] ? Utilities.formatDate(new Date(data[i][IOM_TPL_COL.UPDATED]), 'Asia/Seoul', 'M/d HH:mm') : '',
-      isMine: knox === myKnox
+      isMine: knox === myKnox,
+      ownerName: nameMap[knox] || ''
     });
   }
   return createResponse({ ok: true, templates: templates });
