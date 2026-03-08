@@ -10,7 +10,8 @@ const SHEET_NAME = {
   BOARD: "게시판",
   RATING: "맛집평가",
   CARD_INFO: "사용자카드정보",
-  RELEASE: "릴리즈노트"
+  RELEASE: "릴리즈노트",
+  GAME_RANK: "미니게임랭킹"
 };
 
 const DATA_COL = {
@@ -409,7 +410,9 @@ const doGet = (e) => {
     getVoteTemplates: handleGetVoteTemplates,
     saveVoteTemplate: handleSaveVoteTemplate,
     deleteVoteTemplate: handleDeleteVoteTemplate,
-    closeVote: handleCloseVote
+    closeVote: handleCloseVote,
+    gameRankSave: handleGameRankSave,
+    gameRankList: handleGameRankList
   };
   if (TOKEN_ACTIONS[action] && token) {
     const entry = _verifyToken(token, adminByKnoxId);
@@ -800,5 +803,97 @@ function sendFlowGAS(userId, content, previewLink, previewTitle) {
 
   const response = UrlFetchApp.fetch(API_URL, { 'method': 'post', 'contentType': 'application/x-www-form-urlencoded', 'payload': payload, 'muteHttpExceptions': true });
   try { return JSON.parse(decodeURIComponent(response.getContentText())); } catch (e) { return null; }
+}
+
+// ═══════════════ 미니게임 랭킹 ═══════════════
+// 시트 구조: [게임명, knoxId, 이름, 점수, 메세지, 날짜]
+function _ensureGameRankSheet(ss) {
+  var sheet = ss.getSheetByName(SHEET_NAME.GAME_RANK);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME.GAME_RANK);
+    sheet.appendRow(['게임명', 'knoxId', '이름', '점수', '메세지', '날짜']);
+  }
+  return sheet;
+}
+
+function handleGameRankSave(adminRow, e) {
+  var p = e.parameter;
+  var game = String(p.game || '').trim();
+  var scoreVal = parseInt(p.score, 10);
+  var message = String(p.message || '').slice(0, 20);
+  if (!game || isNaN(scoreVal) || scoreVal <= 0) return createResponse({ error: '잘못된 요청' });
+
+  var knoxId = String(adminRow[ADMIN_COL.KNOX_ID]).trim();
+  var name = String(adminRow[ADMIN_COL.NAME] || knoxId);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = _ensureGameRankSheet(ss);
+  var data = sheet.getDataRange().getValues();
+
+  // 해당 게임의 기존 랭킹 가져오기
+  var ranks = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === game) {
+      ranks.push({ row: i + 1, knoxId: String(data[i][1]), score: Number(data[i][3]) });
+    }
+  }
+  ranks.sort(function(a, b) { return b.score - a.score; });
+
+  // Top 5 진입 가능한지 체크
+  var minTop5 = ranks.length >= 5 ? ranks[4].score : 0;
+  if (scoreVal <= minTop5 && ranks.length >= 5) return createResponse({ status: 'success', ranked: false });
+
+  // 같은 유저의 기존 기록이 있으면 더 높은 점수만 업데이트
+  var existingIdx = -1;
+  for (var j = 0; j < ranks.length; j++) {
+    if (ranks[j].knoxId === knoxId) { existingIdx = j; break; }
+  }
+
+  var now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+  if (existingIdx >= 0) {
+    if (scoreVal <= ranks[existingIdx].score) return createResponse({ status: 'success', ranked: true, updated: false });
+    var r = ranks[existingIdx].row;
+    sheet.getRange(r, 4).setValue(scoreVal);
+    sheet.getRange(r, 5).setValue(message);
+    sheet.getRange(r, 6).setValue(now);
+  } else {
+    sheet.appendRow([game, knoxId, name, scoreVal, message, now]);
+  }
+
+  // Top 5 밖의 오래된 레코드 정리 (6위 이상 삭제)
+  var updated = sheet.getDataRange().getValues();
+  var gameRanks = [];
+  for (var k = 1; k < updated.length; k++) {
+    if (String(updated[k][0]).trim() === game) {
+      gameRanks.push({ row: k + 1, score: Number(updated[k][3]) });
+    }
+  }
+  gameRanks.sort(function(a, b) { return b.score - a.score; });
+  // 역순으로 삭제 (행 번호 밀림 방지)
+  var toDelete = gameRanks.slice(5).sort(function(a, b) { return b.row - a.row; });
+  for (var d = 0; d < toDelete.length; d++) {
+    sheet.deleteRow(toDelete[d].row);
+  }
+
+  return createResponse({ status: 'success', ranked: true, updated: true });
+}
+
+function handleGameRankList(adminRow, e) {
+  var game = String((e.parameter.game) || '').trim();
+  if (!game) return createResponse({ error: '게임명 필요' });
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME.GAME_RANK);
+  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'success', ranks: [] });
+
+  var data = sheet.getDataRange().getValues();
+  var ranks = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === game) {
+      var rawMsg = String(data[i][4] || '').replace(/\s*\d+m\b/g, '').replace(/\s*Wave\d+/gi, '').replace(/\s*\d+점\s*/g, '').trim();
+      ranks.push({ score: Number(data[i][3]), message: rawMsg });
+    }
+  }
+  ranks.sort(function(a, b) { return b.score - a.score; });
+  return createResponse({ status: 'success', ranks: ranks.slice(0, 5) });
 }
 
