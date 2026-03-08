@@ -53,7 +53,8 @@
       "WebFetch(domain:order.banapresso.com)",
       "WebFetch(domain:m.banapresso.com)",
       "Bash(git pull:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(xargs cat:*)"
     ]
   }
 }

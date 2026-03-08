@@ -60,7 +60,7 @@ tailwind.config = {
     <!-- 브랜딩 -->
     <div class="text-center mb-8">
       <img id="mascotImg" src="../img/preview-full-256.png" alt="QuickLogin" class="w-16 h-16 mx-auto mb-4 object-contain">
-      <h1 class="text-2xl font-bold"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span id="verBadgeAuth" class="text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle cursor-pointer hover:bg-accent/25 transition-colors" onclick="showReleaseNotes()"></span></h1>
+      <h1 class="text-2xl font-bold"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span id="verBadgeAuth" class="relative text-[10px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle cursor-pointer hover:bg-accent/25 transition-colors" onclick="showReleaseNotes()"><span class="ver-new-dot hidden absolute -top-0.5 -right-0.5 w-2 h-2 bg-pink-400/70 rounded-full"></span></span></h1>
       <div class="mt-2 inline-flex items-center gap-1.5 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5">
         <svg class="w-3.5 h-3.5 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
         <span class="text-[13px] text-accent font-medium">Bizplay 아이디로 로그인하면 돼!</span>
@@ -162,7 +162,7 @@ tailwind.config = {
           <img id="headerLoading" src="../img/dance2.gif" alt="loading" class="icon-hidden">
         </div>
         <div>
-          <div class="text-xl font-bold leading-tight"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span id="verBadgeHeader" class="text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle cursor-pointer hover:bg-accent/25 transition-colors" onclick="showReleaseNotes()"></span></div>
+          <div class="text-xl font-bold leading-tight"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span id="verBadgeHeader" class="relative text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle cursor-pointer hover:bg-accent/25 transition-colors" onclick="showReleaseNotes()"><span class="ver-new-dot hidden absolute -top-0.5 -right-0.5 w-2 h-2 bg-pink-400/70 rounded-full"></span></span></div>
         </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
@@ -1942,21 +1942,44 @@ var _rnCache = null; // { currentVersion, notes[] }
 
 // 페이지 로드 시 버전 뱃지 세팅
 (async function() {
+  var SPIN_SVG = '<svg class="spinner inline-block w-3 h-3 text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+  var b1 = document.getElementById('verBadgeAuth');
+  var b2 = document.getElementById('verBadgeHeader');
+  // 로딩 스피너 표시
+  [b1, b2].forEach(function(b) {
+    if (!b) return;
+    var sp = document.createElement('span'); sp.className = 'ver-label'; sp.innerHTML = SPIN_SVG;
+    b.insertBefore(sp, b.firstChild);
+  });
   try {
     var data = await gasFetch(API_URL + '?action=releaseNotes');
     if (data) _rnCache = data;
     var v = (data && data.currentVersion) || '';
     if (v) {
       var label = 'v' + v;
-      var b1 = document.getElementById('verBadgeAuth');
-      var b2 = document.getElementById('verBadgeHeader');
-      if (b1) b1.textContent = label;
-      if (b2) b2.textContent = label;
+      [b1, b2].forEach(function(b) {
+        if (!b) return;
+        var txt = b.querySelector('.ver-label');
+        if (txt) txt.textContent = label;
+      });
+      // 읽지 않은 버전이면 분홍 점 표시
+      var seenVer = localStorage.getItem('rnSeenVersion');
+      if (seenVer !== v) {
+        document.querySelectorAll('.ver-new-dot').forEach(function(dot) { dot.classList.remove('hidden'); });
+      }
+    } else {
+      [b1, b2].forEach(function(b) { if (b) { var s = b.querySelector('.ver-label'); if (s) s.remove(); } });
     }
-  } catch (_) {}
+  } catch (_) {
+    [b1, b2].forEach(function(b) { if (b) { var s = b.querySelector('.ver-label'); if (s) s.remove(); } });
+  }
 })();
 
 window.showReleaseNotes = async function() {
+  // 빨간 점 숨기고 현재 버전 기록
+  document.querySelectorAll('.ver-new-dot').forEach(function(dot) { dot.classList.add('hidden'); });
+  if (_rnCache && _rnCache.currentVersion) localStorage.setItem('rnSeenVersion', _rnCache.currentVersion);
+
   let overlay = document.getElementById('rnOverlay');
   if (overlay) { overlay.classList.remove('hidden'); return; }
 
