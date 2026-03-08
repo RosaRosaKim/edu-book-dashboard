@@ -295,7 +295,9 @@ async function build() {
 
   // 3. 모듈 HTML 빌드
   console.log('\n========== Building modules ==========');
-  const modules = ['edu-bizplay.html', 'card-babka.html', 'edu-draft.html', 'edu-expense.html', 'edu-timesheet.html', 'edu-board.html', 'emro-life.html'];
+  const mainPages = ['dev-edu-book-dashboard.html', 'dev-admin-dashboard.html'];
+  const modules = fs.readdirSync(SRC_DIR)
+    .filter(f => f.endsWith('.html') && !mainPages.includes(f));
   for (const mod of modules) {
     const src = path.join(SRC_DIR, mod);
     if (fs.existsSync(src)) {
