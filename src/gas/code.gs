@@ -129,7 +129,7 @@ const doGet = (e) => {
     let used = 0, pending = 0;
     allApplyData.forEach(row => {
       const c = colFor(row);
-      if (String(row[c.KNOX_ID]) !== targetKnoxId) return;
+      if (_normalizeKnoxId(row[c.KNOX_ID]) !== targetKnoxId) return;
       const status = String(row[c.STATUS]);
       const cost = Number(row[c.COST]) || 0;
       if (status === "완료") used += cost;
@@ -506,7 +506,7 @@ const doGet = (e) => {
       if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; allApplyData.push(row); }); }
       if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; allApplyData.push(row); }); }
 
-      const myRows = allApplyData.filter(row => String(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
+      const myRows = allApplyData.filter(row => _normalizeKnoxId(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
       let myUsed = 0;
       const myHistory = myRows.map(row => {
         const c = colFor(row);
@@ -529,8 +529,8 @@ const doGet = (e) => {
         const stats = { totalConfirmed: 0, totalPending: 0, totalMemberCount: adminSheet.getLastRow() - 1, vendors: {}, allUserList: [], allRecords: [] };
         const userMap = new Map();
         adminData.forEach((row, idx) => { if (idx === 0) return; const uId = String(row[ADMIN_COL.KNOX_ID]); userMap.set(uId, { knoxId: uId, name: row[ADMIN_COL.NAME] || "미확인", dept: row[ADMIN_COL.DEPT] || "", used: 0, pending: 0, eduUsed: 0, bookUsed: 0 }); });
-        allApplyData.forEach(row => { const c = colFor(row); const sId = String(row[c.KNOX_ID]); const cost = Number(row[c.COST]) || 0; const status = String(row[c.STATUS]); const vendor = row._reqType === "교육" ? (row[DATA_COL.VENDOR] || "기타") : "도서"; if (status === "완료") { stats.totalConfirmed += cost; stats.vendors[vendor] = (stats.vendors[vendor] || 0) + cost; } else if (status.includes("대기") || status.includes("진행")) { stats.totalPending += cost; } if (userMap.has(sId)) { const u = userMap.get(sId); if (u.name === '미확인' && row[c.NAME]) u.name = String(row[c.NAME]); if (status === "완료") { u.used += cost; if (row._reqType === "교육") u.eduUsed += cost; else if (row._reqType === "도서") u.bookUsed += cost; } else if (status.includes("대기") || status.includes("진행")) { u.pending += cost; } } });
-        stats.allRecords = allApplyData.map(row => { const c = colFor(row); const knoxId = String(row[c.KNOX_ID]); const masterName = userMap.has(knoxId) ? userMap.get(knoxId).name : ''; return { knoxId, name: masterName || row[c.NAME] || '', courseName: `[${row._reqType}] ${row[c.TITLE]}`, cost: Number(row[c.COST]) || 0, status: row[c.STATUS] || '', period: row._reqType === "교육" ? (row[12] || '') : '', date: row[0] ? new Date(row[0]).toISOString() : '', reqType: row._reqType }; });
+        allApplyData.forEach(row => { const c = colFor(row); const sId = _normalizeKnoxId(row[c.KNOX_ID]); const cost = Number(row[c.COST]) || 0; const status = String(row[c.STATUS]); const vendor = row._reqType === "교육" ? (row[DATA_COL.VENDOR] || "기타") : "도서"; if (status === "완료") { stats.totalConfirmed += cost; stats.vendors[vendor] = (stats.vendors[vendor] || 0) + cost; } else if (status.includes("대기") || status.includes("진행")) { stats.totalPending += cost; } if (userMap.has(sId)) { const u = userMap.get(sId); if (u.name === '미확인' && row[c.NAME]) u.name = String(row[c.NAME]); if (status === "완료") { u.used += cost; if (row._reqType === "교육") u.eduUsed += cost; else if (row._reqType === "도서") u.bookUsed += cost; } else if (status.includes("대기") || status.includes("진행")) { u.pending += cost; } } });
+        stats.allRecords = allApplyData.map(row => { const c = colFor(row); const knoxId = _normalizeKnoxId(row[c.KNOX_ID]); const masterName = userMap.has(knoxId) ? userMap.get(knoxId).name : ''; return { knoxId, name: masterName || row[c.NAME] || '', courseName: `[${row._reqType}] ${row[c.TITLE]}`, cost: Number(row[c.COST]) || 0, status: row[c.STATUS] || '', period: row._reqType === "교육" ? (row[12] || '') : '', date: row[0] ? new Date(row[0]).toISOString() : '', reqType: row._reqType }; });
         stats.allUserList = Array.from(userMap.values()).map(u => ({ ...u, isOverLimit: u.used >= 450000, isZeroUsage: u.used === 0 }));
         adminStats = stats;
       }
@@ -589,7 +589,7 @@ const doGet = (e) => {
     }
 
     // 1. 일반 사용자 본인 내역
-    const myRows = allApplyData.filter(row => String(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
+    const myRows = allApplyData.filter(row => _normalizeKnoxId(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
     let myUsed = 0;
     const myHistory = myRows.map(row => {
       const c = colFor(row);
@@ -630,7 +630,7 @@ const doGet = (e) => {
       // 신청서 데이터 순회 및 집계
       allApplyData.forEach(row => {
         const c = colFor(row);
-        const sId = String(row[c.KNOX_ID]);
+        const sId = _normalizeKnoxId(row[c.KNOX_ID]);
         const cost = Number(row[c.COST]) || 0;
         const status = String(row[c.STATUS]);
         const vendor = row._reqType === "교육" ? (row[DATA_COL.VENDOR] || "기타") : "도서";
@@ -665,7 +665,7 @@ const doGet = (e) => {
       // 전체 개별 레코드 (관리자 상세 조회용) — 이름은 웹페이지관리(마스터) 우선
       stats.allRecords = allApplyData.map(row => {
         const c = colFor(row);
-        const knoxId = String(row[c.KNOX_ID]);
+        const knoxId = _normalizeKnoxId(row[c.KNOX_ID]);
         const masterName = userMap.has(knoxId) ? userMap.get(knoxId).name : '';
         return {
           knoxId,
