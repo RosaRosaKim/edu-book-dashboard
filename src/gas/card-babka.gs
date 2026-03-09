@@ -993,7 +993,6 @@ function sendDailyAlarm(data) {
       if (hasMenu) {
         msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
       }
-      if (_resendNotice) msg.content += _resendNotice;
       sendFlowMsg(knoxId, msg);
       Logger.log('[일일알림] 발송 완료 - ' + knoxId + (hasMenu ? ' (+식단)' : ''));
     } catch (ex) {
@@ -1002,17 +1001,6 @@ function sendDailyAlarm(data) {
   }
 }
 
-var _resendNotice = '';
-
-/** 잔액알림 수동 재발송 (하단 안내문 포함, GAS 에디터에서 직접 실행) */
-function resendDailyAlarm() {
-  _resendNotice = '\n\n⚠️ 교통비 집계 오류로 재발송된 알림입니다.';
-  try {
-    sendDailyAlarm();
-  } finally {
-    _resendNotice = '';
-  }
-}
 
 /** 공휴일 여부 체크 (holidays.hyunbin.page API + 근로자의 날) */
 function _isHolidayServer(date) {
