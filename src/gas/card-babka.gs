@@ -339,7 +339,7 @@ function sendBabCardAlarm() {
   sendCardAlarmDay14(adminData);
   sendCardAlarmReminder(adminData);
   sendCardRefundAlert(adminData);
-  sendCardDailyBalance(adminData);
+  sendDailyAlarm(adminData);
 }
 
 /**
@@ -867,11 +867,12 @@ function migratePasswords() {
 /* ═══════════════ 평일 잔액알림 발송 ═══════════════ */
 
 /**
- * 매일 평일 11시 트리거: 밥카 잔액 알림 발송
- * 트리거 설정: 시간 기반 트리거 → 매일 오전 11시
+ * 매일 평일 트리거: 밥카 잔액 + 식단 통합 알림 발송
+ * - 밥카=Y → 잔액 알림 (+ 식단=Y면 식단 합산)
+ * - 밥카=N & 식단=Y → 식단만 단독 발송
  * 주말 + 공휴일(근로자의날 포함) 제외
  */
-function sendCardDailyBalance(data) {
+function sendDailyAlarm(data) {
   var now = new Date();
   var dow = now.getDay();
   if (dow === 0 || dow === 6) return;
@@ -902,33 +903,42 @@ function sendCardDailyBalance(data) {
     }
   } catch (ciErr) {}
 
-  // 식단 정보 미리 조회 (밥카+식단 합산 발송용)
+  // 식단 정보 미리 조회
   var menuInfo = _getTodayMenu();
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
     var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
-    var dailyAlarm = data[i][CARD_ALARM_COL - 1]; // G열: 잔액알림 수신여부
+    var cardAlarm = data[i][CARD_ALARM_COL - 1]; // G열: 잔액알림 수신여부
     var encPw = data[i][CARD_DAILY_COL - 1]; // H열: 암호화된 PW
     var menuAlarm = String(data[i][10] || '').trim().toUpperCase(); // K열: 식단알림
 
-    if (!knoxId || dailyAlarm !== 'Y' || !encPw) continue;
+    if (!knoxId) continue;
+    var hasCard = (cardAlarm === 'Y' && encPw);
+    var hasMenu = (menuAlarm === 'Y' && menuInfo);
+    if (!hasCard && !hasMenu) continue;
 
+    // ── 식단만 Y (밥카 N) → 식단 단독 발송 ──
+    if (!hasCard) {
+      sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
+      Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId);
+      continue;
+    }
+
+    // ── 밥카 Y → 잔액 조회 후 발송 (식단 Y면 합산) ──
     try {
       var userId = (bizplayId || knoxId) + '@emro.co.kr';
       var password = _decryptPw(encPw);
 
-      // 로그인 → webank 쿠키 획득
       var loginResult = _bizplayLoginCore(userId, password);
       if (loginResult.error || !loginResult.webankCookies) {
-        Logger.log('[잔액알림] 로그인 실패 - ' + knoxId + ': ' + (loginResult.error || 'webank 쿠키 없음'));
+        Logger.log('[일일알림] 로그인 실패 - ' + knoxId + ': ' + (loginResult.error || 'webank 쿠키 없음'));
         continue;
       }
 
-      // 사용내역 조회
       var result = _callWebankApi(loginResult.webankCookies);
       if (result.expired || result.error) {
-        Logger.log('[잔액알림] 조회 실패 - ' + knoxId + ': ' + (result.error || 'expired'));
+        Logger.log('[일일알림] 조회 실패 - ' + knoxId + ': ' + (result.error || 'expired'));
         continue;
       }
 
@@ -937,7 +947,6 @@ function sendCardDailyBalance(data) {
       var msg;
 
       if (userCardsArr.length >= 2) {
-        // ── 다중카드: 카드별로 그룹핑 → 합산 메시지 ──
         var lunchBudget = _calcCardBudget();
         var byCard = {};
         records.forEach(function(r) {
@@ -964,10 +973,8 @@ function sendCardDailyBalance(data) {
 
         msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
       } else {
-        // ── 기존 단일카드 로직 (하위호환) ──
         var usedSum = 0;
         var usedCount = 0;
-        // 중식대 카드 필터링
         var lunchCard = userCardsArr.find(function(c) { return c.isLunchCard; });
         records.forEach(function(r) {
           if (lunchCard && r.cardNo !== lunchCard.cardNo) return;
@@ -983,14 +990,14 @@ function sendCardDailyBalance(data) {
       }
 
       // 식단알람도 Y이면 식단 정보 합산
-      if (menuAlarm === 'Y' && menuInfo) {
+      if (hasMenu) {
         msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
       }
       if (_resendNotice) msg.content += _resendNotice;
       sendFlowMsg(knoxId, msg);
-      Logger.log('[잔액알림] 발송 완료 - ' + knoxId + (menuAlarm === 'Y' && menuInfo ? ' (+식단)' : ''));
+      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (hasMenu ? ' (+식단)' : ''));
     } catch (ex) {
-      Logger.log('[잔액알림] 예외 - ' + knoxId + ': ' + ex.message);
+      Logger.log('[일일알림] 예외 - ' + knoxId + ': ' + ex.message);
     }
   }
 }
@@ -998,10 +1005,10 @@ function sendCardDailyBalance(data) {
 var _resendNotice = '';
 
 /** 잔액알림 수동 재발송 (하단 안내문 포함, GAS 에디터에서 직접 실행) */
-function resendCardDailyBalance() {
+function resendDailyAlarm() {
   _resendNotice = '\n\n⚠️ 교통비 집계 오류로 재발송된 알림입니다.';
   try {
-    sendCardDailyBalance();
+    sendDailyAlarm();
   } finally {
     _resendNotice = '';
   }

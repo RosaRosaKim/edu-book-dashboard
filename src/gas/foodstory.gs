@@ -182,9 +182,6 @@ function syncSKV1Menu() {
 
   var result = _writeMenuToSheet(parsed);
   Logger.log('[menu] 시트 기록 완료: row ' + result.row + (result.updated ? ' (덮어쓰기)' : ' (신규)'));
-
-  // 등록/갱신 후 오늘 날짜 식단이 있으면 Flow 발송
-  _sendMenuFlowIfToday();
 }
 
 /**
@@ -244,33 +241,3 @@ function _getTodayMenu() {
   return null;
 }
 
-/**
- * 식단 알림 단독 발송 (식단알람=Y & 밥카알람≠Y인 사용자만)
- * 밥카알람=Y인 사용자는 sendCardDailyBalance에서 합산 발송됨
- */
-function _sendMenuFlowIfToday() {
-  var info = _getTodayMenu();
-  if (!info) {
-    Logger.log('[menu] 오늘 식단 없음, Flow 발송 스킵');
-    return;
-  }
-
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  if (!adminSheet) return;
-
-  var data = adminSheet.getDataRange().getValues();
-  var sent = 0;
-  for (var i = 1; i < data.length; i++) {
-    var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
-    var menuAlarm = String(data[i][10] || '').trim().toUpperCase(); // K열 = index 10
-    var cardAlarm = String(data[i][6] || '').trim().toUpperCase();  // G열 = index 6
-    if (!knoxId || menuAlarm !== 'Y') continue;
-    // 밥카알람도 Y면 잔액알림에서 합산 발송하므로 여기선 스킵
-    if (cardAlarm === 'Y') continue;
-
-    sendFlowMsg(knoxId, FLOW_MSG.todayMenu(info.todayStr, info.todayMenu));
-    sent++;
-  }
-  Logger.log('[menu] 식단 단독 발송: ' + sent + '명');
-}
