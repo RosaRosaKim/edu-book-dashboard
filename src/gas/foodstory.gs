@@ -209,62 +209,53 @@ function _normDateKey(cellVal) {
  * @return {boolean} 발송 성공 여부
  */
 function _sendMenuFlowToUser(knoxId) {
-  var now = new Date();
-  var todayKey = (now.getMonth() + 1) + '/' + now.getDate();
-  var todayStr = (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
-
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
-  if (!menuSheet || menuSheet.getLastRow() <= 1) {
-    Logger.log('[menu] 즉시발송 실패: 시트 없음 또는 데이터 없음');
+  var info = _getTodayMenu();
+  if (!info) {
+    Logger.log('[menu] 즉시발송 실패: 오늘 식단 없음');
     return false;
   }
 
-  var menuData = menuSheet.getDataRange().getValues();
-  var todayMenu = null;
-  for (var i = 1; i < menuData.length; i++) {
-    if (_normDateKey(menuData[i][0]) === todayKey) {
-      todayMenu = String(menuData[i][1] || '');
-      break;
-    }
-  }
-  if (!todayMenu) {
-    Logger.log('[menu] 즉시발송 실패: 오늘(' + todayKey + ') 식단 없음');
-    return false;
-  }
-
-  sendFlowMsg(knoxId, FLOW_MSG.todayMenu(todayStr, todayMenu));
+  sendFlowMsg(knoxId, FLOW_MSG.todayMenu(info.todayStr, info.todayMenu));
   Logger.log('[menu] 즉시 발송 완료: ' + knoxId);
   return true;
 }
 
 /**
- * 오늘 날짜 식단이 시트에 있으면 Flow 알림 발송 (웹페이지관리 K열=Y 사용자)
+ * 오늘 식단 텍스트 조회 (없으면 null)
+ * @return {{ todayStr: string, todayMenu: string }|null}
  */
-function _sendMenuFlowIfToday() {
+function _getTodayMenu() {
   var now = new Date();
   var todayKey = (now.getMonth() + 1) + '/' + now.getDate();
   var todayStr = (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
-  if (!menuSheet || menuSheet.getLastRow() <= 1) return;
+  if (!menuSheet || menuSheet.getLastRow() <= 1) return null;
 
-  // 당산푸드스토리 시트에서 오늘 날짜 메뉴 찾기 (Date객체/문자열 모두 대응)
   var menuData = menuSheet.getDataRange().getValues();
-  var todayMenu = null;
   for (var i = 1; i < menuData.length; i++) {
     if (_normDateKey(menuData[i][0]) === todayKey) {
-      todayMenu = String(menuData[i][1] || '');
+      var menu = String(menuData[i][1] || '');
+      if (menu) return { todayStr: todayStr, todayMenu: menu };
       break;
     }
   }
-  if (!todayMenu) {
-    Logger.log('[menu] 오늘(' + todayKey + ') 식단 없음, Flow 발송 스킵');
+  return null;
+}
+
+/**
+ * 식단 알림 단독 발송 (식단알람=Y & 밥카알람≠Y인 사용자만)
+ * 밥카알람=Y인 사용자는 sendCardDailyBalance에서 합산 발송됨
+ */
+function _sendMenuFlowIfToday() {
+  var info = _getTodayMenu();
+  if (!info) {
+    Logger.log('[menu] 오늘 식단 없음, Flow 발송 스킵');
     return;
   }
 
-  // 웹페이지관리 K열=Y 사용자에게 발송
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   if (!adminSheet) return;
 
@@ -273,10 +264,13 @@ function _sendMenuFlowIfToday() {
   for (var i = 1; i < data.length; i++) {
     var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
     var menuAlarm = String(data[i][10] || '').trim().toUpperCase(); // K열 = index 10
+    var cardAlarm = String(data[i][6] || '').trim().toUpperCase();  // G열 = index 6
     if (!knoxId || menuAlarm !== 'Y') continue;
+    // 밥카알람도 Y면 잔액알림에서 합산 발송하므로 여기선 스킵
+    if (cardAlarm === 'Y') continue;
 
-    sendFlowMsg(knoxId, FLOW_MSG.todayMenu(todayStr, todayMenu));
+    sendFlowMsg(knoxId, FLOW_MSG.todayMenu(info.todayStr, info.todayMenu));
     sent++;
   }
-  Logger.log('[menu] Flow 발송 완료: ' + sent + '명');
+  Logger.log('[menu] 식단 단독 발송: ' + sent + '명');
 }

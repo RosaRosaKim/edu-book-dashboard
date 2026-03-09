@@ -902,11 +902,15 @@ function sendCardDailyBalance(data) {
     }
   } catch (ciErr) {}
 
+  // 식단 정보 미리 조회 (밥카+식단 합산 발송용)
+  var menuInfo = _getTodayMenu();
+
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
     var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
     var dailyAlarm = data[i][CARD_ALARM_COL - 1]; // G열: 잔액알림 수신여부
     var encPw = data[i][CARD_DAILY_COL - 1]; // H열: 암호화된 PW
+    var menuAlarm = String(data[i][10] || '').trim().toUpperCase(); // K열: 식단알림
 
     if (!knoxId || dailyAlarm !== 'Y' || !encPw) continue;
 
@@ -930,6 +934,7 @@ function sendCardDailyBalance(data) {
 
       var records = result.records || [];
       var userCardsArr = allCardInfo[knoxId] || [];
+      var msg;
 
       if (userCardsArr.length >= 2) {
         // ── 다중카드: 카드별로 그룹핑 → 합산 메시지 ──
@@ -957,10 +962,7 @@ function sendCardDailyBalance(data) {
           };
         });
 
-        var msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
-        if (_resendNotice) msg.content += _resendNotice;
-        sendFlowMsg(knoxId, msg);
-        Logger.log('[잔액알림] 다중카드 발송 - ' + knoxId);
+        msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
       } else {
         // ── 기존 단일카드 로직 (하위호환) ──
         var usedSum = 0;
@@ -977,11 +979,16 @@ function sendCardDailyBalance(data) {
         var budget = _calcCardBudget();
         var remain = budget - usedSum;
 
-        var msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
-        if (_resendNotice) msg.content += _resendNotice;
-        sendFlowMsg(knoxId, msg);
-        Logger.log('[잔액알림] 발송 완료 - ' + knoxId);
+        msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
       }
+
+      // 식단알람도 Y이면 식단 정보 합산
+      if (menuAlarm === 'Y' && menuInfo) {
+        msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
+      }
+      if (_resendNotice) msg.content += _resendNotice;
+      sendFlowMsg(knoxId, msg);
+      Logger.log('[잔액알림] 발송 완료 - ' + knoxId + (menuAlarm === 'Y' && menuInfo ? ' (+식단)' : ''));
     } catch (ex) {
       Logger.log('[잔액알림] 예외 - ' + knoxId + ': ' + ex.message);
     }
