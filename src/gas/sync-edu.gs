@@ -418,7 +418,7 @@ function handleAdminSyncEdu(e) {
  * 교육신청서 + 도서신청서 통합 동기화 (GAS 편집기에서 직접 실행 또는 트리거 등록)
  * - 로그인 1회 → 교육/도서 순차 처리
  */
-function syncAllRequests() {
+function syncEduBookRequests() {
   var now = new Date();
   var dow = now.getDay();
   if (dow === 0 || dow === 6) { Logger.log('[sync] 주말 스킵'); return; }
