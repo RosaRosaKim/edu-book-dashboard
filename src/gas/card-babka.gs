@@ -930,9 +930,8 @@ function sendDailyAlarm(data) {
     // ── 식단만 Y (밥카 N) ──
     if (!hasCard) {
       if (menuInfo) {
-        // sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
-        var _m = FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu);
-        Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId + '\n' + _m.content);
+        sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
+        Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId);
       } else {
         menuOnlyUsers.push({ knoxId: knoxId, like: menuLike });
       }
@@ -1009,8 +1008,8 @@ function sendDailyAlarm(data) {
       } else if (wantsMenu && menuMissing) {
         msg.content += '\n\n🍽 오늘 식단정보가 아직 없어. 찾아보고 있으면 보내줄게';
       }
-      // sendFlowMsg(knoxId, msg);
-      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (wantsMenu && menuInfo ? ' (+식단)' : wantsMenu ? ' (식단대기)' : '') + '\n' + msg.content);
+      sendFlowMsg(knoxId, msg);
+      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (wantsMenu && menuInfo ? ' (+식단)' : wantsMenu ? ' (식단대기)' : ''));
     } catch (ex) {
       Logger.log('[일일알림] 예외 - ' + knoxId + ': ' + ex.message);
     }
@@ -1029,12 +1028,11 @@ function sendDailyAlarm(data) {
           Logger.log('[일일알림] 재시도 선호 미매칭 → 생략 - ' + u.knoxId);
           continue;
         }
-        // sendFlowMsg(u.knoxId, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
-        var _rm = FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu);
-        Logger.log('[일일알림] 식단 재시도 발송 - ' + u.knoxId + '\n' + _rm.content);
+        sendFlowMsg(u.knoxId, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
+        Logger.log('[일일알림] 식단 재시도 발송 - ' + u.knoxId);
       } else {
-        // sendFlowMsg(u.knoxId, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
-        Logger.log('[일일알림] 식단 미등록 안내 - ' + u.knoxId + '\n오늘은 식단정보가 업로드 되지 않았어..');
+        sendFlowMsg(u.knoxId, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
+        Logger.log('[일일알림] 식단 미등록 안내 - ' + u.knoxId);
       }
     }
   }
