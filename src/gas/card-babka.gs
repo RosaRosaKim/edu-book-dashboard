@@ -1039,6 +1039,110 @@ function sendDailyAlarm(data) {
 }
 
 
+/** sendDailyAlarm 테스트 (logger.park 에게만 발송, 주말/공휴일 무시) */
+function testDailyAlarm() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+  // logger.park 행만 남기기
+  var testData = [data[0]]; // 헤더
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === 'logger.park') { testData.push(data[i]); break; }
+  }
+  if (testData.length <= 1) { Logger.log('[테스트] logger.park 사용자를 찾을 수 없음'); return; }
+
+  // 주말/공휴일 체크 우회를 위해 내부 로직 직접 실행
+  var allCardInfo = {};
+  try {
+    var ciSheet = ss.getSheetByName(SHEET_NAME.CARD_INFO);
+    if (ciSheet && ciSheet.getLastRow() >= 2) {
+      var ciData = ciSheet.getDataRange().getValues();
+      for (var ci = 1; ci < ciData.length; ci++) {
+        var kid = String(ciData[ci][0]).trim();
+        if (!kid) continue;
+        if (!allCardInfo[kid]) allCardInfo[kid] = [];
+        allCardInfo[kid].push({ cardNo: String(ciData[ci][1] || ''), alias: String(ciData[ci][2] || ''), limit: Number(ciData[ci][3]) || 0, isLunchCard: String(ciData[ci][4]).trim().toUpperCase() === 'Y' });
+      }
+    }
+  } catch (e) {}
+
+  var menuInfo = _getTodayMenu();
+  Logger.log('[테스트] logger.park 발송 시작, 식단=' + (menuInfo ? '있음' : '없음'));
+
+  var row = testData[1];
+  var knoxId = 'logger.park';
+  var bizplayId = String(row[BIZPLAY_ID_COL - 1] || '').trim();
+  var cardAlarm = row[CARD_ALARM_COL - 1];
+  var encPw = row[CARD_DAILY_COL - 1];
+  var menuAlarm = String(row[10] || '').trim().toUpperCase();
+  var menuLike = String(row[11] || '').trim();
+  var hasCard = (cardAlarm === 'Y' && encPw);
+  var wantsMenu = (menuAlarm === 'Y');
+
+  Logger.log('[테스트] hasCard=' + hasCard + ', wantsMenu=' + wantsMenu + ', menuLike=' + menuLike);
+
+  if (wantsMenu && menuInfo && !_shouldSendMenu(menuInfo.todayMenu, menuLike)) {
+    Logger.log('[테스트] 선호 미매칭 → 식단 생략');
+    wantsMenu = false;
+  }
+
+  if (!hasCard && !wantsMenu) { Logger.log('[테스트] 발송 대상 아님'); return; }
+
+  if (!hasCard && wantsMenu) {
+    if (menuInfo) {
+      sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
+      Logger.log('[테스트] 식단 단독 발송 완료');
+    } else {
+      Logger.log('[테스트] 식단 없음 → OCR 재시도');
+      try { _trySyncMenu(); } catch (ex) { Logger.log('[테스트] OCR 실패: ' + ex.message); }
+      var retryMenu = _getTodayMenu();
+      if (retryMenu && _shouldSendMenu(retryMenu.todayMenu, menuLike)) {
+        sendFlowMsg(knoxId, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
+        Logger.log('[테스트] OCR 후 식단 발송 완료');
+      } else {
+        sendFlowMsg(knoxId, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
+        Logger.log('[테스트] 식단 미등록 안내 발송');
+      }
+    }
+    return;
+  }
+
+  // 밥카 잔액 발송
+  try {
+    var userId = (bizplayId || knoxId) + '@emro.co.kr';
+    var password = _decryptPw(encPw);
+    var loginResult = _bizplayLoginCore(userId, password);
+    if (loginResult.error || !loginResult.webankCookies) { Logger.log('[테스트] 로그인 실패: ' + (loginResult.error || 'webank 쿠키 없음')); return; }
+    var result = _callWebankApi(loginResult.webankCookies);
+    if (result.expired || result.error) { Logger.log('[테스트] 조회 실패: ' + (result.error || 'expired')); return; }
+
+    var records = result.records || [];
+    var userCardsArr = allCardInfo[knoxId] || [];
+    var msg;
+    if (userCardsArr.length >= 2) {
+      var lunchBudget = _calcCardBudget();
+      var byCard = {};
+      records.forEach(function(r) { var cn = r.cardNo || 'unknown'; if (!byCard[cn]) byCard[cn] = { used: 0, count: 0 }; if (isTransportRecord(r)) return; byCard[cn].used += Number(r.cost) || 0; byCard[cn].count++; });
+      var summaries = userCardsArr.map(function(c) { var stats = byCard[c.cardNo] || { used: 0, count: 0 }; var cardBudget = c.isLunchCard ? lunchBudget : c.limit; var last4 = c.cardNo.length >= 4 ? c.cardNo.substring(c.cardNo.length - 4) : c.cardNo; var name = c.isLunchCard ? '밥카' : (c.alias ? c.alias + '(' + last4 + ')' : '카드(' + last4 + ')'); return { name: name, remain: cardBudget - stats.used, used: stats.used, hasLimit: c.isLunchCard || c.limit > 0, isLunch: c.isLunchCard }; });
+      msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
+    } else {
+      var usedSum = 0, usedCount = 0;
+      var lunchCard = userCardsArr.find(function(c) { return c.isLunchCard; });
+      records.forEach(function(r) { if (lunchCard && r.cardNo !== lunchCard.cardNo) return; if (isTransportRecord(r)) return; usedSum += Number(r.cost) || 0; usedCount++; });
+      var budget = _calcCardBudget();
+      msg = FLOW_MSG.cardDailyBalance(budget - usedSum, budget, usedSum, usedCount);
+    }
+    if (wantsMenu && menuInfo) {
+      msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
+    } else if (wantsMenu && !menuInfo) {
+      msg.content += '\n\n🍽 오늘 식단정보가 아직 없어. 찾아보고 있으면 보내줄게';
+    }
+    sendFlowMsg(knoxId, msg);
+    Logger.log('[테스트] 발송 완료');
+  } catch (ex) {
+    Logger.log('[테스트] 예외: ' + ex.message);
+  }
+}
+
 /** 잔액알림 수동 발송 (주말/공휴일 체크 없이 즉시 실행, GAS 에디터에서 직접 실행) */
 function resendDailyAlarm() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
