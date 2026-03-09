@@ -247,6 +247,11 @@ function _writeEduRows(ss, newRows) {
 
   // 새 데이터 추가
   testSheet.getRange(testSheet.getLastRow() + 1, 1, rowsToInsert.length, rowsToInsert[0].length).setValues(rowsToInsert);
+
+  // 작성일시(A열) 기준 내림차순 정렬 (헤더 제외)
+  if (testSheet.getLastRow() > 1) {
+    testSheet.getRange(2, 1, testSheet.getLastRow() - 1, testSheet.getLastColumn()).sort({ column: 1, ascending: false });
+  }
   return { sheet: testSheet, completedDocs: completedDocs };
 }
 
@@ -681,6 +686,11 @@ function _writeBookRows(ss, newRows) {
   }
 
   sheet.getRange(sheet.getLastRow() + 1, 1, rowsToInsert.length, rowsToInsert[0].length).setValues(rowsToInsert);
+
+  // 작성일시(A열) 기준 내림차순 정렬 (헤더 제외)
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).sort({ column: 1, ascending: false });
+  }
   return { sheet: sheet, completedDocs: completedDocs };
 }
 
