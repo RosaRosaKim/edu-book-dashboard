@@ -325,6 +325,21 @@ function handleUpdateCardAutoMode(adminRow, e) {
 /* ═══════════════ 밥카 자동 알림 ═══════════════ */
 
 /**
+ * 월간 밥카 알림 트리거 (매일 등록, 해당일만 실행)
+ * - 14일+1영업일: 결재 안내 + 자동결재
+ * - 14일부터 3번째 영업일: 미상신자 리마인더
+ * - 매월 1영업일: 초과 환불 안내
+ */
+function sendMonthlyCardAlarm() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+
+  try { sendCardAlarmDay14(data); } catch (e) { Logger.log('[월간알림] sendCardAlarmDay14 실패: ' + e.message); }
+  try { sendCardAlarmReminder(data); } catch (e) { Logger.log('[월간알림] sendCardAlarmReminder 실패: ' + e.message); }
+  try { sendCardRefundAlert(data); } catch (e) { Logger.log('[월간알림] sendCardRefundAlert 실패: ' + e.message); }
+}
+
+/**
  * 밥카 자동결재/알람 처리 (14일+1영업일)
  * J열 cardAutoMode별 분기:
  *   off/빈값 → 스킵
