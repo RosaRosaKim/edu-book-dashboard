@@ -543,7 +543,7 @@ function _cleanupFlowHistory(ss, now) {
  *  도서신청서 동기화
  * ═══════════════════════════════════════════════════════════════ */
 
-var SYNC_BOOK_SHEET = '도서신청서_test';
+var SYNC_BOOK_SHEET = '도서 신청서';
 var SYNC_BOOK_PAPER_SEQ_NO = '16206240';
 var SYNC_BOOK_HEADERS = [
   '작성일시', '기안자', '사원번호', '부서', '직위(직급)', '문서명', '문서번호',
