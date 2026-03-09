@@ -336,10 +336,10 @@ function sendBabCardAlarm() {
   var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   var adminData = mgmtSheet.getDataRange().getValues();
 
-  sendCardAlarmDay14(adminData);
-  sendCardAlarmReminder(adminData);
-  sendCardRefundAlert(adminData);
-  sendDailyAlarm(adminData);
+  try { sendCardAlarmDay14(adminData); } catch (e) { Logger.log('[트리거] sendCardAlarmDay14 실패: ' + e.message); }
+  try { sendCardAlarmReminder(adminData); } catch (e) { Logger.log('[트리거] sendCardAlarmReminder 실패: ' + e.message); }
+  try { sendCardRefundAlert(adminData); } catch (e) { Logger.log('[트리거] sendCardRefundAlert 실패: ' + e.message); }
+  try { sendDailyAlarm(adminData); } catch (e) { Logger.log('[트리거] sendDailyAlarm 실패: ' + e.message); }
 }
 
 /**
