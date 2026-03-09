@@ -1021,7 +1021,7 @@ function sendDailyAlarm(data) {
         sendFlowMsg(uid, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
         Logger.log('[일일알림] 식단 재시도 발송 - ' + uid);
       } else {
-        sendFlowMsg(uid, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 식단 알림' });
+        sendFlowMsg(uid, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
         Logger.log('[일일알림] 식단 미등록 안내 - ' + uid);
       }
     }
