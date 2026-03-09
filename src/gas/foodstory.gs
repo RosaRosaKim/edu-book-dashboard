@@ -53,6 +53,8 @@ function _ocrImageToText(imageUrl) {
  * @return {{ date: string, day: string, meal: string, menus: string[], price: string }}
  */
 function _parseMenuText(text) {
+  // OCR 페이지 구분 아티팩트 제거 (예: "19704|#"", "1 페이지" 등)
+  text = text.replace(/\d+\s*\|[#"|\s]*/g, '');
   var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
 
   var result = { date: '', day: '', meal: '', menus: [], price: '' };
