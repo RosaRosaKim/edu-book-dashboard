@@ -874,8 +874,9 @@ function migratePasswords() {
 function sendDailyAlarm(data) {
   var now = new Date();
   var dow = now.getDay();
-  if (dow === 0 || dow === 6) return;
-  if (_isHolidayServer(now)) return;
+  if (dow === 0 || dow === 6) { Logger.log('[일일알림] 주말 스킵 (dow=' + dow + ')'); return; }
+  if (_isHolidayServer(now)) { Logger.log('[일일알림] 공휴일 스킵'); return; }
+  Logger.log('[일일알림] 시작 - ' + now.toLocaleString());
 
   if (!data) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -904,8 +905,9 @@ function sendDailyAlarm(data) {
 
   // 식단 정보 조회
   var menuInfo = _getTodayMenu();
-  var menuMissing = !menuInfo; // 식단 없으면 2단계 진행 필요
-  var menuOnlyUsers = []; // 식단만Y+밥카N → 2단계에서 처리
+  var menuMissing = !menuInfo;
+  var menuOnlyUsers = [];
+  Logger.log('[일일알림] 사용자 ' + (data.length - 1) + '명, 식단=' + (menuInfo ? '있음' : '없음'));
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
