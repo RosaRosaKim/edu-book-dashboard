@@ -1031,6 +1031,92 @@ function sendDailyAlarm(data) {
 }
 
 
+/** 잔액알림 수동 발송 (주말/공휴일 체크 없이 즉시 실행, GAS 에디터에서 직접 실행) */
+function resendDailyAlarm() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+
+  var allCardInfo = {};
+  try {
+    var ciSheet = ss.getSheetByName(SHEET_NAME.CARD_INFO);
+    if (ciSheet && ciSheet.getLastRow() >= 2) {
+      var ciData = ciSheet.getDataRange().getValues();
+      for (var ci = 1; ci < ciData.length; ci++) {
+        var kid = String(ciData[ci][0]).trim();
+        if (!kid) continue;
+        if (!allCardInfo[kid]) allCardInfo[kid] = [];
+        allCardInfo[kid].push({
+          cardNo: String(ciData[ci][1] || ''),
+          alias: String(ciData[ci][2] || ''),
+          limit: Number(ciData[ci][3]) || 0,
+          isLunchCard: String(ciData[ci][4]).trim().toUpperCase() === 'Y'
+        });
+      }
+    }
+  } catch (ciErr) {}
+
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = data[i][0];
+    var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim();
+    var cardAlarm = data[i][CARD_ALARM_COL - 1];
+    var encPw = data[i][CARD_DAILY_COL - 1];
+    if (!knoxId || cardAlarm !== 'Y' || !encPw) continue;
+
+    try {
+      var userId = (bizplayId || knoxId) + '@emro.co.kr';
+      var password = _decryptPw(encPw);
+      var loginResult = _bizplayLoginCore(userId, password);
+      if (loginResult.error || !loginResult.webankCookies) {
+        Logger.log('[수동발송] 로그인 실패 - ' + knoxId); continue;
+      }
+      var result = _callWebankApi(loginResult.webankCookies);
+      if (result.expired || result.error) {
+        Logger.log('[수동발송] 조회 실패 - ' + knoxId); continue;
+      }
+
+      var records = result.records || [];
+      var userCardsArr = allCardInfo[knoxId] || [];
+      var msg;
+
+      if (userCardsArr.length >= 2) {
+        var lunchBudget = _calcCardBudget();
+        var byCard = {};
+        records.forEach(function(r) {
+          var cn = r.cardNo || 'unknown';
+          if (!byCard[cn]) byCard[cn] = { used: 0, count: 0 };
+          if (isTransportRecord(r)) return;
+          byCard[cn].used += Number(r.cost) || 0;
+          byCard[cn].count++;
+        });
+        var summaries = userCardsArr.map(function(c) {
+          var stats = byCard[c.cardNo] || { used: 0, count: 0 };
+          var cardBudget = c.isLunchCard ? lunchBudget : c.limit;
+          var last4 = c.cardNo.length >= 4 ? c.cardNo.substring(c.cardNo.length - 4) : c.cardNo;
+          var name = c.isLunchCard ? '밥카' : (c.alias ? c.alias + '(' + last4 + ')' : '카드(' + last4 + ')');
+          return { name: name, remain: cardBudget - stats.used, used: stats.used, hasLimit: c.isLunchCard || c.limit > 0, isLunch: c.isLunchCard };
+        });
+        msg = FLOW_MSG.cardDailyBalanceMulti(summaries);
+      } else {
+        var usedSum = 0, usedCount = 0;
+        var lunchCard = userCardsArr.find(function(c) { return c.isLunchCard; });
+        records.forEach(function(r) {
+          if (lunchCard && r.cardNo !== lunchCard.cardNo) return;
+          if (isTransportRecord(r)) return;
+          usedSum += Number(r.cost) || 0;
+          usedCount++;
+        });
+        var budget = _calcCardBudget();
+        msg = FLOW_MSG.cardDailyBalance(budget - usedSum, budget, usedSum, usedCount);
+      }
+
+      sendFlowMsg(knoxId, msg);
+      Logger.log('[수동발송] 완료 - ' + knoxId);
+    } catch (ex) {
+      Logger.log('[수동발송] 예외 - ' + knoxId + ': ' + ex.message);
+    }
+  }
+}
+
 /** 공휴일 여부 체크 (holidays.hyunbin.page API + 근로자의 날) */
 function _isHolidayServer(date) {
   var holidays = _loadHolidays(date.getFullYear());
