@@ -1,8 +1,7 @@
 /**
  * 밥카(법인카드 중식대) 모듈
  * - 밥카 알람 수신 설정 (웹페이지관리 시트 G열 + H열)
- * - 통합 트리거 sendBabCardAlarm (매일 오전 10~11시)
- *   → 14일 첫 영업일 알림, 3번째 영업일 미결재 리마인더, 매 영업일 잔액 알림
+ * - 트리거: sendDailyAlarm (잔액+식단 통합), sendCardAlarmDay14, sendCardAlarmReminder, sendCardRefundAlert
  *
  * code.gs의 doGet에서 호출:
  *   handleUpdateCardAlarm(adminRow, e)
@@ -324,23 +323,6 @@ function handleUpdateCardAutoMode(adminRow, e) {
 
 
 /* ═══════════════ 밥카 자동 알림 ═══════════════ */
-
-/**
- * 밥카 통합 알림 트리거 (매일 오전 10~11시)
- * 1) 14일+1영업일: 전원 결재 안내 + 자동결재
- * 2) 14일부터 3번째 영업일: 미상신자 리마인더
- * 3) 매 영업일: 잔액 알림
- */
-function sendBabCardAlarm() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mgmtSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  var adminData = mgmtSheet.getDataRange().getValues();
-
-  try { sendCardAlarmDay14(adminData); } catch (e) { Logger.log('[트리거] sendCardAlarmDay14 실패: ' + e.message); }
-  try { sendCardAlarmReminder(adminData); } catch (e) { Logger.log('[트리거] sendCardAlarmReminder 실패: ' + e.message); }
-  try { sendCardRefundAlert(adminData); } catch (e) { Logger.log('[트리거] sendCardRefundAlert 실패: ' + e.message); }
-  try { sendDailyAlarm(adminData); } catch (e) { Logger.log('[트리거] sendDailyAlarm 실패: ' + e.message); }
-}
 
 /**
  * 밥카 자동결재/알람 처리 (14일+1영업일)
