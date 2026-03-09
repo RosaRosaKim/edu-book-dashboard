@@ -209,15 +209,26 @@ function _normDateKey(cellVal) {
 }
 
 /**
- * 선호 키워드 매칭: 등록된 키워드 중 하나라도 식단에 포함되면 true
- * 키워드 미등록이면 항상 true (필터 없음)
+ * 선호/비선호 키워드 매칭으로 알림 발송 여부 결정
+ * 1) 비선호 매칭 → 무조건 생략 (우선)
+ * 2) 선호 있으면 → 매칭될 때만 발송
+ * 3) 둘 다 없으면 → 항상 발송
  * @param {string} menuText - 오늘 식단 텍스트
  * @param {string} likeStr - 쉼표 구분 선호 키워드
+ * @param {string} [dislikeStr] - 쉼표 구분 비선호 키워드
  * @return {boolean} 알림 발송 여부
  */
-function _shouldSendMenu(menuText, likeStr) {
-  if (!likeStr) return true; // 키워드 미등록 → 항상 발송
+function _shouldSendMenu(menuText, likeStr, dislikeStr) {
   var menu = menuText.toLowerCase();
+
+  // 비선호 체크 (우선)
+  if (dislikeStr) {
+    var dislikes = dislikeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    if (dislikes.some(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; })) return false;
+  }
+
+  // 선호 체크
+  if (!likeStr) return true;
   var likes = likeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
   if (likes.length === 0) return true;
   return likes.some(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; });

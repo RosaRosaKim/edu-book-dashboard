@@ -38,15 +38,23 @@ window._lifeAnimate = function(id, type) {
         싫어
       </button>
     </div>
-    <!-- 선호 키워드 (알람 ON일 때만 표시) -->
+    <!-- 키워드 영역 (알람 ON일 때만 표시) -->
     <div id="menuKeywordArea" class="mt-4 hidden">
-      <div class="text-[11px] font-semibold text-accent mb-1.5">😋 선호 메뉴 <span class="font-normal text-[#6e7f7b]">- 등록하면 이 메뉴가 나올 때만 알려줄게</span></div>
+      <div class="text-[11px] font-semibold text-accent mb-1.5">😋 좋아하는 메뉴 <span class="font-normal text-[#6e7f7b]">- 등록하면 이 메뉴가 나올 때만 알려줄게</span></div>
       <div id="menuLikeTags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
       <div class="flex gap-1.5">
         <input id="menuLikeInput" type="text" maxlength="20" placeholder="메뉴 입력 후 추가"
           class="flex-1 text-[12px] px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 outline-none focus:border-accent">
         <button onclick="addMenuKeyword()"
           class="text-[11px] px-3 py-1.5 rounded-lg bg-accent text-white font-semibold shrink-0">추가</button>
+      </div>
+      <div class="text-[11px] font-semibold text-red-400 mt-3 mb-1.5">🙅 싫어하는 메뉴 <span class="font-normal text-[#6e7f7b]">- 등록하면 이 메뉴가 나오면 알림을 안 보낼게</span></div>
+      <div id="menuDislikeTags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
+      <div class="flex gap-1.5">
+        <input id="menuDislikeInput" type="text" maxlength="20" placeholder="메뉴 입력 후 추가"
+          class="flex-1 text-[12px] px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 outline-none focus:border-accent">
+        <button onclick="addMenuDislike()"
+          class="text-[11px] px-3 py-1.5 rounded-lg bg-red-400 text-white font-semibold shrink-0">추가</button>
       </div>
     </div>
   </div>
@@ -143,8 +151,9 @@ window._lifeAnimate = function(id, type) {
     }
   };
 
-  // ── 선호 키워드 관리 ──
+  // ── 좋아하는/싫어하는 메뉴 키워드 관리 ──
   var _menuLike = [];
+  var _menuDislike = [];
   var _keywordSaving = false;
 
   function _renderLikeTags() {
@@ -153,6 +162,15 @@ window._lifeAnimate = function(id, type) {
     container.innerHTML = _menuLike.map(function(tag, idx) {
       return '<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-accent/15 text-accent">'
         + tag + '<button onclick="removeMenuKeyword(' + idx + ')" class="ml-0.5 opacity-60 hover:opacity-100">&times;</button></span>';
+    }).join('');
+  }
+
+  function _renderDislikeTags() {
+    var container = $('menuDislikeTags');
+    if (!container) return;
+    container.innerHTML = _menuDislike.map(function(tag, idx) {
+      return '<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-red-400/15 text-red-400">'
+        + tag + '<button onclick="removeMenuDislike(' + idx + ')" class="ml-0.5 opacity-60 hover:opacity-100">&times;</button></span>';
     }).join('');
   }
 
@@ -178,12 +196,30 @@ window._lifeAnimate = function(id, type) {
     _saveKeywords();
   };
 
+  window.addMenuDislike = function() {
+    var input = $('menuDislikeInput');
+    var val = (input.value || '').trim();
+    if (!val) return;
+    if (_menuDislike.indexOf(val) >= 0) { input.value = ''; return; }
+    _menuDislike.push(val);
+    input.value = '';
+    _renderDislikeTags();
+    _saveKeywords();
+  };
+
+  window.removeMenuDislike = function(idx) {
+    _menuDislike.splice(idx, 1);
+    _renderDislikeTags();
+    _saveKeywords();
+  };
+
   function _saveKeywords() {
     if (_keywordSaving) return;
     _keywordSaving = true;
     var token = localStorage.getItem('token');
     window.gasFetch(window.API_URL + '?action=updateMenuKeywords&token=' + encodeURIComponent(token)
       + '&like=' + encodeURIComponent(_menuLike.join(','))
+      + '&dislike=' + encodeURIComponent(_menuDislike.join(','))
     ).then(function() {
       _keywordSaving = false;
     }).catch(function() {
@@ -191,15 +227,18 @@ window._lifeAnimate = function(id, type) {
     });
   }
 
-  window._initMenuKeywords = function(likeStr) {
+  window._initMenuKeywords = function(likeStr, dislikeStr) {
     _menuLike = likeStr ? likeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+    _menuDislike = dislikeStr ? dislikeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
     _renderLikeTags();
+    _renderDislikeTags();
     _toggleKeywordArea();
   };
 
   // Enter 키 지원
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && e.target.id === 'menuLikeInput') { e.preventDefault(); window.addMenuKeyword(); }
+    if (e.key === 'Enter' && e.target.id === 'menuDislikeInput') { e.preventDefault(); window.addMenuDislike(); }
   });
 
   function _showOnlySection(sectionId) {
@@ -220,7 +259,7 @@ window._lifeAnimate = function(id, type) {
     var on = !!(window._menuAlarmOn);
     setMenuAlarmBtnState(on);
     var ui = window._userInfoData || {};
-    window._initMenuKeywords(ui.menuLike || '');
+    window._initMenuKeywords(ui.menuLike || '', ui.menuDislike || '');
     // 미니게임 모듈 로드
     if (window._loadModule) window._loadModule('mini-game.html', 'miniGameContainer');
     // 딥링크 체크

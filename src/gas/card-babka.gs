@@ -913,14 +913,15 @@ function sendDailyAlarm(data) {
     var encPw = data[i][CARD_DAILY_COL - 1]; // H열: 암호화된 PW
     var menuAlarm = String(data[i][10] || '').trim().toUpperCase(); // K열: 식단알림
     var menuLike = String(data[i][11] || '').trim();   // L열: 선호 키워드
+    var menuDislike = String(data[i][12] || '').trim(); // M열: 비선호 키워드
 
     if (!knoxId) continue;
     var hasCard = (cardAlarm === 'Y' && encPw);
     var wantsMenu = (menuAlarm === 'Y');
     if (!hasCard && !wantsMenu) continue;
 
-    // 선호 키워드 필터 (키워드 등록 시 매칭 안 되면 식단 생략)
-    if (wantsMenu && menuInfo && !_shouldSendMenu(menuInfo.todayMenu, menuLike)) {
+    // 선호/비선호 키워드 필터
+    if (wantsMenu && menuInfo && !_shouldSendMenu(menuInfo.todayMenu, menuLike, menuDislike)) {
       Logger.log('[일일알림] 선호 미매칭 → 식단 생략 - ' + knoxId);
       wantsMenu = false;
     }
@@ -933,7 +934,7 @@ function sendDailyAlarm(data) {
         sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
         Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId);
       } else {
-        menuOnlyUsers.push({ knoxId: knoxId, like: menuLike });
+        menuOnlyUsers.push({ knoxId: knoxId, like: menuLike, dislike: menuDislike });
       }
       continue;
     }
@@ -1024,7 +1025,7 @@ function sendDailyAlarm(data) {
     for (var j = 0; j < menuOnlyUsers.length; j++) {
       var u = menuOnlyUsers[j];
       if (retryMenu) {
-        if (!_shouldSendMenu(retryMenu.todayMenu, u.like)) {
+        if (!_shouldSendMenu(retryMenu.todayMenu, u.like, u.dislike)) {
           Logger.log('[일일알림] 재시도 선호 미매칭 → 생략 - ' + u.knoxId);
           continue;
         }

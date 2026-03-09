@@ -187,7 +187,9 @@ const doGet = (e) => {
     const entry = _verifyToken(token, adminByKnoxId);
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     var like = String(e.parameter.like || '').trim().slice(0, 200);
+    var dislike = String(e.parameter.dislike || '').trim().slice(0, 200);
     adminSheet.getRange(entry.idx + 1, 12).setValue(like); // L열
+    adminSheet.getRange(entry.idx + 1, 13).setValue(dislike); // M열
     return createResponse({ status: "success" });
   }
 
@@ -489,7 +491,7 @@ const doGet = (e) => {
       try { cardInfo = _getUserCards(currentKnoxId); } catch (ciErr) {}
 
       const resp = {
-        userInfo: { name: adminRow[ADMIN_COL.NAME] || '사용자', isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: null, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", isMenuAlarmAgreed: adminRow[10] === "Y", menuLike: String(adminRow[11] || '').trim(), hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
+        userInfo: { name: adminRow[ADMIN_COL.NAME] || '사용자', isAdmin: isAdmin, totalBudget: LIMIT_BUDGET, usedBudget: null, isAgreed: adminRow[ADMIN_COL.AGREE] === "Y", isCardAlarmAgreed: adminRow[6] === "Y", isMenuAlarmAgreed: adminRow[10] === "Y", menuLike: String(adminRow[11] || '').trim(), menuDislike: String(adminRow[12] || '').trim(), hasBizplayPw: !!(adminRow[7] && String(adminRow[7]).trim()), cardAutoMode: String(adminRow[9] || 'off').trim().toLowerCase() },
         myHistory: null,
         cardInfo: cardInfo,
         phase: 1
