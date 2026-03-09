@@ -189,6 +189,7 @@ function syncSKV1Menu() {
 
 /**
  * 특정 사용자에게 오늘 식단 Flow 발송 (알람 수신 Y 전환 시 즉시 발송용)
+ * @return {boolean} 발송 성공 여부
  */
 function _sendMenuFlowToUser(knoxId) {
   var now = new Date();
@@ -196,21 +197,35 @@ function _sendMenuFlowToUser(knoxId) {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
-  if (!menuSheet || menuSheet.getLastRow() <= 1) return;
+  if (!menuSheet || menuSheet.getLastRow() <= 1) {
+    Logger.log('[menu] 즉시발송 실패: 시트 없음 또는 데이터 없음');
+    return false;
+  }
 
   var menuData = menuSheet.getDataRange().getValues();
   var todayMenu = null;
   var todayNorm = todayStr.replace(/\s+/g, '');
+  Logger.log('[menu] 즉시발송 조회: todayNorm=' + todayNorm + ', rows=' + menuData.length);
   for (var i = 1; i < menuData.length; i++) {
-    if (String(menuData[i][0]).trim().replace(/\s+/g, '') === todayNorm) {
+    var cellNorm = String(menuData[i][0]).trim().replace(/\s+/g, '');
+    if (cellNorm === todayNorm) {
       todayMenu = String(menuData[i][1] || '');
       break;
     }
   }
-  if (!todayMenu) return;
+  if (!todayMenu) {
+    // 시트의 모든 날짜 출력 (디버깅용)
+    var allDates = [];
+    for (var j = 1; j < menuData.length; j++) {
+      allDates.push(String(menuData[j][0]).trim());
+    }
+    Logger.log('[menu] 즉시발송 실패: 오늘(' + todayStr + ') 식단 없음. 시트 날짜목록: ' + allDates.join(', '));
+    return false;
+  }
 
   sendFlowMsg(knoxId, FLOW_MSG.todayMenu(todayStr, todayMenu));
-  Logger.log('[menu] 즉시 발송: ' + knoxId);
+  Logger.log('[menu] 즉시 발송 완료: ' + knoxId);
+  return true;
 }
 
 /**

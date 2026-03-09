@@ -171,10 +171,15 @@ const doGet = (e) => {
     adminSheet.getRange(entry.idx + 1, 11).setValue(newVal);  // K열: 식단 메뉴 알람
 
     // Y로 변경 + 오후 1시 이전이면 오늘 식단 즉시 Flow 발송
+    var flowSent = false;
     if (newVal === "Y" && new Date().getHours() < 13) {
-      try { _sendMenuFlowToUser(String(entry.row[ADMIN_COL.KNOX_ID]).trim()); } catch (ex) {}
+      try {
+        flowSent = _sendMenuFlowToUser(String(entry.row[ADMIN_COL.KNOX_ID]).trim());
+      } catch (ex) {
+        Logger.log('[menuAlarm] 즉시 발송 실패: ' + ex.message);
+      }
     }
-    return createResponse({ status: "success" });
+    return createResponse({ status: "success", flowSent: flowSent });
   }
 
   // [기능 15] 밥카 자동결재 모드 변경
