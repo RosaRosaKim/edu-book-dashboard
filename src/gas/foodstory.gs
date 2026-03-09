@@ -104,12 +104,12 @@ function _writeMenuToSheet(parsed) {
   var menuText = parsed.menus.join('\n');
   var dateKey = parsed.date;
 
-  // 같은 날짜 중복 체크 (A열, 공백 무시 비교) → 이미 있으면 덮어쓰기
-  var dateNorm = dateKey.replace(/\s+/g, '');
+  // 같은 날짜 중복 체크 (A열, Date객체/문자열 모두 대응) → 이미 있으면 덮어쓰기
+  var dateNormKey = _normDateKey(dateKey);
   if (sheet.getLastRow() > 1) {
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim().replace(/\s+/g, '') === dateNorm) {
+      if (_normDateKey(data[i][0]) === dateNormKey) {
         sheet.getRange(i + 1, 2).setValue(menuText);
         return { skipped: false, row: i + 1, updated: true };
       }
@@ -188,11 +188,29 @@ function syncSKV1Menu() {
 }
 
 /**
+ * 시트 날짜 셀 → "M/D" 정규화 (Date 객체, "2026. 3. 9", "3월 9일" 모두 대응)
+ */
+function _normDateKey(cellVal) {
+  if (cellVal instanceof Date) {
+    return (cellVal.getMonth() + 1) + '/' + cellVal.getDate();
+  }
+  var s = String(cellVal).trim();
+  // "2026. 3. 9" or "2026.3.9" 형식
+  var dotMatch = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (dotMatch) return parseInt(dotMatch[2], 10) + '/' + parseInt(dotMatch[3], 10);
+  // "3월 9일" 형식
+  var korMatch = s.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  if (korMatch) return parseInt(korMatch[1], 10) + '/' + parseInt(korMatch[2], 10);
+  return s;
+}
+
+/**
  * 특정 사용자에게 오늘 식단 Flow 발송 (알람 수신 Y 전환 시 즉시 발송용)
  * @return {boolean} 발송 성공 여부
  */
 function _sendMenuFlowToUser(knoxId) {
   var now = new Date();
+  var todayKey = (now.getMonth() + 1) + '/' + now.getDate();
   var todayStr = (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -204,22 +222,14 @@ function _sendMenuFlowToUser(knoxId) {
 
   var menuData = menuSheet.getDataRange().getValues();
   var todayMenu = null;
-  var todayNorm = todayStr.replace(/\s+/g, '');
-  Logger.log('[menu] 즉시발송 조회: todayNorm=' + todayNorm + ', rows=' + menuData.length);
   for (var i = 1; i < menuData.length; i++) {
-    var cellNorm = String(menuData[i][0]).trim().replace(/\s+/g, '');
-    if (cellNorm === todayNorm) {
+    if (_normDateKey(menuData[i][0]) === todayKey) {
       todayMenu = String(menuData[i][1] || '');
       break;
     }
   }
   if (!todayMenu) {
-    // 시트의 모든 날짜 출력 (디버깅용)
-    var allDates = [];
-    for (var j = 1; j < menuData.length; j++) {
-      allDates.push(String(menuData[j][0]).trim());
-    }
-    Logger.log('[menu] 즉시발송 실패: 오늘(' + todayStr + ') 식단 없음. 시트 날짜목록: ' + allDates.join(', '));
+    Logger.log('[menu] 즉시발송 실패: 오늘(' + todayKey + ') 식단 없음');
     return false;
   }
 
@@ -233,24 +243,24 @@ function _sendMenuFlowToUser(knoxId) {
  */
 function _sendMenuFlowIfToday() {
   var now = new Date();
+  var todayKey = (now.getMonth() + 1) + '/' + now.getDate();
   var todayStr = (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
   if (!menuSheet || menuSheet.getLastRow() <= 1) return;
 
-  // 당산푸드스토리 시트에서 오늘 날짜 메뉴 찾기 (공백 무시 비교)
+  // 당산푸드스토리 시트에서 오늘 날짜 메뉴 찾기 (Date객체/문자열 모두 대응)
   var menuData = menuSheet.getDataRange().getValues();
   var todayMenu = null;
-  var todayNorm = todayStr.replace(/\s+/g, '');
   for (var i = 1; i < menuData.length; i++) {
-    if (String(menuData[i][0]).trim().replace(/\s+/g, '') === todayNorm) {
+    if (_normDateKey(menuData[i][0]) === todayKey) {
       todayMenu = String(menuData[i][1] || '');
       break;
     }
   }
   if (!todayMenu) {
-    Logger.log('[menu] 오늘(' + todayStr + ') 식단 없음, Flow 발송 스킵');
+    Logger.log('[menu] 오늘(' + todayKey + ') 식단 없음, Flow 발송 스킵');
     return;
   }
 
