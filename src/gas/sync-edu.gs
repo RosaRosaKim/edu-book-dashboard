@@ -207,8 +207,8 @@ function _writeEduRows(ss, newRows) {
     var inStatus = String(newRows[i][19]).trim();
     var oldStatus = existingStatus[inDocNo];
 
-    if (oldStatus === '완료') {
-      // 기존이 완료면 건너뜀 (덮어쓰지 않음)
+    if (oldStatus === '완료' || oldStatus === '반송') {
+      // 기존이 완료/반송이면 건너뜀 (덮어쓰지 않음)
       continue;
     }
 
@@ -651,7 +651,7 @@ function _writeBookRows(ss, newRows) {
     var inStatus = String(newRows[i][STATUS_IDX]).trim();
     var oldStatus = existingStatus[inDocNo];
 
-    if (oldStatus === '완료') continue;
+    if (oldStatus === '완료' || oldStatus === '반송') continue;
 
     rowsToInsert.push(newRows[i]);
 
