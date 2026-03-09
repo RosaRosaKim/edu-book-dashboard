@@ -807,7 +807,12 @@
     html += '</div></div>';
     html += '<div class="space-y-4">';
 
-    rated.forEach((name, i) => {
+    // 최대 10개만 표시
+    const top = rated.slice(0, 10);
+    // 바 길이용: 목록 내 최대 좋아요/싫어요 수
+    const maxCount = Math.max(1, ...top.map(n => isBest ? (ratings[n].likes || 0) : (ratings[n].dislikes || 0)));
+
+    top.forEach((name, i) => {
       const r = ratings[name];
       const likes = r.likes || 0;
       const dislikes = r.dislikes || 0;
@@ -815,12 +820,14 @@
       const likePct = total > 0 ? Math.round((likes / total) * 100) : 0;
       const dislikePct = total > 0 ? Math.round((dislikes / total) * 100) : 0;
       const pct = isBest ? likePct : dislikePct;
-      const barColor = isBest
-        ? (likePct >= 70 ? '#059669' : likePct >= 40 ? '#d97706' : '#dc2626')
-        : (dislikePct >= 70 ? '#dc2626' : dislikePct >= 40 ? '#d97706' : '#059669');
-      const icon = isBest
-        ? (likePct >= 70 ? '♥' : likePct >= 40 ? '―' : '✕')
-        : (dislikePct >= 70 ? '💩' : dislikePct >= 40 ? '―' : '♥');
+      // 바 길이: 절대 개수 기준 (최대값 대비)
+      const barPct = Math.max(4, Math.round(((isBest ? likes : dislikes) / maxCount) * 100));
+      // 순위별 그라데이션 (아래로 갈수록 연해짐)
+      const bestGrad = ['#059669','#1f9b78','#3aaf8a','#5cc0a0','#7dd1b5','#96d9c5','#a8e2d2','#b8ece6','#c8f0ec','#d8f5f2'];
+      const worstGrad = ['#dc2626','#e03c3c','#e55353','#e96a6a','#ed8181','#f09898','#f3aeae','#f4bfbf','#f7d0d0','#fae0e0'];
+      const gradColors = isBest ? bestGrad : worstGrad;
+      const barColor = gradColors[Math.min(i, gradColors.length - 1)];
+      const icon = i < 3 ? ['🥇','🥈','🥉'][i] : String(i + 1);
       const mapQuery = encodeURIComponent(name);
       const mapUrl = 'https://map.naver.com/v5/search/' + mapQuery;
 
@@ -836,7 +843,7 @@
           <div class="flex items-center gap-2.5">
             <span class="w-5 shrink-0"></span>
             <div class="flex-1 h-2.5 bg-surface-2 rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-700" style="width:${pct}%;background:${barColor}"></div>
+              <div class="h-full rounded-full transition-all duration-700" style="width:${barPct}%;background:${barColor}"></div>
             </div>
           </div>
         </div>`;
