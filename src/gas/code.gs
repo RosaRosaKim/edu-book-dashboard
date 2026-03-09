@@ -23,7 +23,8 @@ const BOOK_COL = {
 function colFor(row) { return row._reqType === '도서' ? BOOK_COL : DATA_COL; }
 
 const ADMIN_COL = {
-  KNOX_ID: 0, AGREE: 1, LAST_LOGIN: 3, DEPT: 4, NAME: 5, BIZPLAY_ID: 8  // I열 = index 8
+  KNOX_ID: 0, AGREE: 1, LAST_LOGIN: 3, DEPT: 4, NAME: 5, BIZPLAY_ID: 8,  // I열 = index 8
+  POS: 13, DEPT_CD: 14  // N열 = 직급, O열 = 부서코드
 };
 
 /** knoxId + 암호화PW + salt 기반 토큰 생성 */
@@ -398,7 +399,9 @@ const doGet = (e) => {
     bizplayLogin: handleBizplayLogin,       // [기능 6]
     bizplayEduInit: handleBizplayEduInit,   // [기능 6.5]
     bizplayApprLine: handleBizplayApprLine, // [기능 7a]
-    bizplaySearchUser: handleBizplaySearchUser, // [기능 7a-2]
+    bizplayApprUsers: handleBizplayApprUsers,     // [기능 7a-2] 결재라인용 사용자 목록
+    bizplaySearchUser: handleBizplaySearchUser,   // [기능 7a-2] Bizplay 사원검색 (폴백)
+    bizplaySyncUsers: handleBizplaySyncUsers,   // [기능 7a-3] 사원정보 일괄 수집
     bizplayDraftList: handleBizplayDraftList,   // [기능 7b]
     bizplayDraftDetail: handleBizplayDraftDetail, // [기능 7c]
     bizplayDraft: handleBizplayDraft,       // [기능 7]

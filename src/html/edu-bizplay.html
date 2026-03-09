@@ -373,6 +373,37 @@ async function fetchApprLine() {
   return null;
 }
 
+/* ─── 결재라인용 사용자 캐시 (시트 기반, Bizplay API 불필요) ─── */
+let _apprUserCache = null; // [{bizId, name, pos, deptCd, deptNm}, ...]
+
+async function _loadApprUsers() {
+  if (_apprUserCache) return;
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const res = await gasFetch(`${API_URL}?action=bizplayApprUsers&token=${encodeURIComponent(token)}`);
+    if (!res || !res.ok || !res.d) return;
+    const b64 = res.d.split('').reverse().join('');
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const arr = JSON.parse(new TextDecoder().decode(bytes));
+    _apprUserCache = arr.map(u => ({
+      APPR_USER_ID: u[0], APPR_USER_NM: u[1], APPR_USER_POS_NM: u[2],
+      APPR_DEPT_CD: u[3], APPR_DEPT_NM: u[4]
+    }));
+  } catch (e) { console.warn('[apprUsers] load error:', e.message); }
+}
+
+function _searchApprUsersLocal(word) {
+  if (!_apprUserCache) return [];
+  const w = word.toLowerCase();
+  return _apprUserCache.filter(u =>
+    (u.APPR_USER_NM || '').toLowerCase().includes(w) ||
+    (u.APPR_USER_ID || '').toLowerCase().includes(w) ||
+    (u.APPR_DEPT_NM || '').toLowerCase().includes(w)
+  ).slice(0, 20);
+}
+
 /* ─── 결재라인 팝업 표시 → Promise<apprLine[]|false> ─── */
 function showApprLinePopup(apprLine) {
   return new Promise(resolve => {
@@ -393,6 +424,9 @@ function showApprLinePopup(apprLine) {
     let editableApprLine = JSON.parse(JSON.stringify(apprLine || []));
     let isEditMode = false;
     let searchTimer = null;
+
+    // 사용자 목록 프리로드 (비동기, 팝업 표시와 병행)
+    _loadApprUsers();
 
     // 초기 렌더링 (읽기전용)
     renderApprLine(content, editableApprLine);
@@ -472,64 +506,65 @@ function showApprLinePopup(apprLine) {
       if (searchTimer) { clearTimeout(searchTimer); searchTimer = null; }
     }
 
-    // 사원 검색 디바운스
+    // 사원 검색 디바운스 (모바일 한글 IME 대응: composing 중 검색 방지)
+    let isComposing = false;
+    function onCompositionStart() { isComposing = true; }
+    function onCompositionEnd() {
+      isComposing = false;
+      onSearchInput(); // 조합 완료 후 검색 트리거
+    }
     function onSearchInput() {
+      if (isComposing) return;
       const word = searchInput.value.trim();
       if (searchTimer) clearTimeout(searchTimer);
-      if (word.length < 2) {
+      if (word.length < 1) {
         $('apprLineSearchResults').innerHTML = '';
         $('apprLineSearchEmpty').classList.add('hidden');
         $('apprLineSearchLoading').classList.add('hidden');
         return;
       }
-      $('apprLineSearchLoading').classList.remove('hidden');
-      $('apprLineSearchEmpty').classList.add('hidden');
-      searchTimer = setTimeout(() => doSearch(word), 400);
+      searchTimer = setTimeout(() => doSearch(word), 1000);
+    }
+    function onSearchKeydown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (searchTimer) clearTimeout(searchTimer);
+        const word = searchInput.value.trim();
+        if (word.length >= 1) doSearch(word);
+      }
     }
 
-    async function doSearch(word) {
-      try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        const params = new URLSearchParams({ action: 'bizplaySearchUser', token, searchWord: word });
-        const data = await gasFetch(`${API_URL}?${params.toString()}`);
-        $('apprLineSearchLoading').classList.add('hidden');
-        if (data.debug) console.log('[searchUser] debug:', JSON.stringify(data.debug));
-        if (data.status === 'success' && data.results && data.results.length > 0) {
-          renderSearchResults($('apprLineSearchResults'), data.results, function onAdd(emp) {
-            // 중복 체크
-            if (editableApprLine.some(r => r.APPR_USER_ID === emp.APPR_USER_ID)) {
-              showToast('이미 추가된 결재자야.', 'sad');
-              return;
-            }
-            // 결재라인에 추가
-            const persons = editableApprLine.filter(r => r.APPR_USER_NM && r.APPR_USER_NM.trim());
-            editableApprLine.push({
-              APPR_USER_ID: emp.APPR_USER_ID,
-              APPR_USER_NM: emp.APPR_USER_NM,
-              APPR_USER_POS_NM: emp.APPR_USER_POS_NM,
-              APPR_DEPT_CD: emp.APPR_DEPT_CD,
-              APPR_DEPT_NM: emp.APPR_DEPT_NM,
-              APPR_ORD: String(persons.length + 1),
-              APPR_USER_GB: '2',
-              APPRLINE_KIND: '2',
-              RECENT_SAVE_YN: 'N',
-              BOTTOM_FIXED_YN: 'N',
-              DEPT_CD: emp.APPR_DEPT_CD,
-              DEPT_NM: emp.APPR_DEPT_NM
-            });
-            onSearchBack();
-            renderCurrent();
+    function doSearch(word) {
+      $('apprLineSearchLoading').classList.add('hidden');
+      const results = _searchApprUsersLocal(word);
+      if (results.length > 0) {
+        renderSearchResults($('apprLineSearchResults'), results, function onAdd(emp) {
+          if (editableApprLine.some(r => r.APPR_USER_ID === emp.APPR_USER_ID)) {
+            showToast('이미 추가된 결재자야.', 'sad');
+            return;
+          }
+          const persons = editableApprLine.filter(r => r.APPR_USER_NM && r.APPR_USER_NM.trim());
+          editableApprLine.push({
+            APPR_USER_ID: emp.APPR_USER_ID,
+            APPR_USER_NM: emp.APPR_USER_NM,
+            APPR_USER_POS_NM: emp.APPR_USER_POS_NM,
+            APPR_DEPT_CD: emp.APPR_DEPT_CD,
+            APPR_DEPT_NM: emp.APPR_DEPT_NM,
+            APPR_ORD: String(persons.length + 1),
+            APPR_USER_GB: '2',
+            APPRLINE_KIND: '2',
+            RECENT_SAVE_YN: 'N',
+            BOTTOM_FIXED_YN: 'N',
+            DEPT_CD: emp.APPR_DEPT_CD,
+            DEPT_NM: emp.APPR_DEPT_NM
           });
-          $('apprLineSearchEmpty').classList.add('hidden');
-        } else {
-          $('apprLineSearchResults').innerHTML = '';
-          $('apprLineSearchEmpty').classList.remove('hidden');
-        }
-      } catch (err) {
-        $('apprLineSearchLoading').classList.add('hidden');
+          onSearchBack();
+          renderCurrent();
+        });
+        $('apprLineSearchEmpty').classList.add('hidden');
+      } else {
         $('apprLineSearchResults').innerHTML = '';
         $('apprLineSearchEmpty').classList.remove('hidden');
-        console.warn('[searchUser] error:', err.message);
       }
     }
 
@@ -539,6 +574,9 @@ function showApprLinePopup(apprLine) {
       addBtn.removeEventListener('click', onAddBtn);
       searchBack.removeEventListener('click', onSearchBack);
       searchInput.removeEventListener('input', onSearchInput);
+      searchInput.removeEventListener('keydown', onSearchKeydown);
+      searchInput.removeEventListener('compositionstart', onCompositionStart);
+      searchInput.removeEventListener('compositionend', onCompositionEnd);
       btnSubmit.removeEventListener('click', onSubmit);
       btnCancel.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onCancel);
@@ -560,6 +598,9 @@ function showApprLinePopup(apprLine) {
     addBtn.addEventListener('click', onAddBtn);
     searchBack.addEventListener('click', onSearchBack);
     searchInput.addEventListener('input', onSearchInput);
+    searchInput.addEventListener('keydown', onSearchKeydown);
+    searchInput.addEventListener('compositionstart', onCompositionStart);
+    searchInput.addEventListener('compositionend', onCompositionEnd);
     btnSubmit.addEventListener('click', onSubmit);
     btnCancel.addEventListener('click', onCancel);
     overlay.addEventListener('click', onCancel);

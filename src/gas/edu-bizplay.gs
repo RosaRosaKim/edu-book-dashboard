@@ -1483,7 +1483,40 @@ function handleBizplayApprLine(adminRow, e) {
   }
 }
 
-/* ═══════════════ 사원 검색 (결재라인 수정용) ═══════════════ */
+/* ═══════════════ 결재라인용 사용자 목록 (시트 기반) ═══════════════ */
+
+/**
+ * 웹페이지관리 시트에서 결재라인용 사용자 목록 반환
+ * action=bizplayApprUsers&token={knoxId:hash}
+ * 응답: { ok, d } — d는 base64(reversed) 인코딩된 [[bizUserId, name, pos, deptCd, deptNm], ...]
+ */
+function handleBizplayApprUsers(adminRow, e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  if (!sheet || sheet.getLastRow() < 2) return createResponse({ ok: true, d: '' });
+
+  var data = sheet.getDataRange().getValues();
+  data.shift();
+  var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
+  var users = [];
+  for (var i = 0; i < data.length; i++) {
+    var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
+    if (!knoxId || knoxId.toLowerCase() === myKnox) continue;
+    var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
+    var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
+    var pos    = String(data[i][ADMIN_COL.POS] || '').trim();
+    var deptCd = String(data[i][ADMIN_COL.DEPT_CD] || '').trim();
+    var bizId  = String(data[i][ADMIN_COL.BIZPLAY_ID] || '').trim();
+    if (!bizId) bizId = knoxId + '@emro.co.kr';
+    users.push([bizId, name, pos, deptCd, dept]);
+  }
+  var json = JSON.stringify(users);
+  var b64 = Utilities.base64Encode(json, Utilities.Charset.UTF_8);
+  var reversed = b64.split('').reverse().join('');
+  return createResponse({ ok: true, d: reversed });
+}
+
+/* ═══════════════ 사원 검색 (결재라인 수정용 — Bizplay API, 폴백) ═══════════════ */
 
 /**
  * com_empl_r002.jct 검색 시도 헬퍼
@@ -1523,7 +1556,7 @@ function _tryEmplSearch(cookies, searchWord, debug, prefix, domain) {
         results.push({
           APPR_USER_ID: uid, APPR_USER_NM: r.FLNM || '',
           APPR_USER_POS_NM: r.RSPT_NM || '', APPR_DEPT_CD: r.DVSN_CD || '',
-          APPR_DEPT_NM: r.DVSN_NM || ''
+          APPR_DEPT_NM: r.DVSN_NM || '', EML: r.EML || ''
         });
       });
       debug[prefix + '_raw'] = emplRec.length;
@@ -1639,3 +1672,411 @@ function handleBizplaySearchUser(adminRow, e) {
 
   return createResponse({ status: 'fail', message: '사원 검색 실패', debug: debug });
 }
+
+/**
+ * Bizplay 사원정보 일괄 수집 — 핵심 로직 (트리거/웹앱 공용)
+ * handleBizplaySearchUser와 동일한 세션/SSO/emplinfo 경로 사용
+ * @returns {{ updated, skipped, failed, details }}
+ */
+function _syncBizplayUsers() {
+  // 1) 교육관리자의 저장된 세션 가져오기
+  var admin = _getEduAdminSession();
+  var session = admin.session;
+  var adminRow = admin.adminRow;
+  var propKey = admin.propKey;
+  console.log('[syncUsers] 교육관리자: ' + admin.knoxId + ', sessionKeys=' + Object.keys(session).join(','));
+
+  // 2) approval SSO (handleBizplaySearchUser와 동일)
+  var ssoResult = _getApprovalSso(session, adminRow);
+  if (ssoResult.error) throw new Error('Approval SSO 실패: ' + ssoResult.error);
+  var sso = ssoResult.sso;
+  if (!sso.approvalCookies) throw new Error('Approval 쿠키 미획득');
+  _saveApprovalSession(propKey, session, sso);
+  console.log('[syncUsers] SSO: ' + JSON.stringify(sso.debug || {}).substring(0, 300));
+
+  // 3) emplinfo 세션 초기화 (handleBizplaySearchUser와 동일)
+  var ff = sso.formFields || session.formFields || {};
+  var useInttId = ff.USE_INTT_ID || session.useInttId || sso.useInttId || '';
+  var secrKey = session.emplInfoSecrKey || '76a4ed5c-462b-29c7-70d0-64de2a6d2496';
+  var emplParams = { useInttId: useInttId, userId: session.userId, secrKey: secrKey };
+  console.log('[syncUsers] useInttId=' + useInttId + ', userId=' + session.userId);
+
+  // emplinfo 세션 초기화 함수 (재사용 가능)
+  function initEmplSession() {
+    var payload01 = 'USE_INTT_ID=' + encodeURIComponent(emplParams.useInttId)
+      + '&USER_ID=' + encodeURIComponent(emplParams.userId)
+      + '&SECR_KEY=' + encodeURIComponent(emplParams.secrKey)
+      + '&POP_OPT=A&EMPL_DSNC=U&POP_TYPE=A&LNGG_DSNC=DF'
+      + '&POST_CALLBACK_PAGE=' + encodeURIComponent('https://approval.appplay.co.kr/appr/appr_callback_empl2.act');
+    var e01 = fetchWithCookies('https://emplinfo.appplay.co.kr/com_empl_01.act', '', {
+      method: 'post', contentType: 'application/x-www-form-urlencoded', payload: payload01
+    });
+    var ck = e01.cookies;
+    var r001P = '_JSON_=' + encodeURIComponent(JSON.stringify({
+      USE_INTT_ID: emplParams.useInttId, POP_OPT: 'A', SECR_KEY: emplParams.secrKey,
+      EMPL_DSNC: 'U', USER_ID: emplParams.userId, LNGG_DSNC: 'DF'
+    }));
+    var r001 = UrlFetchApp.fetch('https://emplinfo.appplay.co.kr/com_empl_r001.jct', {
+      method: 'post', contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+      headers: { 'User-Agent': BROWSER_UA, 'Cookie': ck, 'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://emplinfo.appplay.co.kr/com_empl_01.act' },
+      payload: r001P, muteHttpExceptions: true
+    });
+    ck = mergeCookies(ck, extractCookies(r001));
+    var payload02 = 'SECR_KEY=' + encodeURIComponent(emplParams.secrKey)
+      + '&USE_INTT_ID=' + encodeURIComponent(emplParams.useInttId)
+      + '&POP_OPT=A&EMPL_DSNC=U&POP_TYPE=A&LNGG_DSNC=DF'
+      + '&USER_ID=' + encodeURIComponent(emplParams.userId)
+      + '&_callback_fn=&LNGG_DSNC=DF'
+      + '&POST_CALLBACK_PAGE=' + encodeURIComponent('https://approval.appplay.co.kr/appr/appr_callback_empl2.act');
+    var e02 = fetchWithCookies('https://emplinfo.appplay.co.kr/com_empl_02.act', ck, {
+      method: 'post', contentType: 'application/x-www-form-urlencoded', payload: payload02
+    });
+    return e02.cookies;
+  }
+
+  // 세션 keep-alive: com_empl_02.act 재요청으로 세션 연장
+  function keepAlive(cookies) {
+    try {
+      var payload = 'SECR_KEY=' + encodeURIComponent(emplParams.secrKey)
+        + '&USE_INTT_ID=' + encodeURIComponent(emplParams.useInttId)
+        + '&POP_OPT=A&EMPL_DSNC=U&POP_TYPE=A&LNGG_DSNC=DF'
+        + '&USER_ID=' + encodeURIComponent(emplParams.userId)
+        + '&_callback_fn=&LNGG_DSNC=DF'
+        + '&POST_CALLBACK_PAGE=' + encodeURIComponent('https://approval.appplay.co.kr/appr/appr_callback_empl2.act');
+      UrlFetchApp.fetch('https://emplinfo.appplay.co.kr/com_empl_02.act', {
+        method: 'post', contentType: 'application/x-www-form-urlencoded',
+        headers: { 'User-Agent': BROWSER_UA, 'Cookie': cookies },
+        payload: payload, muteHttpExceptions: true, followRedirects: false
+      });
+    } catch (_) {}
+  }
+
+  // 세션 초기화 + 테스트 검색으로 검증
+  function initAndVerify() {
+    var ck = initEmplSession();
+    var td = {};
+    var ok = _tryEmplSearch(ck, '테스트', td, 'v');
+    if (!ok) throw new Error('세션 검증 실패: ' + JSON.stringify(td).substring(0, 200));
+    return ck;
+  }
+
+  var emplCookies = '';
+  try {
+    emplCookies = initAndVerify();
+    console.log('[syncUsers] emplinfo 초기화+검증 완료');
+  } catch (emplErr) {
+    console.log('[syncUsers] emplinfo 초기화 실패: ' + emplErr.message);
+  }
+
+  // 웹페이지관리 시트에서 사용자 목록 읽기
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var rows = sheet.getDataRange().getValues();
+
+  var updated = 0, skipped = 0, failed = 0;
+  var details = [];
+  var searchCache = {};
+  var startTime = Date.now();
+  var MAX_MS = 4.5 * 60 * 1000;
+  var searchCount = 0;
+  var KEEPALIVE_EVERY = 10;
+
+  // 이전 실행에서 중단된 인덱스부터 재개
+  var props = PropertiesService.getScriptProperties();
+  var startIdx = parseInt(props.getProperty('syncUsers_resumeIdx') || '1', 10);
+  if (startIdx < 1) startIdx = 1;
+
+  for (var i = startIdx; i < rows.length; i++) {
+    // 시간 초과 시 중단 → 1분 후 재실행 트리거
+    if (Date.now() - startTime > MAX_MS) {
+      props.setProperty('syncUsers_resumeIdx', String(i));
+      ScriptApp.getProjectTriggers().forEach(function(t) {
+        if (t.getHandlerFunction() === '_continueSyncBizplayUsers') ScriptApp.deleteTrigger(t);
+      });
+      ScriptApp.newTrigger('_continueSyncBizplayUsers').timeBased().after(60 * 1000).create();
+      console.log('[syncUsers] 시간초과 → ' + i + '번째부터 1분 후 재개 (갱신 ' + updated + ', 실패 ' + failed + ')');
+      return { updated: updated, skipped: skipped, failed: failed, details: details, resumed: true };
+    }
+    var name = String(rows[i][ADMIN_COL.NAME] || '').trim();
+    var knoxId = String(rows[i][ADMIN_COL.KNOX_ID] || '').trim();
+    if (!name || name.length < 2 || !knoxId) { skipped++; continue; }
+
+    var knoxEmail = knoxId.indexOf('@') === -1 ? knoxId + '@emro.co.kr' : knoxId;
+
+    if (!searchCache[name]) {
+      // 주기적 keep-alive
+      if (searchCount > 0 && searchCount % KEEPALIVE_EVERY === 0) {
+        keepAlive(emplCookies);
+      }
+      searchCount++;
+
+      var d = {};
+      var r = _tryEmplSearch(emplCookies, name, d, 'e');
+
+      // 실패 시 세션 재초기화 후 재시도
+      if (!r) {
+        try {
+          console.log('[syncUsers] 세션 만료 → 재초기화 (i=' + i + ', 검색 ' + searchCount + '회)');
+          emplCookies = initAndVerify();
+          searchCount = 0;
+          d = {};
+          r = _tryEmplSearch(emplCookies, name, d, 'e');
+        } catch (reinitErr) {
+          console.log('[syncUsers] 재초기화 실패: ' + reinitErr.message);
+        }
+      }
+
+      if (r) {
+        try {
+          var parsed = JSON.parse(r.getContent());
+          searchCache[name] = parsed.results || [];
+        } catch (_) { searchCache[name] = []; }
+      } else {
+        searchCache[name] = [];
+      }
+    }
+
+    var matched = null;
+    var candidates = searchCache[name];
+
+    // EML(=knoxId@emro.co.kr)로 매칭
+    for (var j = 0; j < candidates.length; j++) {
+      var eml = (candidates[j].EML || '').toLowerCase();
+      if (eml === knoxEmail.toLowerCase()) { matched = candidates[j]; break; }
+    }
+
+    // EML 매칭 실패 시, 검색결과 1명이면 자동 매칭
+    if (!matched) {
+      if (candidates.length === 1) {
+        matched = candidates[0];
+      } else if (candidates.length > 1) {
+        details.push({ name: name, error: 'ambiguous', count: candidates.length });
+        failed++;
+        continue;
+      }
+    }
+
+    if (!matched && candidates.length > 0) {
+      details.push({ name: name, knoxId: knoxId, error: 'no match',
+        candidateEmls: candidates.map(function(c) { return c.EML || c.APPR_USER_ID; }).slice(0, 5) });
+      failed++;
+      continue;
+    }
+
+    if (matched) {
+      var newDept = matched.APPR_DEPT_NM || '';
+      var newPos = matched.APPR_USER_POS_NM || '';
+      var newDeptCd = matched.APPR_DEPT_CD || '';
+      var newBizId = (matched.APPR_USER_ID || '').replace(/@emro\.co\.kr$/i, '');
+      var oldDept = String(rows[i][ADMIN_COL.DEPT] || '').trim();
+      var oldPos = String(rows[i][ADMIN_COL.POS] || '').trim();
+      var oldDeptCd = String(rows[i][ADMIN_COL.DEPT_CD] || '').trim();
+      var oldBizId = String(rows[i][ADMIN_COL.BIZPLAY_ID] || '').trim();
+
+      var changed = (newDept !== oldDept || newPos !== oldPos || newDeptCd !== oldDeptCd);
+      // BIZPLAY_ID: 비어있으면 채우기, @emro.co.kr 붙어있으면 정리
+      var fillBizId = (!oldBizId && newBizId);
+      var fixBizId = (oldBizId && oldBizId.indexOf('@emro.co.kr') > -1);
+
+      if (changed || fillBizId || fixBizId) {
+        var rowNum = i + 1;
+        sheet.getRange(rowNum, 5).setValue(newDept);
+        sheet.getRange(rowNum, 14).setValue(newPos);   // N열
+        sheet.getRange(rowNum, 15).setValue(newDeptCd); // O열
+        if (fillBizId) sheet.getRange(rowNum, 9).setValue(newBizId); // I열
+        if (fixBizId) sheet.getRange(rowNum, 9).setValue(oldBizId.replace(/@emro\.co\.kr$/i, '')); // I열 정리
+        updated++;
+        details.push({ name: name, dept: newDept, pos: newPos, deptCd: newDeptCd,
+          bizId: fillBizId ? newBizId : undefined });
+      } else {
+        skipped++;
+      }
+    } else if (candidates.length === 0) {
+      failed++;
+      details.push({ name: name, knoxId: knoxId, error: 'search empty', rowIdx: i });
+    }
+  }
+
+  // ── 실패 목록 재시도 (최대 3라운드) ──
+  var MAX_RETRY_ROUNDS = 3;
+  for (var round = 1; round <= MAX_RETRY_ROUNDS; round++) {
+    // 시간 체크
+    if (Date.now() - startTime > MAX_MS) break;
+
+    var failedItems = details.filter(function(d) { return d.error === 'search empty' && d.rowIdx; });
+    if (failedItems.length === 0) break;
+
+    console.log('[syncUsers] 재시도 ' + round + '/' + MAX_RETRY_ROUNDS + ': ' + failedItems.length + '건');
+
+    // 새 세션으로 재시도
+    try { emplCookies = initAndVerify(); searchCount = 0; } catch (e) {
+      console.log('[syncUsers] 재시도 세션 실패: ' + e.message);
+      break;
+    }
+
+    var stillFailed = [];
+    for (var fi = 0; fi < failedItems.length; fi++) {
+      if (Date.now() - startTime > MAX_MS) break;
+
+      var item = failedItems[fi];
+      var idx = item.rowIdx;
+      var nm = item.name;
+
+      if (searchCount > 0 && searchCount % KEEPALIVE_EVERY === 0) keepAlive(emplCookies);
+      searchCount++;
+
+      // 캐시 클리어 후 재검색
+      delete searchCache[nm];
+      var d2 = {};
+      var r2 = _tryEmplSearch(emplCookies, nm, d2, 'e');
+      if (!r2) {
+        try { emplCookies = initAndVerify(); searchCount = 0; d2 = {}; r2 = _tryEmplSearch(emplCookies, nm, d2, 'e'); } catch(_){}
+      }
+
+      if (r2) {
+        try {
+          var p2 = JSON.parse(r2.getContent());
+          var cands = p2.results || [];
+          var knoxEmail2 = item.knoxId.indexOf('@') === -1 ? item.knoxId + '@emro.co.kr' : item.knoxId;
+          var m2 = null;
+          for (var j2 = 0; j2 < cands.length; j2++) {
+            if ((cands[j2].EML || '').toLowerCase() === knoxEmail2.toLowerCase()) { m2 = cands[j2]; break; }
+          }
+          if (!m2 && cands.length === 1) m2 = cands[0];
+
+          if (m2) {
+            var rowNum2 = idx + 1;
+            sheet.getRange(rowNum2, 5).setValue(m2.APPR_DEPT_NM || '');
+            sheet.getRange(rowNum2, 14).setValue(m2.APPR_USER_POS_NM || '');
+            sheet.getRange(rowNum2, 15).setValue(m2.APPR_DEPT_CD || '');
+            var bizId2 = (m2.APPR_USER_ID || '').replace(/@emro\.co\.kr$/i, '');
+            if (bizId2 && !String(rows[idx][ADMIN_COL.BIZPLAY_ID] || '').trim()) {
+              sheet.getRange(rowNum2, 9).setValue(bizId2);
+            }
+            updated++; failed--;
+            item.error = null; // 성공 마킹
+            continue;
+          }
+        } catch(_) {}
+      }
+      stillFailed.push(item);
+    }
+
+    // 성공한 항목 제거
+    details = details.filter(function(d) { return d.error !== null; });
+  }
+
+  // 완료 → resumeIdx 클리어
+  props.deleteProperty('syncUsers_resumeIdx');
+  console.log('[syncUsers] 최종: 갱신 ' + updated + ', 스킵 ' + skipped + ', 실패 ' + failed);
+  return { updated: updated, skipped: skipped, failed: failed, details: details };
+}
+
+/** 시간초과 후 이어서 실행하는 트리거 핸들러 */
+function _continueSyncBizplayUsers() {
+  // 일회성 트리거 정리
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === '_continueSyncBizplayUsers') ScriptApp.deleteTrigger(t);
+  });
+  triggerSyncBizplayUsers();
+}
+
+/**
+ * 교육관리자 세션 확보 (자동 로그인 지원)
+ * 1) ScriptProperties에 저장된 세션이 있으면 재사용
+ * 2) 없으면 _approvalSsoOnly로 자동 로그인 → 세션 저장
+ * @returns {{ session, adminRow, propKey, knoxId }}
+ */
+function _getEduAdminSession() {
+  var cred = _getEduAdminCredentials();
+  if (!cred) throw new Error('교육관리자 크레덴셜 없음 (관리자 시트 확인)');
+
+  // 웹페이지관리에서 교육관리자 행 찾기
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
+  var rows = sheet.getDataRange().getValues();
+  var adminRow = null;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][ADMIN_COL.KNOX_ID]).trim() === cred.knoxId) { adminRow = rows[i]; break; }
+  }
+  if (!adminRow) throw new Error('교육관리자 ' + cred.knoxId + ' 가 웹페이지관리에 없음');
+
+  var propKey = 'bizplay_' + cred.knoxId;
+  var props = PropertiesService.getScriptProperties();
+  var rawSession = props.getProperty(propKey);
+
+  if (rawSession) {
+    console.log('[syncUsers] 기존 세션 재사용: ' + cred.knoxId);
+    return { session: JSON.parse(rawSession), adminRow: adminRow, propKey: propKey, knoxId: cred.knoxId };
+  }
+
+  // 저장된 세션 없음 → 자동 로그인
+  console.log('[syncUsers] 세션 없음 → 자동 로그인: ' + cred.bizUserId);
+  var sso = _approvalSsoOnly(cred.bizUserId, cred.bizPwd);
+  if (sso.error) throw new Error('Bizplay 자동 로그인 실패: ' + sso.error);
+  if (!sso.approvalCookies) throw new Error('approval 쿠키 미획득');
+
+  var ff = sso.formFields || {};
+  var session = {
+    userId: cred.bizUserId,
+    bizplayCookies: sso.bizplayCookies || '',
+    approvalCookies: sso.approvalCookies,
+    useInttId: ff.USE_INTT_ID || '',
+    formFields: ff,
+    userName: ff.USER_NM || cred.knoxId,
+    approvalSsoTime: new Date().toISOString()
+  };
+  props.setProperty(propKey, JSON.stringify(session));
+  console.log('[syncUsers] 자동 로그인 세션 저장 완료');
+
+  return { session: session, adminRow: adminRow, propKey: propKey, knoxId: cred.knoxId };
+}
+
+/**
+ * Bizplay 사원정보 일괄 수집 (웹앱 액션 — 관리자 전용)
+ * action=bizplaySyncUsers&token={knoxId:hash}
+ */
+function handleBizplaySyncUsers(adminRow, e) {
+  try {
+    var result = _syncBizplayUsers();
+    return createResponse({
+      status: 'success',
+      message: '갱신 ' + result.updated + '명, 스킵 ' + result.skipped + '명, 실패 ' + result.failed + '명',
+      updated: result.updated, skipped: result.skipped, failed: result.failed,
+      details: result.details
+    });
+  } catch (err) {
+    return createResponse({ error: err.message });
+  }
+}
+
+/**
+ * [주간 트리거] Bizplay 사원정보 자동 수집
+ * 관리자 시트의 교육관리자 아이디/비번으로 Bizplay 로그인 후 일괄 수집
+ * 설치: installSyncUsersTrigger() 1회 실행
+ */
+function triggerSyncBizplayUsers() {
+  try {
+    var result = _syncBizplayUsers();
+    console.log('[syncUsers] 갱신 ' + result.updated + ', 스킵 ' + result.skipped + ', 실패 ' + result.failed);
+    if (result.details.length > 0) console.log('[syncUsers] 상세: ' + JSON.stringify(result.details.slice(0, 10)));
+  } catch (err) {
+    console.log('[syncUsers] 실패: ' + err.message);
+  }
+}
+
+/** 주간 트리거 설치 (1회 실행) — 매주 월요일 오전 7시 */
+function installSyncUsersTrigger() {
+  // 기존 트리거 중복 방지
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'triggerSyncBizplayUsers') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('triggerSyncBizplayUsers')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(7)
+    .create();
+  console.log('주간 사원정보 동기화 트리거 설치 완료 (매주 월 07:00)');
+}
+
