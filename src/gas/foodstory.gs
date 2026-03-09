@@ -149,39 +149,46 @@ function handleOcrMenu(e) {
 }
 
 /**
- * 식단 자동 동기화 (트리거 또는 GAS 에디터에서 실행)
- * 카카오 채널 → 이미지 URL 추출 → OCR → 시트 기록
+ * 카카오 채널 → OCR → 시트 기록 (성공 여부 반환)
+ * @return {boolean} 시트에 기록 성공 여부
  */
-function syncSKV1Menu() {
-  // 평일만 실행 (주말·공휴일 스킵)
-  var now = new Date();
-  var dow = now.getDay();
-  if (dow === 0 || dow === 6) { Logger.log('[menu] 주말 스킵'); return; }
-  if (_isHolidayServer(now)) { Logger.log('[menu] 공휴일 스킵'); return; }
-
+function _trySyncMenu() {
   var imageUrl = _getKakaoMenuImageUrl();
   if (!imageUrl) {
     Logger.log('[menu] 카카오 채널에서 이미지 URL을 찾을 수 없음');
-    return;
+    return false;
   }
   Logger.log('[menu] 이미지 URL: ' + imageUrl);
 
   var text = _ocrImageToText(imageUrl);
   if (!text) {
     Logger.log('[menu] OCR 결과가 비어있음');
-    return;
+    return false;
   }
   Logger.log('[menu] OCR 텍스트:\n' + text);
 
   var parsed = _parseMenuText(text);
   if (!parsed.date) {
     Logger.log('[menu] 날짜 파싱 실패. rawText: ' + text);
-    return;
+    return false;
   }
   Logger.log('[menu] 파싱: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
 
   var result = _writeMenuToSheet(parsed);
   Logger.log('[menu] 시트 기록 완료: row ' + result.row + (result.updated ? ' (덮어쓰기)' : ' (신규)'));
+  return true;
+}
+
+/**
+ * 식단 자동 동기화 (트리거: 매일 오전 8~9시)
+ * 카카오 채널 → 이미지 URL 추출 → OCR → 시트 기록
+ */
+function syncSKV1Menu() {
+  var now = new Date();
+  var dow = now.getDay();
+  if (dow === 0 || dow === 6) { Logger.log('[menu] 주말 스킵'); return; }
+  if (_isHolidayServer(now)) { Logger.log('[menu] 공휴일 스킵'); return; }
+  _trySyncMenu();
 }
 
 /**

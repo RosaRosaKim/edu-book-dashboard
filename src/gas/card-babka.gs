@@ -868,8 +868,7 @@ function migratePasswords() {
 
 /**
  * 매일 평일 트리거: 밥카 잔액 + 식단 통합 알림 발송
- * - 밥카=Y → 잔액 알림 (+ 식단=Y면 식단 합산)
- * - 밥카=N & 식단=Y → 식단만 단독 발송
+ * 식단이 없으면 → 잔액 먼저 발송 → OCR 재시도 → 결과에 따라 후속 발송
  * 주말 + 공휴일(근로자의날 포함) 제외
  */
 function sendDailyAlarm(data) {
@@ -903,8 +902,10 @@ function sendDailyAlarm(data) {
     }
   } catch (ciErr) {}
 
-  // 식단 정보 미리 조회
+  // 식단 정보 조회
   var menuInfo = _getTodayMenu();
+  var menuMissing = !menuInfo; // 식단 없으면 2단계 진행 필요
+  var menuOnlyUsers = []; // 식단만Y+밥카N → 2단계에서 처리
 
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0]; // A열: knoxId
@@ -915,17 +916,23 @@ function sendDailyAlarm(data) {
 
     if (!knoxId) continue;
     var hasCard = (cardAlarm === 'Y' && encPw);
-    var hasMenu = (menuAlarm === 'Y' && menuInfo);
-    if (!hasCard && !hasMenu) continue;
+    var wantsMenu = (menuAlarm === 'Y');
+    if (!hasCard && !wantsMenu) continue;
 
-    // ── 식단만 Y (밥카 N) → 식단 단독 발송 ──
+    // ── 식단만 Y (밥카 N) ──
     if (!hasCard) {
-      sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
-      Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId);
+      if (menuInfo) {
+        // 식단 있음 → 바로 발송
+        sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
+        Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId);
+      } else {
+        // 식단 없음 → 2단계에서 처리
+        menuOnlyUsers.push(knoxId);
+      }
       continue;
     }
 
-    // ── 밥카 Y → 잔액 조회 후 발송 (식단 Y면 합산) ──
+    // ── 밥카 Y → 잔액 조회 후 발송 ──
     try {
       var userId = (bizplayId || knoxId) + '@emro.co.kr';
       var password = _decryptPw(encPw);
@@ -989,14 +996,34 @@ function sendDailyAlarm(data) {
         msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
       }
 
-      // 식단알람도 Y이면 식단 정보 합산
-      if (hasMenu) {
+      // 식단 합산 or 대기 안내
+      if (wantsMenu && menuInfo) {
         msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
+      } else if (wantsMenu && menuMissing) {
+        msg.content += '\n\n🍽 오늘 식단정보가 아직 없어. 찾아보고 있으면 보내줄게';
       }
       sendFlowMsg(knoxId, msg);
-      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (hasMenu ? ' (+식단)' : ''));
+      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (wantsMenu && menuInfo ? ' (+식단)' : wantsMenu ? ' (식단대기)' : ''));
     } catch (ex) {
       Logger.log('[일일알림] 예외 - ' + knoxId + ': ' + ex.message);
+    }
+  }
+
+  // ── 2단계: 식단이 없었으면 OCR 재시도 후 후속 발송 ──
+  if (menuMissing && menuOnlyUsers.length > 0) {
+    Logger.log('[일일알림] 식단 없음 → OCR 재시도');
+    try { _trySyncMenu(); } catch (ex) { Logger.log('[일일알림] OCR 재시도 실패: ' + ex.message); }
+    var retryMenu = _getTodayMenu();
+
+    for (var j = 0; j < menuOnlyUsers.length; j++) {
+      var uid = menuOnlyUsers[j];
+      if (retryMenu) {
+        sendFlowMsg(uid, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
+        Logger.log('[일일알림] 식단 재시도 발송 - ' + uid);
+      } else {
+        sendFlowMsg(uid, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 식단 알림' });
+        Logger.log('[일일알림] 식단 미등록 안내 - ' + uid);
+      }
     }
   }
 }
