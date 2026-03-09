@@ -14,6 +14,11 @@ var SYNC_EDU_HEADERS = [
 ];
 var SYNC_STS_MAP = { '9': '진행', '2': '진행', '3': '완료', '4': '반송', '5': '취소' };
 
+/** 녹스ID에서 @emro.co.kr 제거 (일부 사용자가 이메일 전체를 입력하는 경우 대응) */
+function _normalizeKnoxId(knoxId) {
+  return String(knoxId || '').trim().replace(/@emro\.co\.kr$/i, '');
+}
+
 /** 관리자 시트에서 C열="교육" 행의 계정정보 읽기 */
 function _getEduAdminCredentials() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -151,7 +156,7 @@ function _parseEduRecords(records) {
       docNo,                                   // G: 문서번호
       rec.APPR_SUBJ || '',                     // H: 제목
       (vals1[0] || '').trim(),                 // I: 부서명
-      (vals1[1] || '').trim(),                 // J: 녹스ID
+      _normalizeKnoxId(vals1[1]),              // J: 녹스ID (@emro.co.kr 제거)
       (vals1[2] || '').trim(),                 // K: 성명
       (vals1[3] || '').trim(),                 // L: 교육과정명
       period,                                  // M: 기간
@@ -300,7 +305,7 @@ function _sendCompletionFlow(ss, reqType, completedDocs) {
     if (!sheet || sheet.getLastRow() < 2) return;
     var rows = sheet.getDataRange().getValues();
     for (var j = 1; j < rows.length; j++) {
-      var kid = String(rows[j][colDef.KNOX_ID]);
+      var kid = _normalizeKnoxId(rows[j][colDef.KNOX_ID]);
       if (rows[j][colDef.STATUS] === '완료') {
         budgetMap[kid] = (budgetMap[kid] || 0) + (Number(rows[j][colDef.COST]) || 0);
       }
@@ -599,7 +604,7 @@ function _parseBookRecords(records) {
       docNo,                                   // G: 문서번호
       rec.APPR_SUBJ || '',                     // H: 제목
       (vals1[0] || '').trim(),                 // I: 부서명
-      (vals1[1] || '').trim(),                 // J: 녹스ID
+      _normalizeKnoxId(vals1[1]),              // J: 녹스ID (@emro.co.kr 제거)
       (vals1[2] || '').trim(),                 // K: 성명
       (vals1[3] || '').trim(),                 // L: 도서명
       (vals1[4] || '').trim(),                 // M: 비용
