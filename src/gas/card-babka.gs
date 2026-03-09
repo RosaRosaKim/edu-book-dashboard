@@ -931,7 +931,8 @@ function sendDailyAlarm(data) {
     if (!hasCard) {
       if (menuInfo) {
         // sendFlowMsg(knoxId, FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu));
-        Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId);
+        var _m = FLOW_MSG.todayMenu(menuInfo.todayStr, menuInfo.todayMenu);
+        Logger.log('[일일알림] 식단 단독 발송 - ' + knoxId + '\n' + _m.content);
       } else {
         menuOnlyUsers.push({ knoxId: knoxId, like: menuLike });
       }
@@ -1009,7 +1010,7 @@ function sendDailyAlarm(data) {
         msg.content += '\n\n🍽 오늘 식단정보가 아직 없어. 찾아보고 있으면 보내줄게';
       }
       // sendFlowMsg(knoxId, msg);
-      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (wantsMenu && menuInfo ? ' (+식단)' : wantsMenu ? ' (식단대기)' : ''));
+      Logger.log('[일일알림] 발송 완료 - ' + knoxId + (wantsMenu && menuInfo ? ' (+식단)' : wantsMenu ? ' (식단대기)' : '') + '\n' + msg.content);
     } catch (ex) {
       Logger.log('[일일알림] 예외 - ' + knoxId + ': ' + ex.message);
     }
@@ -1029,10 +1030,11 @@ function sendDailyAlarm(data) {
           continue;
         }
         // sendFlowMsg(u.knoxId, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
-        Logger.log('[일일알림] 식단 재시도 발송 - ' + u.knoxId);
+        var _rm = FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu);
+        Logger.log('[일일알림] 식단 재시도 발송 - ' + u.knoxId + '\n' + _rm.content);
       } else {
         // sendFlowMsg(u.knoxId, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
-        Logger.log('[일일알림] 식단 미등록 안내 - ' + u.knoxId);
+        Logger.log('[일일알림] 식단 미등록 안내 - ' + u.knoxId + '\n오늘은 식단정보가 업로드 되지 않았어..');
       }
     }
   }
