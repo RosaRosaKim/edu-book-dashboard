@@ -1879,6 +1879,7 @@
   window.initCardModule = function(data) {
     cardAlarmOn = !!(data.userInfo && data.userInfo.isCardAlarmAgreed);
     window._menuAlarmOn = !!(data.userInfo && data.userInfo.isMenuAlarmAgreed);
+    window._userInfoData = data.userInfo || {};
     hasBizplayPw = !!(data.userInfo && data.userInfo.hasBizplayPw);
     cardAutoMode = (data.userInfo && data.userInfo.cardAutoMode) || 'off';
 

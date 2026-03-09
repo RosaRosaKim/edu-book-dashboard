@@ -209,6 +209,29 @@ function _normDateKey(cellVal) {
 }
 
 /**
+ * 식단 메뉴와 선호/비선호 키워드 매칭
+ * @param {string} menuText - 오늘 식단 텍스트
+ * @param {string} likeStr - 쉼표 구분 선호 키워드
+ * @param {string} dislikeStr - 쉼표 구분 비선호 키워드
+ * @return {{ type: 'like'|'dislike'|'normal', matched: string[] }}
+ */
+function _matchMenuKeywords(menuText, likeStr, dislikeStr) {
+  var menu = menuText.toLowerCase();
+  var likes = likeStr ? likeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+  var dislikes = dislikeStr ? dislikeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+
+  // 선호 매칭 (우선)
+  var likeMatched = likes.filter(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; });
+  if (likeMatched.length > 0) return { type: 'like', matched: likeMatched };
+
+  // 비선호 매칭
+  var dislikeMatched = dislikes.filter(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; });
+  if (dislikeMatched.length > 0) return { type: 'dislike', matched: dislikeMatched };
+
+  return { type: 'normal', matched: [] };
+}
+
+/**
  * 특정 사용자에게 오늘 식단 Flow 발송 (알람 수신 Y 전환 시 즉시 발송용)
  * @return {boolean} 발송 성공 여부
  */
