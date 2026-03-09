@@ -209,26 +209,18 @@ function _normDateKey(cellVal) {
 }
 
 /**
- * 식단 메뉴와 선호/비선호 키워드 매칭
+ * 선호 키워드 매칭: 등록된 키워드 중 하나라도 식단에 포함되면 true
+ * 키워드 미등록이면 항상 true (필터 없음)
  * @param {string} menuText - 오늘 식단 텍스트
  * @param {string} likeStr - 쉼표 구분 선호 키워드
- * @param {string} dislikeStr - 쉼표 구분 비선호 키워드
- * @return {{ type: 'like'|'dislike'|'normal', matched: string[] }}
+ * @return {boolean} 알림 발송 여부
  */
-function _matchMenuKeywords(menuText, likeStr, dislikeStr) {
+function _shouldSendMenu(menuText, likeStr) {
+  if (!likeStr) return true; // 키워드 미등록 → 항상 발송
   var menu = menuText.toLowerCase();
-  var likes = likeStr ? likeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
-  var dislikes = dislikeStr ? dislikeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
-
-  // 선호 매칭 (우선)
-  var likeMatched = likes.filter(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; });
-  if (likeMatched.length > 0) return { type: 'like', matched: likeMatched };
-
-  // 비선호 매칭
-  var dislikeMatched = dislikes.filter(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; });
-  if (dislikeMatched.length > 0) return { type: 'dislike', matched: dislikeMatched };
-
-  return { type: 'normal', matched: [] };
+  var likes = likeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (likes.length === 0) return true;
+  return likes.some(function(k) { return menu.indexOf(k.toLowerCase()) >= 0; });
 }
 
 /**
