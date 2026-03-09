@@ -169,6 +169,11 @@ const doGet = (e) => {
     if (!entry) return createResponse({ error: "UNAUTHORIZED" });
     const newVal = e.parameter.isAgreed === "true" ? "Y" : "N";
     adminSheet.getRange(entry.idx + 1, 11).setValue(newVal);  // K열: 식단 메뉴 알람
+
+    // Y로 변경 + 오후 1시 이전이면 오늘 식단 즉시 Flow 발송
+    if (newVal === "Y" && new Date().getHours() < 13) {
+      try { _sendMenuFlowToUser(String(entry.row[ADMIN_COL.KNOX_ID]).trim()); } catch (ex) {}
+    }
     return createResponse({ status: "success" });
   }
 

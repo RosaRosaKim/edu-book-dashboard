@@ -104,12 +104,14 @@ function _writeMenuToSheet(parsed) {
   var menuText = parsed.menus.join('\n');
   var dateKey = parsed.date;
 
-  // 같은 날짜 중복 체크 (A열) → 이미 있으면 스킵
+  // 같은 날짜 중복 체크 (A열, 공백 무시 비교) → 이미 있으면 덮어쓰기
+  var dateNorm = dateKey.replace(/\s+/g, '');
   if (sheet.getLastRow() > 1) {
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim() === dateKey) {
-        return { skipped: true, row: i + 1 };
+      if (String(data[i][0]).trim().replace(/\s+/g, '') === dateNorm) {
+        sheet.getRange(i + 1, 2).setValue(menuText);
+        return { skipped: false, row: i + 1, updated: true };
       }
     }
   }
@@ -150,7 +152,7 @@ function handleOcrMenu(e) {
  * 식단 자동 동기화 (트리거 또는 GAS 에디터에서 실행)
  * 카카오 채널 → 이미지 URL 추출 → OCR → 시트 기록
  */
-function syncMenu() {
+function syncSKV1Menu() {
   // 평일만 실행 (주말·공휴일 스킵)
   var now = new Date();
   var dow = now.getDay();
@@ -179,14 +181,36 @@ function syncMenu() {
   Logger.log('[menu] 파싱: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
 
   var result = _writeMenuToSheet(parsed);
-  if (result.skipped) {
-    Logger.log('[menu] ' + parsed.date + ' 이미 등록됨 (스킵)');
-    return;
-  }
-  Logger.log('[menu] 시트 기록 완료: row ' + result.row + ' (신규)');
+  Logger.log('[menu] 시트 기록 완료: row ' + result.row + (result.updated ? ' (덮어쓰기)' : ' (신규)'));
 
-  // 신규 등록 후 오늘 날짜 식단이 있으면 Flow 발송
+  // 등록/갱신 후 오늘 날짜 식단이 있으면 Flow 발송
   _sendMenuFlowIfToday();
+}
+
+/**
+ * 특정 사용자에게 오늘 식단 Flow 발송 (알람 수신 Y 전환 시 즉시 발송용)
+ */
+function _sendMenuFlowToUser(knoxId) {
+  var now = new Date();
+  var todayStr = (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
+  if (!menuSheet || menuSheet.getLastRow() <= 1) return;
+
+  var menuData = menuSheet.getDataRange().getValues();
+  var todayMenu = null;
+  var todayNorm = todayStr.replace(/\s+/g, '');
+  for (var i = 1; i < menuData.length; i++) {
+    if (String(menuData[i][0]).trim().replace(/\s+/g, '') === todayNorm) {
+      todayMenu = String(menuData[i][1] || '');
+      break;
+    }
+  }
+  if (!todayMenu) return;
+
+  sendFlowMsg(knoxId, FLOW_MSG.todayMenu(todayStr, todayMenu));
+  Logger.log('[menu] 즉시 발송: ' + knoxId);
 }
 
 /**
@@ -200,11 +224,12 @@ function _sendMenuFlowIfToday() {
   var menuSheet = ss.getSheetByName(MENU_SHEET_NAME);
   if (!menuSheet || menuSheet.getLastRow() <= 1) return;
 
-  // 당산푸드스토리 시트에서 오늘 날짜 메뉴 찾기
+  // 당산푸드스토리 시트에서 오늘 날짜 메뉴 찾기 (공백 무시 비교)
   var menuData = menuSheet.getDataRange().getValues();
   var todayMenu = null;
+  var todayNorm = todayStr.replace(/\s+/g, '');
   for (var i = 1; i < menuData.length; i++) {
-    if (String(menuData[i][0]).trim() === todayStr) {
+    if (String(menuData[i][0]).trim().replace(/\s+/g, '') === todayNorm) {
       todayMenu = String(menuData[i][1] || '');
       break;
     }
