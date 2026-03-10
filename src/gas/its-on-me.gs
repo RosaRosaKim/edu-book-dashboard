@@ -35,7 +35,6 @@ function handleSearchBizFlowUsers(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    if (knoxId.toLowerCase() === myKnox) continue;
     if (name.toLowerCase().indexOf(word) !== -1 || knoxId.toLowerCase().indexOf(word) !== -1) {
       results.push({ knoxId: knoxId, name: name, dept: dept });
     }
@@ -63,7 +62,7 @@ function handleGetBizFlowUserList(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    if (knoxId.toLowerCase() === myKnox) { myDept = dept; continue; }
+    if (knoxId.toLowerCase() === myKnox) { myDept = dept; }
     users.push([knoxId, name, dept]);
   }
   // JSON → base64 → 문자열 반전 (평문 노출 방지)
