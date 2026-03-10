@@ -351,7 +351,7 @@ function sendCardAlarmDay14(data) {
   var now = new Date();
   if (!_isFirstBizDayFrom14(now)) return;
 
-  if (!data) {
+  if (!Array.isArray(data)) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
   }
@@ -458,7 +458,7 @@ function sendCardAlarmReminder(data) {
   var now = new Date();
   if (!_isCardAlarmDay(now)) return;
 
-  if (!data) {
+  if (!Array.isArray(data)) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
   }
@@ -535,7 +535,7 @@ function sendCardRefundAlert(data) {
   var periodLabel = prevStart.getFullYear() + '.' + ('0' + (prevStart.getMonth() + 1)).slice(-2) + '.' + ('0' + prevStart.getDate()).slice(-2)
     + ' ~ ' + prevEnd.getFullYear() + '.' + ('0' + (prevEnd.getMonth() + 1)).slice(-2) + '.' + ('0' + prevEnd.getDate()).slice(-2);
 
-  if (!data) {
+  if (!Array.isArray(data)) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
   }
@@ -875,7 +875,7 @@ function sendDailyAlarm(data) {
   if (_isHolidayServer(now)) { Logger.log('[일일알림] 공휴일 스킵'); return; }
   Logger.log('[일일알림] 시작 - ' + now.toLocaleString());
 
-  if (!data) {
+  if (!Array.isArray(data)) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
   }
