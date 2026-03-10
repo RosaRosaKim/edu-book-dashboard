@@ -877,29 +877,63 @@ function showDashboard() {
 
 /* ═══════════════ Flow 링크 자동 인증 ═══════════════ */
 async function _authByFlowToken(ft) {
-  // 이미 유효한 토큰이 있으면 바로 대시보드
-  const existing = localStorage.getItem(TOKEN_KEY);
+  var isDirectLife = !!(sessionStorage.getItem('itsOnMe') || sessionStorage.getItem('vote'));
+
+  // 이미 유효한 토큰이 있으면 바로 진행
+  var existing = localStorage.getItem(TOKEN_KEY);
   if (existing) {
-    showDashboard();
-    loadDashboard();
-    return;
+    if (isDirectLife) { _openDirectLife(); return; }
+    showDashboard(); loadDashboard(); return;
   }
+
+  // 이쏜미/투표 딥링크: 로그인 화면 대신 로딩 표시
+  if (isDirectLife) {
+    $('authScreen').classList.add('hidden');
+    $('dashboard').classList.remove('hidden');
+    // 헤더/탭바 숨기고 life 패널만 표시
+    var header = document.querySelector('header');
+    if (header) header.classList.add('hidden');
+    $('loadingState').classList.remove('hidden');
+    $('dashContent').classList.add('hidden');
+  }
+
   try {
-    const url = `${API_URL}?action=flowTokenAuth&ft=${encodeURIComponent(ft)}`;
-    const data = await gasFetch(url);
+    var url = `${API_URL}?action=flowTokenAuth&ft=${encodeURIComponent(ft)}`;
+    var data = await gasFetch(url);
     if (data.status === 'success' && data.token) {
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem('auth_method', 'flow_token');
       if (data.session) localStorage.setItem('bizplay_session', JSON.stringify(data.session));
-      showDashboard();
-      loadDashboard();
-      return;
+      if (isDirectLife) { _openDirectLife(); return; }
+      showDashboard(); loadDashboard(); return;
     }
   } catch (e) {
     console.log('[flowToken] 자동 인증 실패:', e.message);
   }
   // 실패 시 일반 로그인 화면
+  var header2 = document.querySelector('header');
+  if (header2) header2.classList.remove('hidden');
   showAuth();
+}
+
+/** 이쏜미/투표 전용: 대시보드 스킵, life 모듈만 바로 로드 */
+async function _openDirectLife() {
+  $('authScreen').classList.add('hidden');
+  $('dashboard').classList.remove('hidden');
+  // 헤더/탭바 숨기기 — 이쏜미/투표 화면만 표시
+  var header = document.querySelector('header');
+  if (header) header.classList.add('hidden');
+  // life 패널만 표시
+  ['tabPanelEdu','tabPanelCard','tabPanelDraft','tabPanelBoard'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  $('tabPanelLife').classList.remove('hidden');
+  $('loadingState').classList.add('hidden');
+  $('dashContent').classList.remove('hidden');
+  // life 모듈 로드
+  await window._loadModule('emro-life.html', 'lifeContainer');
+  if (window.initLife) window.initLife();
 }
 
 /* ═══════════════ Bizplay 로그인 ═══════════════ */
