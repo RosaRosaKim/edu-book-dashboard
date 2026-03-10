@@ -40,21 +40,21 @@ function _generateToken(knoxId, encPw) {
 function _generateFlowToken(knoxId) {
   var secret = PropertiesService.getScriptProperties().getProperty('TOKEN_SALT') || 'default';
   var expiry = new Date().getTime() + 24 * 60 * 60 * 1000;
-  var payload = knoxId + '.' + expiry;
+  var payload = knoxId + '|' + expiry;
   var sig = Utilities.computeHmacSha256Signature(payload, secret)
     .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
-  return payload + '.' + sig;
+  return payload + '|' + sig;
 }
 
 /** Flow 링크 토큰 검증 → knoxId 반환, 실패 시 null */
 function _verifyFlowToken(flowToken) {
   if (!flowToken) return null;
-  var parts = flowToken.split('.');
+  var parts = flowToken.split('|');
   if (parts.length !== 3) return null;
   var knoxId = parts[0], expiry = parseInt(parts[1], 10), sig = parts[2];
   if (isNaN(expiry) || new Date().getTime() > expiry) return null;
   var secret = PropertiesService.getScriptProperties().getProperty('TOKEN_SALT') || 'default';
-  var payload = knoxId + '.' + expiry;
+  var payload = knoxId + '|' + expiry;
   var expected = Utilities.computeHmacSha256Signature(payload, secret)
     .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
   return sig === expected ? knoxId : null;
