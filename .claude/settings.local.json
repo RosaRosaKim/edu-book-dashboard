@@ -54,7 +54,9 @@
       "WebFetch(domain:m.banapresso.com)",
       "Bash(git pull:*)",
       "Bash(git:*)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "WebFetch(domain:script.google.com)",
+      "WebFetch(domain:script.googleusercontent.com)"
     ]
   }
 }
