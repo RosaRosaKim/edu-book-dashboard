@@ -724,6 +724,15 @@ const _splashBase = [
 ];
 let _infoToasts = []; // 정보성: 주식, 날씨, 미세먼지, D-day
 let _newsToasts = []; // 뉴스 헤드라인
+// 이전 세션에서 저장한 뉴스가 있으면 미리 로드
+try {
+  const _cached = JSON.parse(localStorage.getItem('_cachedNews') || '[]');
+  if (_cached.length) _newsToasts = _cached;
+} catch(_) {}
+try {
+  const _cachedInfo = JSON.parse(localStorage.getItem('_cachedInfo') || '[]');
+  if (_cachedInfo.length) _infoToasts = _cachedInfo;
+} catch(_) {}
 let _shownInfo = [], _shownNews = [];
 let _lastCat = 'news'; // 마지막 카테고리 → 다음엔 반대쪽
 function _pickFrom(pool, shown) {
@@ -1153,12 +1162,18 @@ async function loadDashboard() {
       localStorage.setItem('bizplay_session', JSON.stringify(p2.bizplaySession));
     }
     // 정보 토스트 등록 — 우선순위순 (이후 탭 전환 시 랜덤 표시)
+    // Phase 2 데이터로 갱신 (캐시된 이전 데이터 대체)
+    _infoToasts = []; _newsToasts = [];
+    _shownInfo = []; _shownNews = [];
     if (p2.stockInfo) _infoToasts.push(p2.stockInfo);
     if (p2.weatherAlert) _infoToasts.push(p2.weatherAlert);
     if (p2.airQuality) _infoToasts.push(p2.airQuality);
     if (p2.ddayInfo) p2.ddayInfo.forEach(function(m) { _infoToasts.push(m); });
     if (p2.weatherNow) _infoToasts.push(p2.weatherNow);
     if (p2.newsHeadlines) p2.newsHeadlines.forEach(function(m) { _newsToasts.push(m); });
+    // 다음 접속용 캐시 저장
+    try { localStorage.setItem('_cachedNews', JSON.stringify(_newsToasts)); } catch(_) {}
+    try { localStorage.setItem('_cachedInfo', JSON.stringify(_infoToasts)); } catch(_) {}
 
     // 스켈레톤 → 실제 대시보드 전환
     renderDashboard();
