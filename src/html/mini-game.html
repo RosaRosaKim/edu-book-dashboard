@@ -1193,8 +1193,10 @@
   }
 
   fetchRanking();
-  // 내기모드가 아닐 때만 시작버튼 표시 (기본 hidden → 조건부 show)
-  if (!document.body.classList.contains('betting-mode')) {
+  // 내기모드가 아닐 때만 시작버튼 표시
+  if (document.body.classList.contains('betting-mode')) {
+    $('mgHome').style.display = 'none';
+  } else {
     $('mgHome').classList.remove('hidden');
   }
 })();
