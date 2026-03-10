@@ -949,11 +949,18 @@ window._lifeAnimate = function(id, type) {
     window._mgBettingCallback = async function(score) {
       window._mgBettingSessionId = null;
       window._mgBettingCallback = null;
-      // 이쏜미 섹션으로 스크롤
+      // 미니게임 숨기고 이쏜미로 스크롤
+      var mgEl = document.getElementById('sectionMiniGame');
+      if (mgEl) mgEl.style.display = 'none';
       var iomSection = document.getElementById('sectionItsOnMe');
       if (iomSection) iomSection.scrollIntoView({ behavior: 'smooth' });
-      // 점수 저장 중 로딩 표시
-      window.showToast(score + '점! 저장 중...', 'smail');
+      // 내기 영역에 즉시 점수 + 저장 중 표시
+      $('iomBettingArea').classList.remove('hidden');
+      $('iomBettingMyScore').classList.remove('hidden');
+      $('iomBettingScoreVal').textContent = score + '점';
+      $('iomBettingPlayBtn').classList.add('hidden');
+      $('iomBettingMenuBtn').classList.add('hidden');
+      $('iomBettingBoard').innerHTML = '<div class="text-center py-2 text-[#9ab0ab] text-[13px]">점수 저장 중...</div>';
       try {
         var token = localStorage.getItem('token');
         var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +
