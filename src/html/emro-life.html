@@ -2,6 +2,7 @@
 @keyframes lifeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes lifeFade { from { opacity: 0; } to { opacity: 1; } }
 #sectionMenuAlarm button:active, #sectionItsOnMe button:active, #sectionVote button:active, #sectionMiniGame button:active { transform: scale(0.96); }
+body.betting-mode #mgHome { display: none !important; }
 </style>
 <script>
 window._lifeAnimate = function(id, type) {
@@ -256,9 +257,8 @@ window._lifeAnimate = function(id, type) {
       var el = document.getElementById(id);
       if (el) { el.style.display = ''; window._lifeAnimate(el); }
     });
-    // 미니게임 홈 버튼 복원 (내기모드에서 숨겼을 수 있음)
-    var mgHome = document.getElementById('mgHome');
-    if (mgHome) mgHome.classList.remove('hidden');
+    // 내기모드 해제
+    document.body.classList.remove('betting-mode');
   };
 
   window.initLife = function() {
@@ -1083,9 +1083,8 @@ window._lifeAnimate = function(id, type) {
         // 미니게임 섹션도 표시 (딥링크로 이쏜미만 보일 때 대비)
         var mgEl = document.getElementById('sectionMiniGame');
         if (mgEl) mgEl.style.display = '';
-        // 미니게임 자체 시작버튼(mgHome) 숨김 — 내기모드는 이쏜미 버튼으로 게임 시작
-        var mgHome = document.getElementById('mgHome');
-        if (mgHome) mgHome.classList.add('hidden');
+        // 미니게임 자체 시작버튼 숨김 (CSS로 제어 — 모듈 로드 타이밍 무관)
+        document.body.classList.add('betting-mode');
         $('iomMenuList').innerHTML = '';
         $('iomBettingArea').classList.remove('hidden');
         window._lifeAnimate('iomBettingArea');
