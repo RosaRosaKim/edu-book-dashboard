@@ -7,7 +7,7 @@
 
 var BANA_API_URL = 'https://order.banapresso.com/query';
 var BANA_MENU_QUERY = '91D8843AB9D3C73B28F1043252C574AF';
-var BANA_OPT_QUERY  = null; // 옵션은 별도 쿼리 필요 (영업시간에 확인)
+var BANA_OPT_QUERY  = '7426BEAF86B272A76AEE27580B296CF3';
 var BANA_F_CODE     = 200000;
 var BANA_F_CODE_SUB = 12600; // 당산SK점
 var BANA_PROP_MENU  = 'BANA_MENU';
