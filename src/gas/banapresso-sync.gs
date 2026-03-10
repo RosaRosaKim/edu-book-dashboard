@@ -49,19 +49,26 @@ function _parseMenuRow(r) {
   };
 }
 
-/* ── 옵션 row → map 구축 ── */
-function _buildOptionMap(rows) {
-  var map = {};
+/* ── nOptionType → 옵션 목록 맵 구축 ── */
+// sUserOption 필드의 숫자는 nOptionType(카테고리ID)을 가리킴
+function _buildOptionTypeMap(rows) {
+  var map = {};  // key: nOptionType
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
-    map[r[0]] = {
-      id: r[0],
-      categoryId: r[1],
-      categoryName: r[2],
-      name: r[3],
-      price: r[4] || 0,
-      required: r[11] === '1' || r[11] === 1
-    };
+    var typeId = r[1]; // nOptionType
+    if (!map[typeId]) {
+      map[typeId] = {
+        typeId: typeId,
+        typeName: r[2],  // sOptionTypeName
+        options: [],
+        required: false
+      };
+    }
+    map[typeId].options.push({
+      name: r[3],       // sOptionName
+      price: r[4] || 0  // nAddOptionCharge
+    });
+    if (r[11] === '1' || r[11] === 1) map[typeId].required = true;
   }
   return map;
 }
@@ -75,49 +82,56 @@ function _guessOptionType(catName) {
   return 'radio';
 }
 
+// 이쏜미에서 불필요한 옵션 타입 제외
+var BANA_SKIP_TYPES = ['매장에서 먹을게요', '젤라또', '쿠키', '아크릴키링', '텀블러', '아이스크림'];
+
 /* ── 메뉴별 refined options 생성 ── */
-function _buildRefinedOptions(menus, optMap) {
+function _buildRefinedOptions(menus, typeMap) {
   var result = {};
   for (var mi = 0; mi < menus.length; mi++) {
     var m = menus[mi];
     if (!m.optionIds) continue;
 
-    // optionIds: "8,18,37,;18,36,41,;" (HOT옵션;ICE옵션;...)
+    // optionIds: "6,10,18,39,;10,18,39,;" (ICE타입;HOT타입;...)
+    // 숫자는 nOptionType을 가리킴
     var groups = m.optionIds.split(';');
     var seen = {};
-    var allIds = [];
+    var allTypeIds = [];
     for (var gi = 0; gi < groups.length; gi++) {
       var ids = groups[gi].split(',');
       for (var ii = 0; ii < ids.length; ii++) {
         var n = parseInt(ids[ii], 10);
-        if (!isNaN(n) && !seen[n]) { seen[n] = true; allIds.push(n); }
+        if (!isNaN(n) && !seen[n]) { seen[n] = true; allTypeIds.push(n); }
       }
-    }
-
-    // 카테고리별 그룹핑
-    var catMap = {};
-    for (var ai = 0; ai < allIds.length; ai++) {
-      var opt = optMap[allIds[ai]];
-      if (!opt) continue;
-      var cid = opt.categoryId;
-      if (!catMap[cid]) {
-        catMap[cid] = {
-          id: opt.categoryName,
-          name: opt.categoryName,
-          required: opt.required,
-          type: _guessOptionType(opt.categoryName),
-          options: []
-        };
-      }
-      // 기본값 표시: 가격 0이고 이름에 '기본' 포함
-      var entry = { name: opt.name, price: opt.price };
-      if (opt.price === 0 && opt.name.indexOf('기본') !== -1) entry.isDefault = true;
-      catMap[cid].options.push(entry);
     }
 
     var cats = [];
-    var keys = Object.keys(catMap);
-    for (var ki = 0; ki < keys.length; ki++) cats.push(catMap[keys[ki]]);
+    for (var ai = 0; ai < allTypeIds.length; ai++) {
+      var typeInfo = typeMap[allTypeIds[ai]];
+      if (!typeInfo) continue;
+
+      // 불필요한 타입 제외
+      var skip = false;
+      for (var si = 0; si < BANA_SKIP_TYPES.length; si++) {
+        if (typeInfo.typeName.indexOf(BANA_SKIP_TYPES[si]) !== -1) { skip = true; break; }
+      }
+      if (skip) continue;
+
+      var cat = {
+        id: typeInfo.typeName,
+        name: typeInfo.typeName,
+        required: typeInfo.required,
+        type: _guessOptionType(typeInfo.typeName),
+        options: []
+      };
+      for (var oi = 0; oi < typeInfo.options.length; oi++) {
+        var o = typeInfo.options[oi];
+        var entry = { name: o.name, price: o.price };
+        if (o.price === 0 && o.name.indexOf('기본') !== -1) entry.isDefault = true;
+        cat.options.push(entry);
+      }
+      cats.push(cat);
+    }
 
     // 온도 카테고리를 맨 앞으로
     cats.sort(function(a, b) {
@@ -157,8 +171,8 @@ function syncBanapressoMenu() {
   var refined = {};
   if (BANA_OPT_QUERY) {
     var optRaw = _fetchBanaAPI(BANA_OPT_QUERY);
-    var optMap = _buildOptionMap(optRaw.rows);
-    refined = _buildRefinedOptions(menus, optMap);
+    var typeMap = _buildOptionTypeMap(optRaw.rows);
+    refined = _buildRefinedOptions(menus, typeMap);
   } else {
     // 기존 옵션 캐시가 있으면 유지
     var props = PropertiesService.getScriptProperties();
