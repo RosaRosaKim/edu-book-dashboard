@@ -952,6 +952,8 @@ window._lifeAnimate = function(id, type) {
       // 이쏜미 섹션으로 스크롤
       var iomSection = document.getElementById('sectionItsOnMe');
       if (iomSection) iomSection.scrollIntoView({ behavior: 'smooth' });
+      // 점수 저장 중 로딩 표시
+      window.showToast(score + '점! 저장 중...', 'smail');
       try {
         var token = localStorage.getItem('token');
         var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +

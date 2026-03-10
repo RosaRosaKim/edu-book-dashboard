@@ -18,8 +18,8 @@
       </div>
     </div>
 
-    <!-- 게임 홈 -->
-    <div id="mgHome">
+    <!-- 게임 홈 (내기모드 등에서 깜빡임 방지를 위해 기본 숨김) -->
+    <div id="mgHome" class="hidden">
       <div class="text-center py-3">
         <div class="text-2xl mb-2">🏃</div>
         <button onclick="mgStartGame()" class="px-6 py-2.5 rounded-xl bg-accent text-white font-semibold text-sm hover:brightness-110 transition">
@@ -1194,5 +1194,9 @@
   }
 
   fetchRanking();
+  // 내기모드가 아닐 때만 시작버튼 표시 (기본 hidden → 조건부 show)
+  if (!document.body.classList.contains('betting-mode')) {
+    $('mgHome').classList.remove('hidden');
+  }
 })();
 </script>
