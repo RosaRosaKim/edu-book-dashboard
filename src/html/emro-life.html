@@ -245,14 +245,14 @@ window._lifeAnimate = function(id, type) {
     var show = {};
     show[sectionId] = true;
     if (extraIds) extraIds.forEach(function(id) { show[id] = true; });
-    ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame'].forEach(function(id) {
+    ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame','findRoomContainer'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.style.display = show[id] ? '' : 'none';
     });
     window._lifeAnimate(sectionId);
   }
   window._restoreAllSections = function() {
-    ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame'].forEach(function(id) {
+    ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame','findRoomContainer'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) { el.style.display = ''; window._lifeAnimate(el); }
     });
