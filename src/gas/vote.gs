@@ -68,10 +68,11 @@ function handleCreateVote(adminRow, e) {
   }
   if (respRows.length) respSheet.getRange(respSheet.getLastRow() + 1, 1, respRows.length, 5).setValues(respRows);
 
-  // Flow 발송 (본인 포함)
+  // Flow 발송 (생성자 제외)
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
   var failedUsers = [];
   for (var k = 0; k < allMembers.length; k++) {
+    if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
     try {
       var msg = FLOW_MSG.voteInvite(creatorName, title, deadlineStr, sid);
       sendFlowMsg(allMembers[k].knoxId, msg);
