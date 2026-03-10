@@ -192,9 +192,9 @@ var FLOW_MSG = {
   // #12c 이쏜미 마감 임박 리마인드
   itsOnMeReminder: function(store, deadlineStr, sessionId) {
     return {
-      content: '아직 메뉴를 안 골랐어! ' + deadlineStr + '에 마감이야.',
+      content: '아직 메뉴를 안 골랐어! 곧 마감이야.',
       link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
-      previewTitle: '⏰ ' + store + ' 마감 5분 전!'
+      previewTitle: '⏰ ' + store + ' 곧 마감!'
     };
   },
 
@@ -209,9 +209,9 @@ var FLOW_MSG = {
   // #14 투표 리마인드
   voteReminder: function(title, deadlineStr, sessionId) {
     return {
-      content: '아직 투표 안 했어! ' + deadlineStr + '에 마감이야.',
+      content: '아직 투표 안 했어! 곧 마감이야.',
       link: FLOW_LINK.LIFE + '&vote=' + sessionId,
-      previewTitle: '⏰ 투표 마감 5분 전!'
+      previewTitle: '⏰ 투표 곧 마감!'
     };
   },
   // #15 투표 결과 (전원 발송)
