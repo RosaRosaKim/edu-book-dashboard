@@ -300,8 +300,12 @@ function showInfo(r){
   document.getElementById('info-floor').textContent=r.f+'층';
   document.getElementById('info-dot').className='w-2.5 h-2.5 rounded-full '+(r.t==='meeting'?'bg-indigo-500':'bg-emerald-500');
   const sx=(r.x/100)*imgW*scale+tx,sy=(r.y/100)*imgH*scale+ty;
-  let cx=sx+25,cy=sy-60;
-  if(cx+200>window.innerWidth-20)cx=sx-210;if(cy<10)cy=10;
+  const cw=210,ch=100,pad=20;
+  let cx=sx+25,cy=sy-ch-10;
+  if(cx+cw>window.innerWidth-pad)cx=sx-cw-10;
+  if(cx<pad)cx=pad;
+  if(cy<pad)cy=sy+25;
+  if(cy+ch>window.innerHeight-pad)cy=sy-ch-10;
   c.style.left=cx+'px';c.style.top=cy+'px';c.classList.add('show');
 }
 function closeInfo(){document.getElementById('info-card').classList.remove('show')}
