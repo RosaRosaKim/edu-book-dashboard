@@ -967,7 +967,7 @@ window._lifeAnimate = function(id, type) {
       $('iomBettingScoreVal').textContent = score + '점';
       $('iomBettingPlayBtn').classList.add('hidden');
       $('iomBettingMenuBtn').classList.add('hidden');
-      $('iomBettingBoard').innerHTML = '<div class="text-center py-2 text-[#9ab0ab] text-[13px]">점수 저장 중...</div>';
+      $('iomBettingBoard').innerHTML = '<div class="flex items-center justify-center gap-2 py-3"><svg class="w-4 h-4 text-accent animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span class="text-[13px] text-[#9ab0ab]">점수 저장 중</span></div>';
       try {
         var token = localStorage.getItem('token');
         var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +

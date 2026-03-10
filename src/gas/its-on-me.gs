@@ -184,7 +184,7 @@ function handleCreateItsOnMe(adminRow, e) {
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
   var failedUsers = [];
   for (var k = 0; k < allMembers.length; k++) {
-    // if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue; // 테스트: 본인에게도 발송
+    if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
     try {
       var msg = betting === 'Y'
         ? FLOW_MSG.itsOnMeBettingInvite(creatorName, store, deadlineStr, sid)
