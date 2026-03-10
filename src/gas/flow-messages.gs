@@ -268,7 +268,7 @@ var FLOW_MSG = {
   // #12g 이쏜미 내기 모드 리마인드
   itsOnMeBettingReminder: function(store, deadlineStr, sessionId) {
     return {
-      content: '아직 게임을 안 했어! 곧 마감이야.\n안 하면 자동 0점으로 꼴찌야!',
+      content: '아직 게임을 안 했어! 곧 마감이야.\n안 하면 내기에서 빠지게 돼!',
       link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
       previewTitle: '⏰ ' + store + ' 내기 곧 마감!'
     };

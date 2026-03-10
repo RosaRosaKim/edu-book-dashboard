@@ -607,26 +607,31 @@ function _closeItsOnMeSession(ss, masterSheet, respSheet, sid, masterIdx) {
   }
 
   if (isBetting) {
-    // 내기 모드: 꼴찌 결정 + 전원에게 결과 발송
+    // 내기 모드: 게임 참여자만 대상, 미참여자는 제외
     var scored = [];
     for (var s = 0; s < responses.length; s++) {
-      scored.push({
-        knoxId: responses[s].knoxId,
-        name: responses[s].name,
-        gameScore: responses[s].gameScore !== null ? responses[s].gameScore : 0 // 미플레이 = 0점
-      });
+      if (responses[s].gameScore !== null) {
+        scored.push({
+          knoxId: responses[s].knoxId,
+          name: responses[s].name,
+          gameScore: responses[s].gameScore
+        });
+      }
     }
-    scored.sort(function(a, b) { return a.gameScore - b.gameScore; });
 
-    // 동점 꼴찌 중 랜덤 선택
-    var lowestScore = scored[0].gameScore;
-    var losers = scored.filter(function(r) { return r.gameScore === lowestScore; });
-    var loser = losers[Math.floor(Math.random() * losers.length)];
+    if (scored.length > 0) {
+      scored.sort(function(a, b) { return a.gameScore - b.gameScore; });
+      // 동점 꼴찌 중 랜덤 선택
+      var lowestScore = scored[0].gameScore;
+      var losers = scored.filter(function(r) { return r.gameScore === lowestScore; });
+      var loser = losers[Math.floor(Math.random() * losers.length)];
 
-    var msg = FLOW_MSG.itsOnMeBettingSummary(store, responses, scored, loser);
-    // 전원에게 발송
-    for (var m = 0; m < responses.length; m++) {
-      try { sendFlowMsg(responses[m].knoxId, msg); } catch (_) {}
+      // 게임 참여자에게만 결과 + 메뉴 취합 발송 (참여자 기준)
+      var playedResponses = responses.filter(function(r) { return r.gameScore !== null; });
+      var msg = FLOW_MSG.itsOnMeBettingSummary(store, playedResponses, scored, loser);
+      for (var m = 0; m < scored.length; m++) {
+        try { sendFlowMsg(scored[m].knoxId, msg); } catch (_) {}
+      }
     }
   } else {
     // 일반 모드: 생성자에게만 취합 발송
