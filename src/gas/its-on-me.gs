@@ -25,8 +25,12 @@ function handleSendFindRoomFlow(adminRow, e) {
 
   var senderName = String(adminRow[ADMIN_COL.NAME] || '').trim();
   var msg = FLOW_MSG.findRoom(senderName, roomName, floor);
-  sendFlowMsg(targetKnox, msg);
-  return createResponse({ status: 'success' });
+  var ids = targetKnox.split(',');
+  for (var i = 0; i < ids.length; i++) {
+    var id = ids[i].trim();
+    if (id) sendFlowMsg(id, msg);
+  }
+  return createResponse({ status: 'success', count: ids.length });
 }
 
 /* ═══════════════ BizFlow 사용자 검색 ═══════════════ */

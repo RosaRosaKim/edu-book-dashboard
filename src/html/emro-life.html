@@ -260,6 +260,8 @@ window._lifeAnimate = function(id, type) {
     setMenuAlarmBtnState(on);
     var ui = window._userInfoData || {};
     window._initMenuKeywords(ui.menuLike || '', ui.menuDislike || '');
+    // 회의실 찾기 모듈 로드
+    if (window._loadModule) window._loadModule('find-room.html', 'findRoomContainer');
     // 미니게임 모듈 로드
     if (window._loadModule) window._loadModule('mini-game.html', 'miniGameContainer');
     // 딥링크 체크
@@ -1315,7 +1317,7 @@ window._lifeAnimate = function(id, type) {
 
     <!-- 투표 홈 -->
     <div id="voteHome">
-      <button onclick="voteOpenSetup()" class="w-full flex items-center justify-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+      <button onclick="voteOpenSetup()" class="w-full flex items-center justify-center gap-2 bg-surface-2 rounded-xl py-2.5 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
         <span class="text-lg">+</span>
         <span class="text-[12px] font-semibold text-[#47635f]">새 투표 만들기</span>
       </button>
@@ -2009,6 +2011,9 @@ window._lifeAnimate = function(id, type) {
 
 })();
 </script>
+
+<!-- ═══════════════ 회의실 찾기 (별도 모듈) ═══════════════ -->
+<div id="findRoomContainer"></div>
 
 <!-- ═══════════════ 미니게임 (별도 모듈) ═══════════════ -->
 <div id="miniGameContainer"></div>
