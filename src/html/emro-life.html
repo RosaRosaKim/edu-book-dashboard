@@ -256,6 +256,9 @@ window._lifeAnimate = function(id, type) {
       var el = document.getElementById(id);
       if (el) { el.style.display = ''; window._lifeAnimate(el); }
     });
+    // 미니게임 홈 버튼 복원 (내기모드에서 숨겼을 수 있음)
+    var mgHome = document.getElementById('mgHome');
+    if (mgHome) mgHome.classList.remove('hidden');
   };
 
   window.initLife = function() {
@@ -1080,6 +1083,9 @@ window._lifeAnimate = function(id, type) {
         // 미니게임 섹션도 표시 (딥링크로 이쏜미만 보일 때 대비)
         var mgEl = document.getElementById('sectionMiniGame');
         if (mgEl) mgEl.style.display = '';
+        // 미니게임 자체 시작버튼(mgHome) 숨김 — 내기모드는 이쏜미 버튼으로 게임 시작
+        var mgHome = document.getElementById('mgHome');
+        if (mgHome) mgHome.classList.add('hidden');
         $('iomMenuList').innerHTML = '';
         $('iomBettingArea').classList.remove('hidden');
         window._lifeAnimate('iomBettingArea');
