@@ -943,16 +943,19 @@ window._lifeAnimate = function(id, type) {
     window._mgBettingCallback = async function(score) {
       window._mgBettingSessionId = null;
       window._mgBettingCallback = null;
+      // 이쏜미 섹션으로 스크롤
+      var iomSection = document.getElementById('sectionItsOnMe');
+      if (iomSection) iomSection.scrollIntoView({ behavior: 'smooth' });
       try {
         var token = localStorage.getItem('token');
         var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +
           '&sessionId=' + encodeURIComponent(_currentSessionId) + '&gameScore=' + score);
-        if (res.error) { window.showToast(res.error, 'sad'); return; }
-        window.showToast(score + '점! 메뉴를 골라줘', 'smail');
+        if (res.error) { window.showToast(res.error, 'sad'); _showOrderView(_currentSessionId); return; }
+        window.showToast(score + '점! 이제 메뉴를 골라줘', 'smail');
       } catch (err) {
         window.showToast('점수 저장 실패', 'sad');
       }
-      // 주문 화면 갱신 (게임 후 메뉴 선택 단계로)
+      // 주문 화면 갱신 → 점수 확정 + 메뉴 선택 버튼 표시
       _showOrderView(_currentSessionId);
     };
     // 미니게임 섹션으로 스크롤 후 시작
