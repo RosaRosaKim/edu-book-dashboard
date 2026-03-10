@@ -248,7 +248,24 @@ var FLOW_MSG = {
       previewTitle: '🎲 ' + store + ' 내기 결과 — ' + loser.name + '이(가) 쏜다! ☕'
     };
   },
-  // #12f 이쏜미 내기 모드 리마인드
+  // #12f 이쏜미 내기 전원 완료 → 꼴찌 발표 + 메뉴 선택 안내
+  itsOnMeBettingAllPlayed: function(store, scoreboard, loser, sessionId) {
+    var sorted = scoreboard.slice().sort(function(a, b) { return b.gameScore - a.gameScore; });
+    var medals = ['🥇','🥈','🥉'];
+    var lines = [];
+    for (var i = 0; i < sorted.length; i++) {
+      var prefix = i < 3 ? medals[i] : (i + 1) + '위';
+      var suffix = sorted[i].knoxId === loser.knoxId ? ' ← 꼴찌!' : '';
+      lines.push(prefix + ' ' + sorted[i].name + ' ' + sorted[i].gameScore + '점' + suffix);
+    }
+    lines.push('\n링크 눌러서 메뉴 골라줘!');
+    return {
+      content: lines.join('\n'),
+      link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
+      previewTitle: '🎲 ' + loser.name + '이(가) 꼴찌! 메뉴 골라줘 ☕'
+    };
+  },
+  // #12g 이쏜미 내기 모드 리마인드
   itsOnMeBettingReminder: function(store, deadlineStr, sessionId) {
     return {
       content: '아직 게임을 안 했어! 곧 마감이야.\n안 하면 자동 0점으로 꼴찌야!',

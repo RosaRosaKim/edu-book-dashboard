@@ -514,10 +514,12 @@ function handleSubmitItsOnMeGameScore(adminRow, e) {
   if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
   var masterData = masterSheet.getDataRange().getValues();
   var found = false;
+  var masterIdx = -1;
   for (var i = 1; i < masterData.length; i++) {
     if (String(masterData[i][IOM_COL.SID]) === sid) {
       if (String(masterData[i][IOM_COL.STATUS]) === 'closed') return createResponse({ error: '이미 마감된 주문이야.' });
       if (String(masterData[i][IOM_COL.BETTING]) !== 'Y') return createResponse({ error: '내기 모드가 아니야.' });
+      masterIdx = i;
       found = true;
       break;
     }
@@ -540,7 +542,38 @@ function handleSubmitItsOnMeGameScore(adminRow, e) {
     }
 
     respSheet.getRange(j + 1, IOM_R_COL.GAME_SCORE + 1).setValue(gameScore);
-    return createResponse({ status: 'success', score: gameScore });
+
+    // 전원 게임 완료 체크 → 꼴찌 결정 + Flow 발송
+    var refreshed = respSheet.getDataRange().getValues();
+    var allPlayed = true;
+    var scoreboard = [];
+    for (var k = 1; k < refreshed.length; k++) {
+      if (String(refreshed[k][IOM_R_COL.SID]) !== sid) continue;
+      var sc = refreshed[k][IOM_R_COL.GAME_SCORE];
+      if (sc === '' || sc === null || sc === undefined) { allPlayed = false; break; }
+      scoreboard.push({
+        knoxId: String(refreshed[k][IOM_R_COL.KNOX]).trim(),
+        name: String(refreshed[k][IOM_R_COL.NAME]),
+        gameScore: Number(sc)
+      });
+    }
+
+    if (allPlayed && scoreboard.length > 0) {
+      // 꼴찌 결정
+      scoreboard.sort(function(a, b) { return a.gameScore - b.gameScore; });
+      var lowestScore = scoreboard[0].gameScore;
+      var losers = scoreboard.filter(function(r) { return r.gameScore === lowestScore; });
+      var loser = losers[Math.floor(Math.random() * losers.length)];
+
+      // 전원에게 꼴찌 발표 + 메뉴 선택 안내
+      var store = String(masterData[masterIdx][IOM_COL.STORE]);
+      var msg = FLOW_MSG.itsOnMeBettingAllPlayed(store, scoreboard, loser, sid);
+      for (var m = 0; m < scoreboard.length; m++) {
+        try { sendFlowMsg(scoreboard[m].knoxId, msg); } catch (_) {}
+      }
+    }
+
+    return createResponse({ status: 'success', score: gameScore, allPlayed: allPlayed });
   }
 
   return createResponse({ error: '이 주문에 포함되지 않았어.' });
