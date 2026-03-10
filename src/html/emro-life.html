@@ -902,7 +902,7 @@ window._lifeAnimate = function(id, type) {
       _currentSessionId = data.sessionId;
       _showOrderView(data.sessionId);
       if (betting) {
-        setTimeout(function() { window.showToast('내기 시작! 게임부터 해봐', 'smail'); }, 1000);
+        setTimeout(function() { window.showToast('내기 시작! 게임부터 해봐 🎲', 'smail'); }, 1000);
       } else {
         setTimeout(function() { window.showToast('너도 주문해야지? 메뉴판을 보여줄게', 'smail'); }, 1000);
       }
@@ -954,7 +954,7 @@ window._lifeAnimate = function(id, type) {
         var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +
           '&sessionId=' + encodeURIComponent(_currentSessionId) + '&gameScore=' + score);
         if (res.error) { window.showToast(res.error, 'sad'); _showOrderView(_currentSessionId); return; }
-        window.showToast(score + '점! 이제 메뉴를 골라줘', 'smail');
+        window.showToast(score + '점 확정! 다른 사람 결과를 기다려봐', 'smail');
       } catch (err) {
         window.showToast('점수 저장 실패', 'sad');
       }
