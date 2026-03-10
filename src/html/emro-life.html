@@ -972,6 +972,9 @@ window._lifeAnimate = function(id, type) {
   /* ─── 내기 모드: 메뉴 선택으로 전환 ─── */
   window.iomShowBettingMenu = function() {
     $('iomBettingArea').classList.add('hidden');
+    // 미니게임 섹션 숨김
+    var mgEl = document.getElementById('sectionMiniGame');
+    if (mgEl) mgEl.style.display = 'none';
     // 일반 메뉴 로드 흐름 재사용
     _loadBettingMenu();
   };
@@ -1086,6 +1089,8 @@ window._lifeAnimate = function(id, type) {
 
         // 내 점수 표시
         if (hasPlayed) {
+          // 게임 완료 후에는 미니게임 섹션 숨김
+          if (mgEl) mgEl.style.display = 'none';
           $('iomBettingMyScore').classList.remove('hidden');
           $('iomBettingScoreVal').textContent = myGameScore + '점';
           $('iomBettingPlayBtn').classList.add('hidden');
