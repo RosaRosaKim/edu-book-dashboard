@@ -3,7 +3,240 @@
 .mg-shake { animation: mgShake .18s ease-in-out; }
 @keyframes mgFlash { from{opacity:.5} to{opacity:0} }
 .mg-flash { position:absolute;inset:0;background:rgba(255,100,100,.35);pointer-events:none;border-radius:16px;animation:mgFlash .2s ease-out forwards; }
+#frSearchResults { max-height:0; overflow:hidden; transition: max-height 0.25s ease; }
+#frSearchResults.open { max-height:300px; overflow-y:auto; }
+#frSearchResults::-webkit-scrollbar { width:3px; }
+#frSearchResults::-webkit-scrollbar-thumb { background:#ccc; border-radius:2px; }
+.fr-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; transition:background 0.1s; }
+.fr-item:hover { background:var(--color-accent-10, rgba(45,212,191,0.08)); }
+.fr-item .fr-dot { width:6px; height:6px; border-radius:50%; background:var(--color-accent, #2dd4bf); flex-shrink:0; }
+.fr-item .fr-floor { font-size:10px; padding:1px 5px; border-radius:4px; background:var(--color-accent-10, rgba(45,212,191,0.1)); color:var(--color-accent, #2dd4bf); font-weight:600; }
+.fr-item .fr-name { font-size:13px; font-weight:500; flex:1; }
+.fr-item .fr-cap { font-size:11px; color:#6e7f7b; }
 </style>
+
+<!-- ═══════════════ 회의실 찾기 ═══════════════ -->
+<section id="sectionFindRoom" class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">회의실 찾기</div>
+        <div class="text-[11px] text-[#6e7f7b]">혁신이 어디 있다는거...</div>
+      </div>
+    </div>
+    <div class="relative">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6e7f7b] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input id="frSearchInput" type="text" placeholder="회의실명 검색..." autocomplete="off"
+        class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-surface-2 text-[13px] outline-none focus:border-accent transition-colors"
+        oninput="frOnSearch()" onkeydown="frOnKey(event)" onfocus="frOnSearch()"/>
+    </div>
+    <div id="frSearchResults"></div>
+
+    <!-- Flow 공유 패널 (회의실 선택 후 표시) -->
+    <div id="frSharePanel" class="hidden mt-3 pt-3 border-t border-border">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-[12px] font-semibold">📍 <span id="frShareRoom"></span></span>
+        <button onclick="frCloseShare()" class="ml-auto text-[11px] text-[#6e7f7b] hover:text-[#47635f]">취소</button>
+      </div>
+      <div class="flex gap-2 mb-2">
+        <button onclick="frOpenMap()" class="flex-1 py-2 rounded-lg bg-accent/10 text-accent text-[12px] font-semibold hover:bg-accent/20 transition">지도 보기</button>
+        <button onclick="frToggleFlowShare()" id="frFlowBtn" class="flex-1 py-2 rounded-lg bg-accent text-white text-[12px] font-semibold hover:brightness-110 transition">Flow로 공유</button>
+      </div>
+      <div id="frFlowArea" class="hidden">
+        <div class="relative mb-1.5">
+          <input id="frUserSearch" type="text" placeholder="이름 또는 ID로 검색 (본인 포함)" autocomplete="off"
+            class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60"
+            oninput="frSearchUsers()"/>
+        </div>
+        <div id="frUserResults" class="max-h-32 overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+  var frRooms = [
+    {name:'성장',f:5,cap:'6인'},{name:'도전',f:5,cap:'6인'},{name:'열정',f:5,cap:'6인'},
+    {name:'소통',f:5,cap:'30인'},{name:'소접견실',f:5,cap:'4인'},{name:'대접견실',f:5,cap:'8인'},
+    {name:'쉼',f:5,cap:''},{name:'배움',f:5,cap:'4인'},{name:'기회',f:5,cap:'6인'},
+    {name:'협력',f:5,cap:'6인'},{name:'비전',f:5,cap:'4인'},{name:'프론티어',f:5,cap:'16인'},
+    {name:'미래',f:5,cap:'4인'},{name:'창조',f:5,cap:'6인'},{name:'존중',f:5,cap:'6인'},
+    {name:'공감',f:5,cap:'6인'},
+    {name:'원팀',f:7,cap:'11인'},{name:'인재',f:7,cap:'8인'},{name:'피플',f:7,cap:'6인'},
+    {name:'혁신',f:7,cap:'10인'},{name:'탐구',f:7,cap:'12인'}
+  ];
+  var _selectedRoom = null;
+  var _frSearchTimer = null;
+  var _frUserCache = null;
+
+  // 사용자 목록 프리로드 (이쏜미와 동일 패턴)
+  function _frPreloadUsers(){
+    if(_frUserCache) return;
+    var token=localStorage.getItem('token');
+    if(!token||!window.gasFetch||!window.API_URL) return;
+    window.gasFetch(window.API_URL+'?action=getBizFlowUserList&token='+encodeURIComponent(token)).then(function(res){
+      if(!res||!res.ok||!res.d) return;
+      try{
+        var b64=res.d.split('').reverse().join('');
+        var bin=atob(b64);
+        var bytes=new Uint8Array(bin.length);
+        for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+        var arr=JSON.parse(new TextDecoder().decode(bytes));
+        _frUserCache=arr.map(function(u){return{knoxId:u[0],name:u[1],dept:u[2]};});
+      }catch(e){}
+    }).catch(function(){});
+  }
+  // 페이지 로드 시 프리로드
+  setTimeout(_frPreloadUsers, 500);
+
+  function frHL(t,q){
+    var i=t.toLowerCase().indexOf(q);
+    if(i===-1)return t;
+    return t.slice(0,i)+'<b style="color:var(--color-accent,#2dd4bf)">'+t.slice(i,i+q.length)+'</b>'+t.slice(i+q.length);
+  }
+
+  window.frOnSearch = function(){
+    var q=(document.getElementById('frSearchInput').value||'').trim().toLowerCase();
+    var el=document.getElementById('frSearchResults');
+    var list=frRooms;
+    if(q) list=list.filter(function(r){return r.name.toLowerCase().indexOf(q)>=0||(r.cap||'').toLowerCase().indexOf(q)>=0});
+    if(!list.length){
+      el.innerHTML='<div style="text-align:center;padding:12px;font-size:12px;color:#6e7f7b">검색 결과 없음</div>';
+      el.classList.add('open');return;
+    }
+    el.innerHTML=list.map(function(r){
+      return '<div class="fr-item" onclick="frSelect(\''+r.name+'\','+r.f+')">'
+        +'<div class="fr-dot"></div>'
+        +'<span class="fr-floor">'+r.f+'층</span>'
+        +'<div class="fr-name">'+(q?frHL(r.name,q):r.name)+'</div>'
+        +'<div class="fr-cap">'+(r.cap||'')+'</div></div>';
+    }).join('');
+    el.classList.add('open');
+  };
+
+  window.frOnKey = function(e){
+    if(e.key==='Enter'){
+      var first=document.querySelector('#frSearchResults .fr-item');
+      if(first)first.click();
+    }
+  };
+
+  window.frSelect = function(name, floor){
+    _selectedRoom = { name: name, floor: floor };
+    document.getElementById('frSearchInput').value='';
+    document.getElementById('frSearchResults').classList.remove('open');
+    document.getElementById('frShareRoom').textContent = floor + '층 ' + name;
+    document.getElementById('frSharePanel').classList.remove('hidden');
+    document.getElementById('frFlowArea').classList.add('hidden');
+    if(window._lifeAnimate) window._lifeAnimate('frSharePanel');
+  };
+
+  window.frOpenMap = function(){
+    if(!_selectedRoom) return;
+    var url='floor-3d.html?room='+encodeURIComponent(_selectedRoom.name);
+    var isMobile=window.innerWidth<=768;
+    if(isMobile){
+      window.open(url,'_blank');
+    } else {
+      var w=900,h=700;
+      var left=(screen.width-w)/2, top=(screen.height-h)/2;
+      window.open(url,'findRoom','width='+w+',height='+h+',left='+left+',top='+top+',scrollbars=no,resizable=yes');
+    }
+  };
+
+  window.frCloseShare = function(){
+    _selectedRoom = null;
+    document.getElementById('frSharePanel').classList.add('hidden');
+    document.getElementById('frFlowArea').classList.add('hidden');
+  };
+
+  window.frToggleFlowShare = function(){
+    var area = document.getElementById('frFlowArea');
+    area.classList.toggle('hidden');
+    if(!area.classList.contains('hidden')){
+      document.getElementById('frUserSearch').value='';
+      document.getElementById('frUserResults').innerHTML='';
+      document.getElementById('frUserSearch').focus();
+    }
+  };
+
+  // 사용자 검색 (로컬 캐시 우선 → API 폴백, 이쏜미와 동일)
+  window.frSearchUsers = function(){
+    clearTimeout(_frSearchTimer);
+    var word = (document.getElementById('frUserSearch').value||'').trim().toLowerCase();
+    var el = document.getElementById('frUserResults');
+    if(word.length < 1){ el.innerHTML=''; return; }
+
+    if(_frUserCache){
+      var results = [];
+      for(var i=0; i<_frUserCache.length; i++){
+        var u=_frUserCache[i];
+        if(u.name.toLowerCase().indexOf(word)!==-1 || u.knoxId.toLowerCase().indexOf(word)!==-1){
+          results.push(u);
+        }
+        if(results.length>=20) break;
+      }
+      _frRenderUsers(results);
+      return;
+    }
+
+    // 캐시 없으면 API 폴백
+    _frSearchTimer = setTimeout(function(){
+      el.innerHTML='<div class="text-[11px] text-[#9ab0ab] py-2 text-center">검색 중...</div>';
+      var token=localStorage.getItem('token');
+      if(!token||!window.gasFetch||!window.API_URL) return;
+      window.gasFetch(window.API_URL+'?action=searchBizFlowUsers&token='+encodeURIComponent(token)+'&searchWord='+encodeURIComponent(word)).then(function(data){
+        if(!data||!data.users){el.innerHTML='';return;}
+        _frRenderUsers(data.users);
+      }).catch(function(){el.innerHTML='';});
+    },400);
+  };
+
+  function _frRenderUsers(users){
+    var el=document.getElementById('frUserResults');
+    if(!users.length){el.innerHTML='<div class="text-[11px] text-[#9ab0ab] px-1 py-2">검색 결과가 없어.</div>';return;}
+    el.innerHTML=users.map(function(u){
+      return '<button onclick=\'frSendFlow('+JSON.stringify(u).replace(/\x27/g,"\\'")+')\''+
+        ' class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-accent/10 transition text-left">'+
+        '<div><span class="text-[13px] font-medium text-[#47635f]">'+u.name+'</span> <span class="text-[11px] text-[#9ab0ab]">'+(u.dept||'')+'</span></div>'+
+        '<span class="text-accent text-[11px] font-semibold">전송</span></button>';
+    }).join('');
+  }
+
+  window.frSendFlow = async function(user){
+    if(!_selectedRoom) return;
+    var token=localStorage.getItem('token');
+    if(!token||!window.gasFetch||!window.API_URL){
+      if(window.showToast) window.showToast('로그인이 필요해','sad');
+      return;
+    }
+    try{
+      var data = await window.gasFetch(window.API_URL+'?action=sendFindRoomFlow&token='+encodeURIComponent(token)
+        +'&targetKnoxId='+encodeURIComponent(user.knoxId)
+        +'&roomName='+encodeURIComponent(_selectedRoom.name)
+        +'&floor='+encodeURIComponent(_selectedRoom.floor));
+      if(data&&data.status==='success'){
+        if(window.showToast) window.showToast(user.name+'에게 전송 완료!','smail');
+      } else {
+        if(window.showToast) window.showToast(data&&data.error||'전송 실패','sad');
+      }
+    }catch(e){
+      if(window.showToast) window.showToast('전송 실패','sad');
+    }
+  };
+
+  // 바깥 클릭 시 결과 닫기
+  document.addEventListener('click',function(e){
+    var sec=document.getElementById('sectionFindRoom');
+    if(sec&&!sec.contains(e.target)){
+      document.getElementById('frSearchResults').classList.remove('open');
+    }
+  });
+})();
+</script>
 
 <!-- ═══════════════ 미니게임 ═══════════════ -->
 <section id="sectionMiniGame" class="mb-6">

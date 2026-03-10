@@ -15,6 +15,20 @@ var IOM_TPL_COL = { KNOX: 0, STORE: 1, MENUS: 2, UPDATED: 3 };
 // 이쏜미응답 시트 컬럼 (0-based)
 var IOM_R_COL = { SID: 0, KNOX: 1, NAME: 2, MENU: 3, OPTIONS: 4, PRICE: 5, UPDATED: 6 };
 
+/* ═══════════════ 회의실 위치 Flow 공유 ═══════════════ */
+
+function handleSendFindRoomFlow(adminRow, e) {
+  var targetKnox = String(e.parameter.targetKnoxId || '').trim();
+  var roomName = String(e.parameter.roomName || '').trim();
+  var floor = String(e.parameter.floor || '').trim();
+  if (!targetKnox || !roomName || !floor) return createResponse({ error: '필수 정보가 없어.' });
+
+  var senderName = String(adminRow[ADMIN_COL.NAME] || '').trim();
+  var msg = FLOW_MSG.findRoom(senderName, roomName, floor);
+  sendFlowMsg(targetKnox, msg);
+  return createResponse({ status: 'success' });
+}
+
 /* ═══════════════ BizFlow 사용자 검색 ═══════════════ */
 
 function handleSearchBizFlowUsers(adminRow, e) {
@@ -63,7 +77,7 @@ function handleGetBizFlowUserList(adminRow, e) {
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
     if (!knoxId) continue;
-    if (knoxId.toLowerCase() === myKnox) { myDept = dept; continue; }
+    if (knoxId.toLowerCase() === myKnox) { myDept = dept; /* continue; // 테스트용 본인포함 */ }
     users.push([knoxId, name, dept]);
   }
   // JSON → base64 → 문자열 반전 (평문 노출 방지)

@@ -3,249 +3,142 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>엠로 오피스 회의실 맵</title>
+<title>엠로 오피스 회의실 찾기</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{overflow:hidden;background:#0f0f1a;font-family:'Noto Sans KR',sans-serif;color:#e2e8f0;user-select:none;-webkit-user-select:none}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#0f0f1a;font-family:'Noto Sans KR',sans-serif;color:#e2e8f0;user-select:none;-webkit-user-select:none}
+#viewport{position:fixed;inset:0;overflow:hidden;cursor:grab}
+#viewport.grabbing{cursor:grabbing}
+#map-container{position:absolute;transform-origin:0 0;will-change:transform}
+#floor-img{display:block;pointer-events:none;border-radius:8px;box-shadow:0 0 60px rgba(99,102,241,0.06)}
+.marker{position:absolute;transform:translate(-50%,-50%);cursor:pointer;z-index:10;transition:transform 0.15s}
+.marker:hover{z-index:20}
+.marker-meeting .dot{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#a5b4fc,#6366f1);box-shadow:0 0 0 3px rgba(99,102,241,0.2),0 0 10px rgba(99,102,241,0.35);transition:all 0.2s}
+.marker-meeting:hover .dot,.marker.focused .dot{box-shadow:0 0 0 5px rgba(239,68,68,0.3),0 0 18px rgba(239,68,68,0.5)!important;background:radial-gradient(circle at 40% 35%,#fca5a5,#ef4444)!important}
+.marker-meeting .pulse{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;border:2px solid rgba(99,102,241,0.4);animation:mp 2.5s ease-out infinite}
+.marker-elevator .dot{width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 0 0 3px rgba(99,102,241,0.25),0 0 12px rgba(99,102,241,0.4);display:flex;align-items:center;justify-content:center}
+.marker-zone .dot{width:8px;height:8px;border-radius:50%;background:rgba(16,185,129,0.45);border:1.5px solid rgba(16,185,129,0.6)}
+.marker-label{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:3px;white-space:nowrap;font-size:9px;font-weight:600;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,0.9),0 0 2px rgba(0,0,0,0.7)}
+.marker-elevator .marker-label{color:#a5b4fc;font-size:8px;font-weight:700}
+.marker-zone .marker-label{color:#6ee7b7;font-size:8px}
+@keyframes mp{0%{width:16px;height:16px;opacity:.6}100%{width:40px;height:40px;opacity:0}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+.marker.blink{animation:blink 0.3s ease-in-out 6}
 
-  /* ── Map viewport ── */
-  #viewport{position:fixed;inset:0;overflow:hidden;cursor:grab}
-  #viewport.grabbing{cursor:grabbing}
-  #map-container{position:absolute;transform-origin:0 0;will-change:transform}
-  #floor-img{display:block;pointer-events:none;border-radius:12px;box-shadow:0 0 80px rgba(99,102,241,0.08)}
+/* ── Search Overlay ── */
+#search-overlay{position:fixed;inset:0;z-index:200;background:rgba(10,10,25,0.85);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.3s,visibility 0.3s}
+#search-overlay.hidden{opacity:0;visibility:hidden}
+#search-box{width:340px;max-width:calc(100vw - 40px)}
+#search-box input{width:100%;padding:14px 44px 14px 44px;border-radius:16px;border:1px solid rgba(99,102,241,0.25);background:rgba(30,30,50,0.95);color:#e2e8f0;font-size:15px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:all 0.2s}
+#search-box input:focus{border-color:rgba(99,102,241,0.5);box-shadow:0 0 0 3px rgba(99,102,241,0.15),0 4px 24px rgba(0,0,0,0.3)}
+#search-box input::placeholder{color:#6b7280}
+#search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#6366f1;pointer-events:none}
+#search-box .clear-btn{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#6b7280;cursor:pointer;display:none}
+#search-box .clear-btn.show{display:block}
+#overlay-results{margin-top:8px;width:100%;max-height:50vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 transparent}
+#overlay-results::-webkit-scrollbar{width:3px}
+#overlay-results::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
+.ov-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;cursor:pointer;transition:all 0.12s;border:1px solid transparent}
+.ov-item:hover{background:rgba(99,102,241,0.08);border-color:rgba(99,102,241,0.15)}
+.ov-item .ov-dot{width:8px;height:8px;border-radius:50%;background:#6366f1;flex-shrink:0}
+.ov-item .ov-name{font-size:14px;font-weight:500;color:#e2e8f0;flex:1}
+.ov-item .ov-meta{font-size:11px;color:#6b7280;display:flex;gap:6px;align-items:center}
+.ov-floor{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(99,102,241,0.12);color:#a5b4fc;font-weight:600}
+.search-hl{color:#a5b4fc;font-weight:600}
 
-  /* ── Markers ── */
-  .marker{
-    position:absolute;transform:translate(-50%,-50%);
-    cursor:pointer;z-index:10;
-    transition:transform 0.2s cubic-bezier(.4,0,.2,1);
-  }
-  .marker:hover{transform:translate(-50%,-50%) scale(1.25);z-index:20}
+/* ── Reopen button ── */
+#reopen-btn{position:fixed;top:12px;left:12px;z-index:100;padding:8px 14px;border-radius:12px;border:1px solid rgba(99,102,241,0.15);background:rgba(15,15,30,0.92);backdrop-filter:blur(16px);box-shadow:0 4px 16px rgba(0,0,0,0.4);color:#a5b4fc;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s}
+#reopen-btn:hover{border-color:rgba(99,102,241,0.35);color:#c7d2fe}
 
-  .marker-meeting .dot{
-    width:18px;height:18px;border-radius:50%;
-    background:radial-gradient(circle at 40% 35%,#a5b4fc,#6366f1);
-    box-shadow:0 0 0 3px rgba(99,102,241,0.25), 0 0 12px rgba(99,102,241,0.4);
-    transition:box-shadow 0.2s;
-  }
-  .marker-meeting:hover .dot{
-    box-shadow:0 0 0 5px rgba(99,102,241,0.35), 0 0 20px rgba(99,102,241,0.6);
-  }
-  .marker-meeting .pulse{
-    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    width:18px;height:18px;border-radius:50%;
-    border:2px solid rgba(99,102,241,0.5);
-    animation:pulse 2.5s ease-out infinite;
-  }
+/* ── Floor tabs on overlay ── */
+.floor-tabs{display:flex;gap:6px;margin-bottom:12px}
+.floor-tab{padding:6px 20px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1px solid rgba(99,102,241,0.12);background:rgba(30,30,50,0.6);color:#6b7280}
+.floor-tab.active{background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#a5b4fc}
+.floor-tab:hover{border-color:rgba(99,102,241,0.25);color:#94a3b8}
 
-  .marker-door .dot{
-    width:22px;height:12px;border-radius:3px;
-    background:linear-gradient(135deg,#fbbf24,#f59e0b);
-    box-shadow:0 0 8px rgba(251,191,36,0.4);
-    display:flex;align-items:center;justify-content:center;
-    font-size:7px;font-weight:700;color:#78350f;letter-spacing:-0.3px;
-  }
+/* ── Info card ── */
+#info-card{position:fixed;z-index:110;background:rgba(15,15,30,0.95);backdrop-filter:blur(16px);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 16px;min-width:190px;box-shadow:0 10px 36px rgba(0,0,0,0.6);opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity 0.2s,transform 0.2s}
+#info-card.show{opacity:1;pointer-events:auto;transform:translateY(0)}
 
-  .marker-zone .dot{
-    width:10px;height:10px;border-radius:50%;
-    background:rgba(16,185,129,0.5);
-    border:1.5px solid rgba(16,185,129,0.7);
-  }
+/* ── Zoom controls ── */
+#zoom-controls{position:fixed;bottom:12px;right:12px;z-index:100;display:flex;flex-direction:column;gap:3px}
+#zoom-controls button{width:34px;height:34px;border-radius:8px;border:1px solid rgba(99,102,241,0.12);background:rgba(15,15,30,0.85);backdrop-filter:blur(8px);color:#94a3b8;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s}
+#zoom-controls button:hover{border-color:rgba(99,102,241,0.35);color:#c7d2fe}
 
-  .marker-label{
-    position:absolute;left:50%;top:100%;transform:translateX(-50%);
-    margin-top:4px;white-space:nowrap;
-    font-size:10px;font-weight:600;line-height:1;
-    padding:2px 6px;border-radius:4px;
-    pointer-events:none;opacity:0.85;
-    text-shadow:0 1px 3px rgba(0,0,0,0.8);
-  }
-  .marker-meeting .marker-label{color:#c7d2fe}
-  .marker-door .marker-label{color:#fde68a;font-size:8px;font-weight:500}
-  .marker-zone .marker-label{color:#6ee7b7;font-size:9px;font-weight:500}
-
-  .marker.focused .dot{
-    box-shadow:0 0 0 6px rgba(239,68,68,0.3), 0 0 24px rgba(239,68,68,0.5) !important;
-    background:radial-gradient(circle at 40% 35%,#fca5a5,#ef4444) !important;
-  }
-  .marker.focused .pulse{border-color:rgba(239,68,68,0.6) !important}
-
-  @keyframes pulse{
-    0%{width:18px;height:18px;opacity:0.6}
-    100%{width:44px;height:44px;opacity:0}
-  }
-
-  /* ── Floating Panel ── */
-  #panel{
-    position:fixed;top:12px;left:12px;z-index:100;width:250px;
-    max-height:calc(100vh - 24px);display:flex;flex-direction:column;
-    background:rgba(15,15,30,0.92);backdrop-filter:blur(16px);
-    border:1px solid rgba(99,102,241,0.15);border-radius:16px;
-    box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden;
-  }
-  #panel-body{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:#333 transparent;padding:0 12px 12px}
-  #panel-body::-webkit-scrollbar{width:3px}
-  #panel-body::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
-
-  .room-item{
-    display:flex;align-items:center;gap:8px;
-    padding:7px 10px;border-radius:8px;cursor:pointer;
-    border:1px solid transparent;
-    transition:all 0.15s;
-  }
-  .room-item:hover{background:rgba(99,102,241,0.08);border-color:rgba(99,102,241,0.2);transform:translateX(2px)}
-  .room-item.active{background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.3)}
-
-  .room-item .room-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-  .room-item .room-name{font-size:12px;font-weight:500;flex:1;color:#d1d5db}
-  .room-item .room-cap{font-size:10px;color:#6b7280;flex-shrink:0}
-  .room-item:hover .room-name{color:#e2e8f0}
-
-  /* ── Info Card (future: reservation status) ── */
-  #info-card{
-    position:fixed;z-index:110;
-    background:rgba(15,15,30,0.95);backdrop-filter:blur(16px);
-    border:1px solid rgba(99,102,241,0.25);border-radius:14px;
-    padding:16px 20px;min-width:200px;
-    box-shadow:0 12px 40px rgba(0,0,0,0.6);
-    opacity:0;pointer-events:none;
-    transform:translateY(8px);
-    transition:opacity 0.25s, transform 0.25s;
-  }
-  #info-card.show{opacity:1;pointer-events:auto;transform:translateY(0)}
-
-  /* ── Bottom hint ── */
-  #hint-bar{
-    position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:90;
-    background:rgba(15,15,30,0.7);backdrop-filter:blur(8px);
-    border:1px solid rgba(99,102,241,0.1);border-radius:10px;
-    padding:6px 18px;font-size:11px;color:#64748b;
-    display:flex;gap:16px;align-items:center;
-  }
-  #hint-bar kbd{background:#1a1a30;border:1px solid #2a2a40;border-radius:3px;padding:0 5px;font-size:10px;color:#818cf8}
-
-  /* ── Search highlight ── */
-  .search-hl{color:#a5b4fc;font-weight:600}
-
-  /* ── Zoom controls ── */
-  #zoom-controls{
-    position:fixed;bottom:12px;right:12px;z-index:100;
-    display:flex;flex-direction:column;gap:4px;
-  }
-  #zoom-controls button{
-    width:36px;height:36px;border-radius:10px;border:1px solid rgba(99,102,241,0.15);
-    background:rgba(15,15,30,0.85);backdrop-filter:blur(8px);
-    color:#94a3b8;font-size:18px;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    transition:all 0.15s;
-  }
-  #zoom-controls button:hover{border-color:rgba(99,102,241,0.4);color:#c7d2fe}
+@media(max-width:640px){
+  #search-box{width:calc(100vw - 32px)}
+  #search-box input{font-size:14px;padding:12px 40px}
+  #zoom-controls{bottom:auto;top:10px;right:10px}
+  #info-card{left:10px!important;right:10px!important;bottom:10px!important;top:auto!important;width:auto!important;min-width:0!important}
+}
 </style>
 </head>
 <body>
-
-<!-- ═══ Map Viewport ═══ -->
 <div id="viewport">
   <div id="map-container">
-    <img id="floor-img" src="" alt="도면" />
+    <img id="floor-img" src="" alt="도면"/>
     <div id="markers-layer"></div>
   </div>
 </div>
 
-<!-- ═══ Info Card (shown on room click) ═══ -->
 <div id="info-card">
-  <div class="flex items-center gap-2 mb-2">
-    <div id="info-dot" class="w-3 h-3 rounded-full bg-indigo-500"></div>
-    <span id="info-floor" class="text-[10px] text-indigo-400 font-semibold"></span>
-  </div>
-  <div id="info-name" class="text-base font-bold text-white mb-1"></div>
-  <div id="info-cap" class="text-xs text-gray-400 mb-3"></div>
-  <!-- Future: reservation status -->
-  <div id="info-status" class="text-[11px] text-gray-500 border-t border-gray-700/50 pt-2">
-    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1 align-middle"></span>
-    예약 기능 준비중
-  </div>
-  <button onclick="closeInfoCard()" class="absolute top-3 right-3 text-gray-600 hover:text-gray-300 transition-colors">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-  </button>
+  <div class="flex items-center gap-2 mb-1"><div id="info-dot" class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div><span id="info-floor" class="text-[9px] text-indigo-400 font-semibold"></span></div>
+  <div id="info-name" class="text-sm font-bold text-white mb-0.5"></div>
+  <div id="info-cap" class="text-[11px] text-gray-400 mb-2"></div>
+  <div class="text-[10px] text-gray-500 border-t border-gray-700/40 pt-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 align-middle"></span>예약 기능 준비중</div>
+  <button onclick="closeInfo()" class="absolute top-2.5 right-2.5 text-gray-600 hover:text-gray-300"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
 </div>
 
-<!-- ═══ Left Panel ═══ -->
-<div id="panel">
-  <div class="p-3 pb-0">
-    <!-- Header -->
-    <div class="flex items-center gap-2.5 mb-3">
-      <div class="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
-        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-      </div>
-      <div>
-        <div class="text-white text-sm font-bold leading-tight">회의실 찾기</div>
-        <div class="text-gray-500 text-[10px]">엠로 오피스</div>
-      </div>
-    </div>
-
-    <!-- Search -->
-    <div class="relative mb-3">
-      <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-      </svg>
-      <input id="search" type="text" placeholder="회의실명 검색..."
-        class="w-full pl-8 pr-8 py-2 rounded-lg bg-gray-800/70 border border-gray-700/40 text-gray-200 text-xs placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all" />
-      <button id="search-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-300 hidden" onclick="clearSearch()">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-
-    <!-- Floor tabs -->
-    <div class="flex gap-1.5 mb-3">
-      <button onclick="switchFloor(5)" id="tab5" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-500/20">5층</button>
-      <button onclick="switchFloor(7)" id="tab7" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all bg-gray-800 text-gray-400 border border-gray-700/50 hover:border-gray-600">7층</button>
-    </div>
+<!-- Search Overlay -->
+<div id="search-overlay">
+  <div class="text-center mb-5">
+    <div class="text-lg font-bold text-white mb-1">회의실 찾기</div>
+    <div class="text-xs text-gray-500">회의실명을 검색하거나 목록에서 선택하세요</div>
   </div>
-
-  <!-- Room list -->
-  <div id="panel-body">
-    <div id="search-results" class="hidden"></div>
-    <div id="room-list"></div>
+  <div id="search-box" class="relative">
+    <svg id="search-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <input id="ov-search" type="text" placeholder="회의실명 검색..." autocomplete="off"/>
+    <button class="clear-btn" id="ov-clear" onclick="clearOvSearch()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+  </div>
+  <div id="search-box" style="width:340px;max-width:calc(100vw - 40px)">
+    <div class="floor-tabs mt-3" id="ov-tabs">
+      <div class="floor-tab active" data-floor="all" onclick="filterFloor('all')">전체</div>
+      <div class="floor-tab" data-floor="5" onclick="filterFloor('5')">5층</div>
+      <div class="floor-tab" data-floor="7" onclick="filterFloor('7')">7층</div>
+    </div>
+    <div id="overlay-results"></div>
   </div>
 </div>
 
-<!-- ═══ Zoom controls ═══ -->
+<!-- Reopen search button -->
+<button id="reopen-btn" onclick="openSearch()">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+  회의실 찾기
+</button>
+
 <div id="zoom-controls">
-  <button onclick="zoomTo(scale*1.4)" title="확대">+</button>
-  <button onclick="zoomTo(scale/1.4)" title="축소">-</button>
-  <button onclick="resetView()" title="전체보기" style="font-size:13px">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-  </button>
-</div>
-
-<!-- ═══ Bottom hint ═══ -->
-<div id="hint-bar">
-  <span><kbd>스크롤</kbd> 확대/축소</span>
-  <span><kbd>드래그</kbd> 이동</span>
-  <span id="floor-indicator" class="text-indigo-400 font-semibold">5층</span>
+  <button onclick="zoomBtn(1.4)">+</button>
+  <button onclick="zoomBtn(0.7)">-</button>
+  <button onclick="resetView()"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></button>
 </div>
 
 <script>
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // DATA
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 const rooms = [
   // 5F 회의실
   {id:'5-성장',f:5,t:'meeting',name:'성장',cap:'6인',x:4.5,y:5},
-  {id:'5-도전',f:5,t:'meeting',name:'도전',cap:'6인',x:14,y:14},
-  {id:'5-열정',f:5,t:'meeting',name:'열정',cap:'6인',x:14,y:28},
+  {id:'5-도전',f:5,t:'meeting',name:'도전',cap:'6인',x:21,y:13},
+  {id:'5-열정',f:5,t:'meeting',name:'열정',cap:'6인',x:21,y:27},
   {id:'5-소통',f:5,t:'meeting',name:'소통',cap:'30인',x:5.8,y:67},
   {id:'5-소접견실',f:5,t:'meeting',name:'소접견실',cap:'4인',x:36,y:65},
   {id:'5-대접견실',f:5,t:'meeting',name:'대접견실',cap:'8인',x:46,y:65},
   {id:'5-쉼',f:5,t:'meeting',name:'쉼',cap:'',x:63,y:5},
-  {id:'5-배움',f:5,t:'meeting',name:'배움',cap:'4인',x:75,y:5},
-  {id:'5-기회',f:5,t:'meeting',name:'기회',cap:'6인',x:84,y:5},
+  {id:'5-배움',f:5,t:'meeting',name:'배움',cap:'4인',x:82,y:5},
+  {id:'5-기회',f:5,t:'meeting',name:'기회',cap:'6인',x:90,y:5},
   {id:'5-협력',f:5,t:'meeting',name:'협력',cap:'6인',x:69,y:17},
   {id:'5-비전',f:5,t:'meeting',name:'비전',cap:'4인',x:80.5,y:16},
   {id:'5-프론티어',f:5,t:'meeting',name:'프론티어',cap:'16인',x:87,y:21},
@@ -256,13 +149,13 @@ const rooms = [
   // 5F 업무구역
   {id:'5-A',f:5,t:'zone',name:'글로벌사업팀',cap:'A구역',x:29,y:83},
   {id:'5-B',f:5,t:'zone',name:'사업기획본부',cap:'B구역',x:7,y:45},
-  {id:'5-C',f:5,t:'zone',name:'기반기술팀·프로젝트지원팀·디자인·글로벌솔루션',cap:'C구역',x:36,y:16},
+  {id:'5-C',f:5,t:'zone',name:'기반기술팀·디자인·글로벌솔루션',cap:'C구역',x:36,y:16},
   {id:'5-D',f:5,t:'zone',name:'솔루션개발팀',cap:'D구역',x:90,y:48},
-  // 5F 출입구
-  {id:'5-d1',f:5,t:'door',name:'출입구',cap:'',x:54,y:34},
-  {id:'5-d2',f:5,t:'door',name:'출입구',cap:'',x:27,y:62},
+  {id:'5-로비',f:5,t:'zone',name:'로비',cap:'',x:56,y:68},
+  // 5F 엘리베이터
+  {id:'5-ev',f:5,t:'elevator',name:'엘리베이터',x:53,y:48},
   // 7F 회의실
-  {id:'7-원팀',f:7,t:'meeting',name:'원팀',cap:'11인',x:10,y:9},
+  {id:'7-원팀',f:7,t:'meeting',name:'원팀',cap:'11인',x:13,y:9},
   {id:'7-인재',f:7,t:'meeting',name:'인재',cap:'8인',x:5.5,y:57},
   {id:'7-피플',f:7,t:'meeting',name:'피플',cap:'6인',x:13.5,y:57},
   {id:'7-혁신',f:7,t:'meeting',name:'혁신',cap:'10인',x:5.5,y:69},
@@ -272,448 +165,192 @@ const rooms = [
   {id:'7-G',f:7,t:'zone',name:'(G구역)',cap:'',x:8,y:47},
   {id:'7-E',f:7,t:'zone',name:'글로벌딜리버리그룹',cap:'E구역',x:19,y:84},
   {id:'7-F',f:7,t:'zone',name:'경영지원본부',cap:'F구역',x:87,y:62},
-  // 7F 출입구
-  {id:'7-d1',f:7,t:'door',name:'출입구',cap:'',x:28,y:27},
-  {id:'7-d2',f:7,t:'door',name:'출입구',cap:'',x:22,y:48},
-  {id:'7-d3',f:7,t:'door',name:'출입구',cap:'',x:28,y:58},
-  {id:'7-d4',f:7,t:'door',name:'출입구',cap:'',x:78,y:48},
+  // 7F 엘리베이터
+  {id:'7-ev',f:7,t:'elevator',name:'엘리베이터',x:53,y:42},
 ];
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // STATE
-// ════════════════════════════════════════════════════════════
-let currentFloor = 5;
-let scale = 1, tx = 0, ty = 0;
-let imgW = 0, imgH = 0;
-let isDragging = false, dragStartX = 0, dragStartY = 0, dragTxStart = 0, dragTyStart = 0;
-let focusedId = null;
-const MIN_SCALE = 0.5, MAX_SCALE = 5;
+// ═══════════════════════════════════
+let currentFloor=5, scale=1, tx=0, ty=0, imgW=0, imgH=0;
+let isDrag=false, dsx=0, dsy=0, dtx=0, dty=0, focusedId=null;
+let ovFloor='all';
+const MN=0.4, MX=5;
+const vp=document.getElementById('viewport'), mc=document.getElementById('map-container');
+const fi=document.getElementById('floor-img'), ml=document.getElementById('markers-layer');
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // INIT
-// ════════════════════════════════════════════════════════════
-const viewport = document.getElementById('viewport');
-const mapContainer = document.getElementById('map-container');
-const floorImg = document.getElementById('floor-img');
-const markersLayer = document.getElementById('markers-layer');
-
-function init() {
-  loadFloorImage(5);
-  buildRoomList();
-  setupEvents();
+// ═══════════════════════════════════
+function init(){
+  loadFloor(5);setupEvents();renderOvList();
+  // URL 파라미터: ?room=성장
+  const params=new URLSearchParams(location.search);
+  const roomParam=params.get('room');
+  if(roomParam){
+    const r=rooms.find(x=>x.t==='meeting'&&x.name===roomParam);
+    if(r){closeSearch();setTimeout(()=>onRoomClick(r.id),300);return}
+  }
+  // 파라미터 없으면 검색 오버레이 표시
+  setTimeout(()=>document.getElementById('ov-search').focus(),100);
 }
 
-function loadFloorImage(floor) {
-  const src = floor === 5 ? '../img/5층도면.png' : '../img/7층도면.png';
-  floorImg.onload = () => {
-    imgW = floorImg.naturalWidth;
-    imgH = floorImg.naturalHeight;
-    mapContainer.style.width = imgW + 'px';
-    mapContainer.style.height = imgH + 'px';
-    renderMarkers();
-    resetView();
+function loadFloor(f){
+  fi.onload=()=>{
+    imgW=fi.naturalWidth;imgH=fi.naturalHeight;
+    mc.style.width=imgW+'px';mc.style.height=imgH+'px';
+    renderMarkers();resetView();
   };
-  floorImg.src = src;
+  fi.src=f===5?'../img/5층도면.png':'../img/7층도면.png';
 }
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // MARKERS
-// ════════════════════════════════════════════════════════════
-function renderMarkers() {
-  markersLayer.innerHTML = '';
-  rooms.filter(r => r.f === currentFloor).forEach(room => {
-    const el = document.createElement('div');
-    el.className = `marker marker-${room.t}`;
-    el.dataset.id = room.id;
-    el.style.left = room.x + '%';
-    el.style.top = room.y + '%';
-
-    if (room.t === 'meeting') {
-      el.innerHTML = `
-        <div class="pulse"></div>
-        <div class="dot"></div>
-        <div class="marker-label">${room.name}${room.cap ? ' <span style="opacity:0.6">' + room.cap + '</span>' : ''}</div>
-      `;
-    } else if (room.t === 'door') {
-      el.innerHTML = `
-        <div class="dot">DOOR</div>
-        <div class="marker-label">${room.name}</div>
-      `;
-    } else if (room.t === 'zone') {
-      el.innerHTML = `
-        <div class="dot"></div>
-        <div class="marker-label">${room.cap || room.name}</div>
-      `;
-    }
-
-    el.addEventListener('click', e => {
-      e.stopPropagation();
-      selectRoom(room.id);
-    });
-    markersLayer.appendChild(el);
+// ═══════════════════════════════════
+function renderMarkers(){
+  ml.innerHTML='';
+  rooms.filter(r=>r.f===currentFloor).forEach(r=>{
+    const el=document.createElement('div');
+    el.className=`marker marker-${r.t}`;el.dataset.id=r.id;
+    el.style.left=r.x+'%';el.style.top=r.y+'%';
+    if(r.t==='meeting') el.innerHTML=`<div class="pulse"></div><div class="dot"></div>`;
+    else if(r.t==='elevator') el.innerHTML=`<div class="dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M7 15l5-5 5 5"/></svg></div><div class="marker-label">EV</div>`;
+    else el.innerHTML=`<div class="dot"></div><div class="marker-label">${r.cap||r.name}</div>`;
+    if(r.t==='meeting'||r.t==='zone') el.addEventListener('click',e=>{e.stopPropagation();onRoomClick(r.id)});
+    ml.appendChild(el);
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// ROOM LIST (panel)
-// ════════════════════════════════════════════════════════════
-function buildRoomList() {
-  const el = document.getElementById('room-list');
-  const floorRooms = rooms.filter(r => r.f === currentFloor && r.t !== 'door');
-  const meetings = floorRooms.filter(r => r.t === 'meeting');
-  const zones = floorRooms.filter(r => r.t === 'zone');
-
-  let html = '<div class="text-[10px] text-indigo-400/60 font-bold tracking-wider mb-1">회의실</div>';
-  meetings.forEach(r => {
-    html += roomItemHTML(r, 'bg-indigo-500');
-  });
-  html += '<div class="text-[10px] text-emerald-400/60 font-bold tracking-wider mt-3 mb-1">업무구역</div>';
-  zones.forEach(r => {
-    html += roomItemHTML(r, 'bg-emerald-500');
-  });
-  el.innerHTML = html;
-
-  // Bind clicks
-  el.querySelectorAll('.room-item').forEach(item => {
-    item.addEventListener('click', () => selectRoom(item.dataset.id));
-  });
+// ═══════════════════════════════════
+// SEARCH OVERLAY
+// ═══════════════════════════════════
+function renderOvList(query){
+  const el=document.getElementById('overlay-results');
+  const q=(query||'').trim().toLowerCase();
+  let list=rooms.filter(r=>r.t==='meeting');
+  if(ovFloor!=='all') list=list.filter(r=>r.f===parseInt(ovFloor));
+  if(q) list=list.filter(r=>r.name.toLowerCase().includes(q)||(r.cap||'').toLowerCase().includes(q));
+  el.innerHTML=list.length?list.map(r=>`<div class="ov-item" data-id="${r.id}"><div class="ov-dot"></div><span class="ov-floor">${r.f}층</span><div class="ov-name">${q?hl(r.name,q):r.name}</div><div class="ov-meta">${r.cap||''}</div></div>`).join(''):'<div class="text-gray-600 text-sm py-6 text-center">검색 결과 없음</div>';
+  el.querySelectorAll('.ov-item').forEach(i=>i.addEventListener('click',()=>{closeSearch();onRoomClick(i.dataset.id)}));
 }
 
-function roomItemHTML(room, dotColor) {
-  return `<div class="room-item" data-id="${room.id}">
-    <div class="room-dot ${dotColor}"></div>
-    <div class="room-name">${room.name}</div>
-    <div class="room-cap">${room.cap || ''}</div>
-  </div>`;
+function filterFloor(f){
+  ovFloor=f;
+  document.querySelectorAll('.floor-tab').forEach(t=>t.classList.toggle('active',t.dataset.floor===f));
+  renderOvList(document.getElementById('ov-search').value);
 }
 
-// ════════════════════════════════════════════════════════════
-// SEARCH
-// ════════════════════════════════════════════════════════════
-function setupSearch() {
-  const input = document.getElementById('search');
-  const clearBtn = document.getElementById('search-clear');
-  const resultsEl = document.getElementById('search-results');
-  const listEl = document.getElementById('room-list');
-
-  input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
-    clearBtn.classList.toggle('hidden', !q);
-
-    if (!q) {
-      resultsEl.classList.add('hidden');
-      resultsEl.innerHTML = '';
-      listEl.classList.remove('hidden');
-      return;
-    }
-
-    listEl.classList.add('hidden');
-    const matches = rooms.filter(r =>
-      r.t !== 'door' &&
-      (r.name.toLowerCase().includes(q) || (r.cap||'').toLowerCase().includes(q))
-    );
-
-    if (!matches.length) {
-      resultsEl.innerHTML = '<div class="text-gray-600 text-xs py-4 text-center">검색 결과 없음</div>';
-    } else {
-      resultsEl.innerHTML = matches.map(r => {
-        const floorBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 font-semibold">${r.f}층</span>`;
-        const dotColor = r.t === 'meeting' ? 'bg-indigo-500' : 'bg-emerald-500';
-        const nameHtml = hlMatch(r.name, q);
-        return `<div class="room-item" data-id="${r.id}">
-          <div class="room-dot ${dotColor}"></div>
-          ${floorBadge}
-          <div class="room-name">${nameHtml}</div>
-          <div class="room-cap">${r.cap||''}</div>
-        </div>`;
-      }).join('');
-
-      resultsEl.querySelectorAll('.room-item').forEach(item => {
-        item.addEventListener('click', () => selectRoom(item.dataset.id));
-      });
-    }
-    resultsEl.classList.remove('hidden');
+function setupOvSearch(){
+  const inp=document.getElementById('ov-search'),cb=document.getElementById('ov-clear');
+  inp.addEventListener('input',()=>{
+    cb.classList.toggle('show',!!inp.value);
+    renderOvList(inp.value);
   });
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const first = resultsEl.querySelector('.room-item');
-      if (first) selectRoom(first.dataset.id);
-    }
-    if (e.key === 'Escape') clearSearch();
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){const f=document.querySelector('#overlay-results .ov-item');if(f){closeSearch();onRoomClick(f.dataset.id)}}
+    if(e.key==='Escape')inp.value?clearOvSearch():closeSearch();
   });
 }
 
-function hlMatch(text, q) {
-  const i = text.toLowerCase().indexOf(q);
-  if (i === -1) return text;
-  return text.slice(0, i) + '<span class="search-hl">' + text.slice(i, i+q.length) + '</span>' + text.slice(i+q.length);
+function clearOvSearch(){
+  const inp=document.getElementById('ov-search');
+  inp.value='';document.getElementById('ov-clear').classList.remove('show');
+  renderOvList();inp.focus();
 }
 
-function clearSearch() {
-  const input = document.getElementById('search');
-  input.value = '';
-  document.getElementById('search-clear').classList.add('hidden');
-  document.getElementById('search-results').classList.add('hidden');
-  document.getElementById('search-results').innerHTML = '';
-  document.getElementById('room-list').classList.remove('hidden');
+function openSearch(){
+  const ov=document.getElementById('search-overlay');
+  ov.classList.remove('hidden');
+  clearOvSearch();
+  ovFloor='all';
+  document.querySelectorAll('.floor-tab').forEach(t=>t.classList.toggle('active',t.dataset.floor==='all'));
+  renderOvList();
+  setTimeout(()=>document.getElementById('ov-search').focus(),100);
 }
 
-// ════════════════════════════════════════════════════════════
-// SELECT ROOM → zoom + info card
-// ════════════════════════════════════════════════════════════
-function selectRoom(id) {
-  const room = rooms.find(r => r.id === id);
-  if (!room) return;
-
-  // Switch floor if needed
-  if (room.f !== currentFloor) {
-    switchFloor(room.f);
-    setTimeout(() => selectRoom(id), 200);
-    return;
-  }
-
-  // Unfocus previous
-  document.querySelectorAll('.marker.focused').forEach(m => m.classList.remove('focused'));
-  document.querySelectorAll('.room-item.active').forEach(m => m.classList.remove('active'));
-  focusedId = id;
-
-  // Focus marker
-  const markerEl = markersLayer.querySelector(`[data-id="${id}"]`);
-  if (markerEl) markerEl.classList.add('focused');
-
-  // Focus list item
-  const listItem = document.querySelector(`#room-list .room-item[data-id="${id}"], #search-results .room-item[data-id="${id}"]`);
-  if (listItem) listItem.classList.add('active');
-
-  // Zoom to room position
-  const targetScale = 2.5;
-  const targetX = window.innerWidth / 2 - (room.x / 100) * imgW * targetScale;
-  const targetY = window.innerHeight / 2 - (room.y / 100) * imgH * targetScale;
-  animateTo(targetScale, targetX, targetY, 500);
-
-  // Show info card near the room
-  setTimeout(() => showInfoCard(room), 350);
+function closeSearch(){
+  document.getElementById('search-overlay').classList.add('hidden');
 }
 
-function showInfoCard(room) {
-  const card = document.getElementById('info-card');
-  document.getElementById('info-name').textContent = room.name;
-  document.getElementById('info-cap').textContent = room.cap ? `수용인원: ${room.cap}` : '';
-  document.getElementById('info-floor').textContent = room.f + '층';
+function hl(t,q){const i=t.toLowerCase().indexOf(q);if(i===-1)return t;return t.slice(0,i)+'<span class="search-hl">'+t.slice(i,i+q.length)+'</span>'+t.slice(i+q.length)}
 
-  const dotEl = document.getElementById('info-dot');
-  dotEl.className = 'w-3 h-3 rounded-full ' + (room.t === 'meeting' ? 'bg-indigo-500' : 'bg-emerald-500');
-
-  // Position card near the marker on screen
-  const sx = (room.x / 100) * imgW * scale + tx;
-  const sy = (room.y / 100) * imgH * scale + ty;
-  const cardW = 220, cardH = 140;
-  let cx = sx + 30, cy = sy - cardH / 2;
-
-  // Keep in viewport
-  if (cx + cardW > window.innerWidth - 20) cx = sx - cardW - 30;
-  if (cy < 10) cy = 10;
-  if (cy + cardH > window.innerHeight - 10) cy = window.innerHeight - cardH - 10;
-
-  card.style.left = cx + 'px';
-  card.style.top = cy + 'px';
-  card.classList.add('show');
+// ═══════════════════════════════════
+// ROOM CLICK → FOCUS
+// ═══════════════════════════════════
+function onRoomClick(id){
+  const r=rooms.find(x=>x.id===id);if(!r)return;
+  if(r.f!==currentFloor){switchFloor(r.f);setTimeout(()=>onRoomClick(id),250);return}
+  // Clear previous focus
+  ml.querySelectorAll('.marker.focused').forEach(m=>m.classList.remove('focused'));
+  focusedId=id;
+  // Highlight marker + 2초 깜빡임
+  const mk=ml.querySelector(`[data-id="${id}"]`);
+  if(mk){mk.classList.add('focused','blink');setTimeout(()=>mk.classList.remove('blink'),2000)}
+  // Show info
+  showInfo(r);
 }
 
-function closeInfoCard() {
-  document.getElementById('info-card').classList.remove('show');
-  document.querySelectorAll('.marker.focused').forEach(m => m.classList.remove('focused'));
-  document.querySelectorAll('.room-item.active').forEach(m => m.classList.remove('active'));
-  focusedId = null;
+// ═══════════════════════════════════
+// INFO CARD
+// ═══════════════════════════════════
+function showInfo(r){
+  const c=document.getElementById('info-card');
+  document.getElementById('info-name').textContent=r.name;
+  document.getElementById('info-cap').textContent=r.cap?`수용인원: ${r.cap}`:'';
+  document.getElementById('info-floor').textContent=r.f+'층';
+  document.getElementById('info-dot').className='w-2.5 h-2.5 rounded-full '+(r.t==='meeting'?'bg-indigo-500':'bg-emerald-500');
+  const sx=(r.x/100)*imgW*scale+tx,sy=(r.y/100)*imgH*scale+ty;
+  let cx=sx+25,cy=sy-60;
+  if(cx+200>window.innerWidth-20)cx=sx-210;if(cy<10)cy=10;
+  c.style.left=cx+'px';c.style.top=cy+'px';c.classList.add('show');
 }
+function closeInfo(){document.getElementById('info-card').classList.remove('show')}
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // FLOOR SWITCH
-// ════════════════════════════════════════════════════════════
-function switchFloor(f) {
-  if (f === currentFloor) return;
-  currentFloor = f;
-  closeInfoCard();
-  clearSearch();
-
-  document.getElementById('tab5').className = f===5
-    ? 'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-    : 'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all bg-gray-800 text-gray-400 border border-gray-700/50 hover:border-gray-600';
-  document.getElementById('tab7').className = f===7
-    ? 'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-    : 'flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all bg-gray-800 text-gray-400 border border-gray-700/50 hover:border-gray-600';
-  document.getElementById('floor-indicator').textContent = f + '층';
-
-  loadFloorImage(f);
-  buildRoomList();
+// ═══════════════════════════════════
+function switchFloor(f){
+  if(f===currentFloor)return;
+  currentFloor=f;closeInfo();
+  focusedId=null;
+  ml.querySelectorAll('.marker.focused').forEach(m=>m.classList.remove('focused'));
+  loadFloor(f);
 }
 
-// ════════════════════════════════════════════════════════════
-// PAN & ZOOM (mouse + touch)
-// ════════════════════════════════════════════════════════════
-function setupEvents() {
-  // Mouse wheel zoom
-  viewport.addEventListener('wheel', e => {
-    e.preventDefault();
-    const rect = viewport.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const delta = e.deltaY > 0 ? 0.85 : 1.18;
-    zoomAt(mx, my, delta);
-  }, {passive: false});
-
-  // Mouse drag
-  viewport.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
-    isDragging = true;
-    dragStartX = e.clientX; dragStartY = e.clientY;
-    dragTxStart = tx; dragTyStart = ty;
-    viewport.classList.add('grabbing');
+// ═══════════════════════════════════
+// PAN & ZOOM
+// ═══════════════════════════════════
+function setupEvents(){
+  vp.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,e.deltaY>0?0.88:1.15)},{passive:false});
+  vp.addEventListener('mousedown',e=>{if(e.button!==0)return;isDrag=true;dsx=e.clientX;dsy=e.clientY;dtx=tx;dty=ty;vp.classList.add('grabbing')});
+  window.addEventListener('mousemove',e=>{if(!isDrag)return;tx=dtx+(e.clientX-dsx);ty=dty+(e.clientY-dsy);applyTf()});
+  window.addEventListener('mouseup',()=>{isDrag=false;vp.classList.remove('grabbing')});
+  let td0=0,ts0=1;
+  vp.addEventListener('touchstart',e=>{if(e.touches.length===1){isDrag=true;dsx=e.touches[0].clientX;dsy=e.touches[0].clientY;dtx=tx;dty=ty}if(e.touches.length===2){isDrag=false;td0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);ts0=scale}},{passive:true});
+  vp.addEventListener('touchmove',e=>{e.preventDefault();if(e.touches.length===1&&isDrag){tx=dtx+(e.touches[0].clientX-dsx);ty=dty+(e.touches[0].clientY-dsy);applyTf()}if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);const ns=Math.min(MX,Math.max(MN,ts0*(d/td0)));const cx=(e.touches[0].clientX+e.touches[1].clientX)/2,cy=(e.touches[0].clientY+e.touches[1].clientY)/2;const r=ns/scale;tx=cx-(cx-tx)*r;ty=cy-(cy-ty)*r;scale=ns;applyTf()}},{passive:false});
+  vp.addEventListener('touchend',()=>{isDrag=false});
+  vp.addEventListener('click',e=>{if(e.target===vp||e.target===fi||e.target===mc){closeInfo()}});
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT')return;
+    if(e.key==='/'||e.key==='f'){e.preventDefault();openSearch()}
+    if(e.key==='Escape')closeInfo();
   });
-  window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    tx = dragTxStart + (e.clientX - dragStartX);
-    ty = dragTyStart + (e.clientY - dragStartY);
-    applyTransform();
-  });
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-    viewport.classList.remove('grabbing');
-  });
-
-  // Touch pan & pinch
-  let touches0 = null, touchDist0 = 0, touchScale0 = 1, touchTx0 = 0, touchTy0 = 0;
-
-  viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
-      isDragging = true;
-      dragStartX = e.touches[0].clientX; dragStartY = e.touches[0].clientY;
-      dragTxStart = tx; dragTyStart = ty;
-    }
-    if (e.touches.length === 2) {
-      isDragging = false;
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      touchDist0 = Math.sqrt(dx*dx + dy*dy);
-      touchScale0 = scale;
-      touchTx0 = tx; touchTy0 = ty;
-    }
-  }, {passive: true});
-
-  viewport.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (e.touches.length === 1 && isDragging) {
-      tx = dragTxStart + (e.touches[0].clientX - dragStartX);
-      ty = dragTyStart + (e.touches[0].clientY - dragStartY);
-      applyTransform();
-    }
-    if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, touchScale0 * (dist / touchDist0)));
-      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      const ratio = newScale / scale;
-      tx = cx - (cx - tx) * ratio;
-      ty = cy - (cy - ty) * ratio;
-      scale = newScale;
-      applyTransform();
-    }
-  }, {passive: false});
-
-  viewport.addEventListener('touchend', () => { isDragging = false; });
-
-  // Click on viewport to close info card
-  viewport.addEventListener('click', e => {
-    if (e.target === viewport || e.target === floorImg || e.target === mapContainer) {
-      closeInfoCard();
-    }
-  });
-
-  // Keyboard shortcut
-  document.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT') return;
-    if (e.key === '/' || e.key === 'f' || e.key === 'F') {
-      e.preventDefault();
-      document.getElementById('search').focus();
-    }
-    if (e.key === 'Escape') {
-      closeInfoCard();
-      document.getElementById('search').blur();
-    }
-  });
-
-  setupSearch();
+  setupOvSearch();
 }
-
-function zoomAt(mx, my, delta) {
-  const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * delta));
-  const ratio = newScale / scale;
-  tx = mx - (mx - tx) * ratio;
-  ty = my - (my - ty) * ratio;
-  scale = newScale;
-  applyTransform();
+function zoomAt(mx,my,d){const ns=Math.min(MX,Math.max(MN,scale*d)),r=ns/scale;tx=mx-(mx-tx)*r;ty=my-(my-ty)*r;scale=ns;applyTf()}
+function zoomBtn(d){const cx=window.innerWidth/2,cy=window.innerHeight/2,ns=Math.min(MX,Math.max(MN,scale*d)),r=ns/scale;animTo(ns,cx-(cx-tx)*r,cy-(cy-ty)*r,250)}
+function resetView(){closeInfo();const vw=window.innerWidth,vh=window.innerHeight,p=60;const s=Math.min((vw-p)/imgW,(vh-p)/imgH);animTo(s,(vw-imgW*s)/2,(vh-imgH*s)/2,350)}
+function applyTf(){
+  mc.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  const inv=Math.min(1.3,1/scale);
+  ml.querySelectorAll('.marker-label').forEach(l=>l.style.transform=`translateX(-50%) scale(${inv})`);
+  ml.querySelectorAll('.marker').forEach(m=>{m.style.transform=`translate(-50%,-50%) scale(${inv})`+(m.classList.contains('focused')?' scale(1.2)':'')});
 }
-
-function zoomTo(targetScale) {
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  const ts = Math.min(MAX_SCALE, Math.max(MIN_SCALE, targetScale));
-  const ratio = ts / scale;
-  const ntx = cx - (cx - tx) * ratio;
-  const nty = cy - (cy - ty) * ratio;
-  animateTo(ts, ntx, nty, 300);
+function animTo(s,ttx,tty,dur){
+  const fs=scale,ftx=tx,fty=ty,t0=performance.now();
+  !function step(now){const t=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-t,3);scale=fs+(s-fs)*e;tx=ftx+(ttx-ftx)*e;ty=fty+(tty-fty)*e;applyTf();if(t<1)requestAnimationFrame(step)}(t0);
 }
-
-function resetView() {
-  closeInfoCard();
-  // Fit image to viewport with padding
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const pad = 80;
-  const fitScale = Math.min((vw - pad) / imgW, (vh - pad) / imgH);
-  const ftx = (vw - imgW * fitScale) / 2;
-  const fty = (vh - imgH * fitScale) / 2;
-  animateTo(fitScale, ftx, fty, 400);
-}
-
-function applyTransform() {
-  mapContainer.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
-  // Scale labels inversely so they stay readable
-  const invScale = Math.min(1.2, 1 / scale);
-  markersLayer.querySelectorAll('.marker-label').forEach(l => {
-    l.style.transform = `translateX(-50%) scale(${invScale})`;
-  });
-  markersLayer.querySelectorAll('.marker').forEach(m => {
-    const base = m.classList.contains('focused') ? 'translate(-50%,-50%) scale(1.3)' : 'translate(-50%,-50%)';
-    m.style.transform = base + ` scale(${invScale})`;
-  });
-}
-
-function animateTo(toScale, toTx, toTy, dur) {
-  const fromScale = scale, fromTx = tx, fromTy = ty;
-  const start = performance.now();
-  function step(now) {
-    const t = Math.min(1, (now - start) / dur);
-    const e = 1 - Math.pow(1 - t, 3); // ease-out cubic
-    scale = fromScale + (toScale - fromScale) * e;
-    tx = fromTx + (toTx - fromTx) * e;
-    ty = fromTy + (toTy - fromTy) * e;
-    applyTransform();
-    if (t < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-// ════════════════════════════════════════════════════════════
-// Responsive
-// ════════════════════════════════════════════════════════════
-window.addEventListener('resize', () => {
-  if (!isDragging) resetView();
-});
-
-// GO
+window.addEventListener('resize',()=>{if(!isDrag)resetView()});
 init();
 </script>
 </body>

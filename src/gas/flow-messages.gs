@@ -245,6 +245,15 @@ var FLOW_MSG = {
       link: FLOW_LINK.DASHBOARD,
       previewTitle: '⚠️ 신청서 동기화 실패'
     };
+  },
+
+  // 회의실 위치 공유
+  findRoom: function(senderName, roomName, floor) {
+    return {
+      content: senderName + '님이 회의실 위치를 알려줬어\n\n📍 ' + floor + '층 ' + roomName + '\n\n링크를 눌러서 위치를 확인해봐',
+      link: 'https://rosarosakim.github.io/edu-book-dashboard/floor-3d.html?room=' + encodeURIComponent(roomName),
+      previewTitle: '📍 ' + floor + '층 ' + roomName + ' 회의실 위치'
+    };
   }
 };
 

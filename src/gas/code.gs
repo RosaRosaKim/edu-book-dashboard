@@ -480,7 +480,8 @@ const doGet = (e) => {
     deleteVoteTemplate: handleDeleteVoteTemplate,
     closeVote: handleCloseVote,
     gameRankSave: handleGameRankSave,
-    gameRankList: handleGameRankList
+    gameRankList: handleGameRankList,
+    sendFindRoomFlow: handleSendFindRoomFlow
   };
   if (TOKEN_ACTIONS[action] && token) {
     const entry = _verifyToken(token, adminByKnoxId);
