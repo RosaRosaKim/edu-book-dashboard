@@ -248,7 +248,12 @@ var FLOW_MSG = {
   }
 };
 
-/** FLOW_MSG 헬퍼: 메시지 객체로 Flow 발송 */
+/** FLOW_MSG 헬퍼: 메시지 객체로 Flow 발송 (링크에 자동 인증 토큰 삽입) */
 function sendFlowMsg(knoxId, msg) {
-  return sendFlowGAS(knoxId, msg.content, msg.link, msg.previewTitle);
+  var link = msg.link;
+  if (link) {
+    var ft = _generateFlowToken(knoxId);
+    link += (link.indexOf('?') !== -1 ? '&' : '?') + 'ft=' + ft;
+  }
+  return sendFlowGAS(knoxId, msg.content, link, msg.previewTitle);
 }

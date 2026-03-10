@@ -818,10 +818,17 @@ function init() {
   // 이쏜미/투표 딥링크: sessionStorage에 저장 (로그인 후 라우팅)
   var urlItsOnMe = params.get('itsOnMe');
   var urlVote = params.get('vote');
+  var urlFlowToken = params.get('ft');
   if (urlItsOnMe) sessionStorage.setItem('itsOnMe', urlItsOnMe);
   if (urlVote) sessionStorage.setItem('vote', urlVote);
-  if (urlToken || urlTab || urlItsOnMe || urlVote) {
+  if (urlToken || urlTab || urlItsOnMe || urlVote || urlFlowToken) {
     window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  // Flow 링크 토큰이 있으면 자동 인증 시도
+  if (urlFlowToken) {
+    _authByFlowToken(urlFlowToken);
+    return;
   }
 
   const token = localStorage.getItem(TOKEN_KEY);
@@ -866,6 +873,33 @@ function showAuth() {
 function showDashboard() {
   $('authScreen').classList.add('hidden');
   $('dashboard').classList.remove('hidden');
+}
+
+/* ═══════════════ Flow 링크 자동 인증 ═══════════════ */
+async function _authByFlowToken(ft) {
+  // 이미 유효한 토큰이 있으면 바로 대시보드
+  const existing = localStorage.getItem(TOKEN_KEY);
+  if (existing) {
+    showDashboard();
+    loadDashboard();
+    return;
+  }
+  try {
+    const url = `${API_URL}?action=flowTokenAuth&ft=${encodeURIComponent(ft)}`;
+    const data = await gasFetch(url);
+    if (data.status === 'success' && data.token) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem('auth_method', 'flow_token');
+      if (data.session) localStorage.setItem('bizplay_session', JSON.stringify(data.session));
+      showDashboard();
+      loadDashboard();
+      return;
+    }
+  } catch (e) {
+    console.log('[flowToken] 자동 인증 실패:', e.message);
+  }
+  // 실패 시 일반 로그인 화면
+  showAuth();
 }
 
 /* ═══════════════ Bizplay 로그인 ═══════════════ */

@@ -36,6 +36,30 @@ function _generateToken(knoxId, encPw) {
   return knoxId + ':' + hash;
 }
 
+/** Flow 링크용 토큰 생성 (HMAC-SHA256, 24시간 유효) */
+function _generateFlowToken(knoxId) {
+  var secret = PropertiesService.getScriptProperties().getProperty('TOKEN_SALT') || 'default';
+  var expiry = new Date().getTime() + 24 * 60 * 60 * 1000;
+  var payload = knoxId + '.' + expiry;
+  var sig = Utilities.computeHmacSha256Signature(payload, secret)
+    .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+  return payload + '.' + sig;
+}
+
+/** Flow 링크 토큰 검증 → knoxId 반환, 실패 시 null */
+function _verifyFlowToken(flowToken) {
+  if (!flowToken) return null;
+  var parts = flowToken.split('.');
+  if (parts.length !== 3) return null;
+  var knoxId = parts[0], expiry = parseInt(parts[1], 10), sig = parts[2];
+  if (isNaN(expiry) || new Date().getTime() > expiry) return null;
+  var secret = PropertiesService.getScriptProperties().getProperty('TOKEN_SALT') || 'default';
+  var payload = knoxId + '.' + expiry;
+  var expected = Utilities.computeHmacSha256Signature(payload, secret)
+    .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+  return sig === expected ? knoxId : null;
+}
+
 /** 토큰 검증 → 일치하면 { row, idx } 반환, 아니면 null */
 function _verifyToken(token, adminByKnoxId) {
   if (!token || token.indexOf(':') === -1) return null;
@@ -390,6 +414,26 @@ const doGet = (e) => {
         deptCd: tempSession.deptCd || '',
         deptNm: tempSession.deptNm || '',
         deptShort: tempSession.deptShort || ''
+      }
+    });
+  }
+
+  // [기능 22] Flow 링크 토큰으로 자동 인증 (로그인 없이)
+  if (action === "flowTokenAuth") {
+    var ft = e.parameter.ft;
+    var ftKnoxId = _verifyFlowToken(ft);
+    if (!ftKnoxId) return createResponse({ error: "INVALID_FLOW_TOKEN" });
+    var ftEntry = adminByKnoxId.get(ftKnoxId);
+    if (!ftEntry) return createResponse({ error: "USER_NOT_FOUND" });
+    var ftEncPw = String(ftEntry.row[7] || '');
+    return createResponse({
+      status: 'success',
+      token: _generateToken(ftKnoxId, ftEncPw),
+      userName: ftEntry.row[ADMIN_COL.NAME] || '',
+      session: {
+        userName: ftEntry.row[ADMIN_COL.NAME] || '',
+        deptCd: ftEntry.row[ADMIN_COL.DEPT_CD] || '',
+        deptNm: ftEntry.row[ADMIN_COL.DEPT] || ''
       }
     });
   }
