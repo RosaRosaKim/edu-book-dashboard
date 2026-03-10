@@ -241,10 +241,13 @@ window._lifeAnimate = function(id, type) {
     if (e.key === 'Enter' && e.target.id === 'menuDislikeInput') { e.preventDefault(); window.addMenuDislike(); }
   });
 
-  function _showOnlySection(sectionId) {
+  function _showOnlySection(sectionId, extraIds) {
+    var show = {};
+    show[sectionId] = true;
+    if (extraIds) extraIds.forEach(function(id) { show[id] = true; });
     ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame'].forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.style.display = (id === sectionId) ? '' : 'none';
+      if (el) el.style.display = show[id] ? '' : 'none';
     });
     window._lifeAnimate(sectionId);
   }
@@ -1071,6 +1074,9 @@ window._lifeAnimate = function(id, type) {
 
       // 내기 모드: 게임 먼저, 메뉴는 나중에
       if (session.betting === 'Y') {
+        // 미니게임 섹션도 표시 (딥링크로 이쏜미만 보일 때 대비)
+        var mgEl = document.getElementById('sectionMiniGame');
+        if (mgEl) mgEl.style.display = '';
         $('iomMenuList').innerHTML = '';
         $('iomBettingArea').classList.remove('hidden');
         window._lifeAnimate('iomBettingArea');
