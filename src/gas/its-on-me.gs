@@ -9,11 +9,11 @@ var IOM_RESP    = '이쏜미응답';
 var IOM_TPL     = '이쏜미템플릿';
 
 // 이쏜미 시트 컬럼 (0-based)
-var IOM_COL = { SID: 0, CREATOR_KNOX: 1, CREATOR_NAME: 2, STORE: 3, DEADLINE: 4, STATUS: 5, CREATED: 6, TOTAL: 7, CUSTOM_MENUS: 8 };
+var IOM_COL = { SID: 0, CREATOR_KNOX: 1, CREATOR_NAME: 2, STORE: 3, DEADLINE: 4, STATUS: 5, CREATED: 6, TOTAL: 7, CUSTOM_MENUS: 8, BETTING: 9 };
 // 이쏜미템플릿 시트 컬럼 (0-based)
 var IOM_TPL_COL = { KNOX: 0, STORE: 1, MENUS: 2, UPDATED: 3 };
 // 이쏜미응답 시트 컬럼 (0-based)
-var IOM_R_COL = { SID: 0, KNOX: 1, NAME: 2, MENU: 3, OPTIONS: 4, PRICE: 5, UPDATED: 6 };
+var IOM_R_COL = { SID: 0, KNOX: 1, NAME: 2, MENU: 3, OPTIONS: 4, PRICE: 5, UPDATED: 6, GAME_SCORE: 7 };
 
 /* ═══════════════ 회의실 위치 Flow 공유 ═══════════════ */
 
@@ -132,6 +132,7 @@ function handleCreateItsOnMe(adminRow, e) {
   var minutes  = parseInt(e.parameter.minutes) || 30;
   var membersJson = String(e.parameter.members || '[]');
   var customMenus = String(e.parameter.customMenus || '');
+  var betting  = String(e.parameter.betting || '').trim() === 'Y' ? 'Y' : '';
 
   if (!store) return createResponse({ error: '가게를 선택해줘.' });
 
@@ -165,7 +166,7 @@ function handleCreateItsOnMe(adminRow, e) {
   }
 
   masterSheet.appendRow([sid, creatorKnox, creatorName, store,
-    deadline, 'open', now, allMembers.length, customMenus]);
+    deadline, 'open', now, allMembers.length, customMenus, betting]);
 
   // 응답 시트에 전원 행 삽입
   var respSheet = ss.getSheetByName(IOM_RESP);
@@ -175,17 +176,19 @@ function handleCreateItsOnMe(adminRow, e) {
   }
   var respRows = [];
   for (var j = 0; j < allMembers.length; j++) {
-    respRows.push([sid, allMembers[j].knoxId, allMembers[j].name, '', '', '', '']);
+    respRows.push([sid, allMembers[j].knoxId, allMembers[j].name, '', '', '', '', '']);
   }
-  if (respRows.length) respSheet.getRange(respSheet.getLastRow() + 1, 1, respRows.length, 7).setValues(respRows);
+  if (respRows.length) respSheet.getRange(respSheet.getLastRow() + 1, 1, respRows.length, 8).setValues(respRows);
 
   // Flow 발송 (생성자 제외)
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
   var failedUsers = [];
   for (var k = 0; k < allMembers.length; k++) {
-    if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue;
+    // if (allMembers[k].knoxId.toLowerCase() === creatorKnox.toLowerCase()) continue; // 테스트: 본인에게도 발송
     try {
-      var msg = FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
+      var msg = betting === 'Y'
+        ? FLOW_MSG.itsOnMeBettingInvite(creatorName, store, deadlineStr, sid)
+        : FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
       sendFlowMsg(allMembers[k].knoxId, msg);
     } catch (ex) {
       failedUsers.push(allMembers[k].name);
@@ -226,7 +229,8 @@ function handleGetItsOnMe(adminRow, e) {
         deadline: new Date(masterData[i][IOM_COL.DEADLINE]).toISOString(),
         status: String(masterData[i][IOM_COL.STATUS]),
         total: Number(masterData[i][IOM_COL.TOTAL]),
-        customMenus: String(masterData[i][IOM_COL.CUSTOM_MENUS] || '')
+        customMenus: String(masterData[i][IOM_COL.CUSTOM_MENUS] || ''),
+        betting: String(masterData[i][IOM_COL.BETTING] || '')
       };
       break;
     }
@@ -242,11 +246,13 @@ function handleGetItsOnMe(adminRow, e) {
     var respData = respSheet.getDataRange().getValues();
     for (var j = 1; j < respData.length; j++) {
       if (String(respData[j][IOM_R_COL.SID]) !== sid) continue;
+      var rawScore = respData[j][IOM_R_COL.GAME_SCORE];
       var resp = {
         knoxId: String(respData[j][IOM_R_COL.KNOX]),
         name: String(respData[j][IOM_R_COL.NAME]),
         menu: String(respData[j][IOM_R_COL.MENU]),
         options: String(respData[j][IOM_R_COL.OPTIONS]),
+        gameScore: (rawScore !== '' && rawScore !== null && rawScore !== undefined) ? Number(rawScore) : null,
         updated: respData[j][IOM_R_COL.UPDATED] ? new Date(respData[j][IOM_R_COL.UPDATED]).toISOString() : ''
       };
       responses.push(resp);
@@ -402,7 +408,7 @@ function handleAddItsOnMeMembers(adminRow, e) {
   for (var k = 0; k < newMembers.length; k++) {
     var knox = String(newMembers[k].knoxId).trim().toLowerCase();
     if (existingKnox[knox]) continue;
-    respRows.push([sid, newMembers[k].knoxId, newMembers[k].name, '', '', '', '']);
+    respRows.push([sid, newMembers[k].knoxId, newMembers[k].name, '', '', '', '', '']);
     added.push(newMembers[k]);
     existingKnox[knox] = true;
   }
@@ -418,10 +424,13 @@ function handleAddItsOnMeMembers(adminRow, e) {
   var creatorKnox = String(session[IOM_COL.CREATOR_KNOX]).trim().toLowerCase();
   var creatorName = String(session[IOM_COL.CREATOR_NAME]);
   var store = String(session[IOM_COL.STORE]);
+  var isBetting = String(session[IOM_COL.BETTING]) === 'Y';
   var deadlineStr = Utilities.formatDate(new Date(session[IOM_COL.DEADLINE]), 'Asia/Seoul', 'HH:mm');
   for (var m = 0; m < added.length; m++) {
     try {
-      var msg = FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
+      var msg = isBetting
+        ? FLOW_MSG.itsOnMeBettingInvite(creatorName, store, deadlineStr, sid)
+        : FLOW_MSG.itsOnMeInvite(creatorName, store, deadlineStr, sid);
       sendFlowMsg(added[m].knoxId, msg);
     } catch (_) {}
   }
@@ -490,6 +499,53 @@ function handleExtendItsOnMe(adminRow, e) {
   return createResponse({ status: 'success', newDeadline: newDeadline.toISOString(), deadlineStr: dlStr });
 }
 
+/* ═══════════════ 내기 모드: 게임 점수 저장 ═══════════════ */
+
+function handleSubmitItsOnMeGameScore(adminRow, e) {
+  var sid = String(e.parameter.sessionId || '').trim();
+  var gameScore = parseInt(e.parameter.gameScore, 10);
+  if (!sid || isNaN(gameScore) || gameScore < 0) return createResponse({ error: '잘못된 요청' });
+
+  var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 세션 확인 (open + betting)
+  var masterSheet = ss.getSheetByName(IOM_SHEET);
+  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
+  var masterData = masterSheet.getDataRange().getValues();
+  var found = false;
+  for (var i = 1; i < masterData.length; i++) {
+    if (String(masterData[i][IOM_COL.SID]) === sid) {
+      if (String(masterData[i][IOM_COL.STATUS]) === 'closed') return createResponse({ error: '이미 마감된 주문이야.' });
+      if (String(masterData[i][IOM_COL.BETTING]) !== 'Y') return createResponse({ error: '내기 모드가 아니야.' });
+      found = true;
+      break;
+    }
+  }
+  if (!found) return createResponse({ error: '세션을 찾을 수 없어.' });
+
+  // 응답 행에서 내 행 찾기
+  var respSheet = ss.getSheetByName(IOM_RESP);
+  if (!respSheet) return createResponse({ error: '응답 시트 오류' });
+  var respData = respSheet.getDataRange().getValues();
+
+  for (var j = 1; j < respData.length; j++) {
+    if (String(respData[j][IOM_R_COL.SID]) !== sid) continue;
+    if (String(respData[j][IOM_R_COL.KNOX]).trim().toLowerCase() !== myKnox) continue;
+
+    // 이미 점수가 있으면 재플레이 불가
+    var existing = respData[j][IOM_R_COL.GAME_SCORE];
+    if (existing !== '' && existing !== null && existing !== undefined) {
+      return createResponse({ error: '이미 게임을 했어! 재도전은 안 돼.' });
+    }
+
+    respSheet.getRange(j + 1, IOM_R_COL.GAME_SCORE + 1).setValue(gameScore);
+    return createResponse({ status: 'success', score: gameScore });
+  }
+
+  return createResponse({ error: '이 주문에 포함되지 않았어.' });
+}
+
 /* ═══════════════ 마감 처리 (내부) ═══════════════ */
 
 function _closeItsOnMeSession(ss, masterSheet, respSheet, sid, masterIdx) {
@@ -497,24 +553,53 @@ function _closeItsOnMeSession(ss, masterSheet, respSheet, sid, masterIdx) {
   masterSheet.getRange(masterIdx + 1, IOM_COL.STATUS + 1).setValue('closed');
 
   // 응답 수집
+  var masterRow = masterSheet.getDataRange().getValues()[masterIdx];
   var respData = respSheet.getDataRange().getValues();
   var responses = [];
-  var creatorKnox = String(masterSheet.getDataRange().getValues()[masterIdx][IOM_COL.CREATOR_KNOX]);
-  var store = String(masterSheet.getDataRange().getValues()[masterIdx][IOM_COL.STORE]);
+  var creatorKnox = String(masterRow[IOM_COL.CREATOR_KNOX]);
+  var store = String(masterRow[IOM_COL.STORE]);
+  var isBetting = String(masterRow[IOM_COL.BETTING]) === 'Y';
 
   for (var i = 1; i < respData.length; i++) {
     if (String(respData[i][IOM_R_COL.SID]) !== sid) continue;
+    var rawScore = respData[i][IOM_R_COL.GAME_SCORE];
     responses.push({
+      knoxId: String(respData[i][IOM_R_COL.KNOX]).trim(),
       name: String(respData[i][IOM_R_COL.NAME]),
       menu: String(respData[i][IOM_R_COL.MENU]).trim(),
       options: String(respData[i][IOM_R_COL.OPTIONS]).trim(),
-      price: Number(respData[i][IOM_R_COL.PRICE]) || 0
+      price: Number(respData[i][IOM_R_COL.PRICE]) || 0,
+      gameScore: (rawScore !== '' && rawScore !== null && rawScore !== undefined) ? Number(rawScore) : null
     });
   }
 
-  // 취합 메시지 생성 + 발송
-  var msg = FLOW_MSG.itsOnMeSummary(store, responses);
-  sendFlowMsg(creatorKnox, msg);
+  if (isBetting) {
+    // 내기 모드: 꼴찌 결정 + 전원에게 결과 발송
+    var scored = [];
+    for (var s = 0; s < responses.length; s++) {
+      scored.push({
+        knoxId: responses[s].knoxId,
+        name: responses[s].name,
+        gameScore: responses[s].gameScore !== null ? responses[s].gameScore : 0 // 미플레이 = 0점
+      });
+    }
+    scored.sort(function(a, b) { return a.gameScore - b.gameScore; });
+
+    // 동점 꼴찌 중 랜덤 선택
+    var lowestScore = scored[0].gameScore;
+    var losers = scored.filter(function(r) { return r.gameScore === lowestScore; });
+    var loser = losers[Math.floor(Math.random() * losers.length)];
+
+    var msg = FLOW_MSG.itsOnMeBettingSummary(store, responses, scored, loser);
+    // 전원에게 발송
+    for (var m = 0; m < responses.length; m++) {
+      try { sendFlowMsg(responses[m].knoxId, msg); } catch (_) {}
+    }
+  } else {
+    // 일반 모드: 생성자에게만 취합 발송
+    var msg = FLOW_MSG.itsOnMeSummary(store, responses);
+    sendFlowMsg(creatorKnox, msg);
+  }
 
   // 1시간 후 데이터 삭제 트리거
   ScriptApp.newTrigger('_cleanupItsOnMe')
@@ -646,12 +731,19 @@ function pollItsOnMeClose() {
     var minLeft = (deadline.getTime() - now.getTime()) / 60000;
     if (minLeft <= 5 && !remindedSet[sid]) {
       var store = String(data[i][IOM_COL.STORE]);
+      var isBetting = String(data[i][IOM_COL.BETTING]) === 'Y';
       var dlStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
       for (var j = 1; j < respData.length; j++) {
         if (String(respData[j][IOM_R_COL.SID]) !== sid) continue;
-        if (String(respData[j][IOM_R_COL.MENU]).trim()) continue; // 이미 선택함
+        // 내기 모드: 게임 미플레이 OR 메뉴 미선택이면 리마인드
+        var needRemind = isBetting
+          ? (respData[j][IOM_R_COL.GAME_SCORE] === '' || respData[j][IOM_R_COL.GAME_SCORE] === null || !String(respData[j][IOM_R_COL.MENU]).trim())
+          : !String(respData[j][IOM_R_COL.MENU]).trim();
+        if (!needRemind) continue;
         try {
-          var msg = FLOW_MSG.itsOnMeReminder(store, dlStr, sid);
+          var msg = isBetting
+            ? FLOW_MSG.itsOnMeBettingReminder(store, dlStr, sid)
+            : FLOW_MSG.itsOnMeReminder(store, dlStr, sid);
           sendFlowMsg(String(respData[j][IOM_R_COL.KNOX]).trim(), msg);
         } catch (_) {}
       }

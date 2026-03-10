@@ -847,6 +847,19 @@
       if (gameOverHandled) return;
       gameOverHandled = true;
       var sc = Math.floor(score);
+
+      // 내기 모드: 점수를 콜백으로 전달하고 글로벌 랭킹은 건드리지 않음
+      if (window._mgBettingSessionId && window._mgBettingCallback) {
+        var cb = window._mgBettingCallback;
+        setTimeout(function() {
+          if (_cleanup) { _cleanup(); _cleanup = null; }
+          $('mgPlay').classList.add('hidden');
+          $('mgHome').classList.remove('hidden');
+          cb(sc);
+        }, 1500);
+        return;
+      }
+
       var minScore = _rankCache.length < 5 ? 0 : _rankCache[_rankCache.length - 1].score;
       if (sc > minScore || _rankCache.length < 5) {
         /* Top5 진입 → 결과 화면 표시, 메시지 입력 대기 */

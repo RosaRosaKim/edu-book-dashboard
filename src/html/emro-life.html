@@ -399,6 +399,23 @@ window._lifeAnimate = function(id, type) {
         </div>
       </div>
 
+      <!-- 내기 모드 -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between bg-surface-2 rounded-xl px-4 py-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎲</span>
+            <div>
+              <div class="text-[13px] font-semibold text-[#47635f]">내기 모드</div>
+              <div class="text-[11px] text-[#6e7f7b]">퇴근러너 꼴찌가 쏜다!</div>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="iomBettingToggle" class="sr-only peer">
+            <div class="w-9 h-5 bg-[#c8d6d3] rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+      </div>
+
       <!-- 발송 버튼 -->
       <button id="iomSendBtn" onclick="iomCreate()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
         보내기
@@ -422,6 +439,29 @@ window._lifeAnimate = function(id, type) {
         <div class="flex gap-1.5">
           <button onclick="iomShowAddMember()" class="text-[11px] text-accent hover:underline">+멤버</button>
           <button onclick="iomExtendTime()" class="text-[11px] text-accent hover:underline">+10분</button>
+        </div>
+      </div>
+      <!-- 내기 모드 영역 -->
+      <div id="iomBettingArea" class="hidden mb-3">
+        <div class="text-center bg-accent/5 rounded-xl py-4 px-3 mb-3">
+          <div class="text-2xl mb-1">🎲</div>
+          <div class="text-sm font-semibold text-[#47635f]">내기 모드</div>
+          <div class="text-[11px] text-[#6e7f7b] mt-1">퇴근러너 꼴찌가 커피를 쏜다!</div>
+          <div id="iomBettingMyScore" class="hidden mt-2">
+            <span class="text-lg font-bold text-accent" id="iomBettingScoreVal">-</span>
+            <div class="text-[11px] text-[#6e7f7b] mt-0.5">내 점수 (확정)</div>
+          </div>
+        </div>
+        <div id="iomBettingBoard" class="space-y-1 mb-3"></div>
+        <div class="flex gap-2">
+          <button id="iomBettingPlayBtn" onclick="iomStartBettingGame()"
+            class="flex-1 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition">
+            🏃 게임 시작
+          </button>
+          <button id="iomBettingMenuBtn" onclick="iomShowBettingMenu()"
+            class="flex-1 py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition hidden">
+            ☕ 메뉴 선택
+          </button>
         </div>
       </div>
       <!-- 먹던대로 -->
@@ -847,16 +887,22 @@ window._lifeAnimate = function(id, type) {
     try {
       var token = localStorage.getItem('token');
       var minutes = $('iomMinutes').value;
+      var betting = $('iomBettingToggle') && $('iomBettingToggle').checked ? 'Y' : '';
       var url = window.API_URL + '?action=createItsOnMe&token=' + encodeURIComponent(token) +
         '&store=' + encodeURIComponent(_store) + '&minutes=' + minutes +
         '&members=' + encodeURIComponent(JSON.stringify(_members));
+      if (betting) url += '&betting=Y';
       if (_customMenus.length) url += '&customMenus=' + encodeURIComponent(JSON.stringify(_customMenus));
       var data = await window.gasFetch(url);
       if (data.error) { window.showToast(data.error, 'sad'); return; }
-      // 본인도 메뉴 선택 화면으로
+      // 본인도 주문 화면으로
       _currentSessionId = data.sessionId;
       _showOrderView(data.sessionId);
-      setTimeout(function() { window.showToast('너도 주문해야지? 메뉴판을 보여줄게', 'smail'); }, 1000);
+      if (betting) {
+        setTimeout(function() { window.showToast('내기 시작! 게임부터 해봐', 'smail'); }, 1000);
+      } else {
+        setTimeout(function() { window.showToast('너도 주문해야지? 메뉴판을 보여줄게', 'smail'); }, 1000);
+      }
     } catch (err) {
       window.showToast('발송 실패: ' + err.message, 'sad');
     } finally {
@@ -866,6 +912,96 @@ window._lifeAnimate = function(id, type) {
   };
 
   /* ─── 메뉴 선택 화면 (딥링크 / 생성 후) ─── */
+  /* ─── 내기 모드: 스코어보드 렌더링 ─── */
+  function _renderBettingScoreboard(responses) {
+    var board = $('iomBettingBoard');
+    if (!board) return;
+    var played = responses.filter(function(r) { return r.gameScore !== null; })
+      .sort(function(a, b) { return b.gameScore - a.gameScore; });
+    var waiting = responses.filter(function(r) { return r.gameScore === null; });
+    if (!played.length && !waiting.length) { board.innerHTML = ''; return; }
+    var html = '<div class="text-[11px] text-[#6e7f7b] mb-1 font-semibold">🏆 현황</div>';
+    var medals = ['🥇','🥈','🥉'];
+    played.forEach(function(r, i) {
+      var prefix = i < 3 ? medals[i] : (i + 1) + '위';
+      html += '<div class="flex justify-between bg-surface-2 rounded-lg px-3 py-1.5 text-[12px]">' +
+        '<span>' + prefix + ' <span class="font-medium text-[#47635f]">' + _esc(r.name) + '</span></span>' +
+        '<span class="font-semibold text-accent">' + r.gameScore + '점</span></div>';
+    });
+    if (waiting.length) {
+      html += '<div class="text-[11px] text-[#9ab0ab] mt-1.5 px-1">⏳ 대기: ' + waiting.map(function(r) { return r.name; }).join(', ') + '</div>';
+    }
+    board.innerHTML = html;
+  }
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  /* ─── 내기 모드: 게임 시작 ─── */
+  window.iomStartBettingGame = function() {
+    if (!_currentSessionId) return;
+    // 글로벌 변수로 미니게임에 내기 모드 전달
+    window._mgBettingSessionId = _currentSessionId;
+    window._mgBettingCallback = async function(score) {
+      window._mgBettingSessionId = null;
+      window._mgBettingCallback = null;
+      try {
+        var token = localStorage.getItem('token');
+        var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +
+          '&sessionId=' + encodeURIComponent(_currentSessionId) + '&gameScore=' + score);
+        if (res.error) { window.showToast(res.error, 'sad'); return; }
+        window.showToast(score + '점! 메뉴를 골라줘', 'smail');
+      } catch (err) {
+        window.showToast('점수 저장 실패', 'sad');
+      }
+      // 주문 화면 갱신 (게임 후 메뉴 선택 단계로)
+      _showOrderView(_currentSessionId);
+    };
+    // 미니게임 섹션으로 스크롤 후 시작
+    var mgSection = document.getElementById('sectionMiniGame');
+    if (mgSection) {
+      mgSection.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(function() { if (window.mgStartGame) window.mgStartGame(); }, 400);
+    }
+  };
+
+  /* ─── 내기 모드: 메뉴 선택으로 전환 ─── */
+  window.iomShowBettingMenu = function() {
+    $('iomBettingArea').classList.add('hidden');
+    // 일반 메뉴 로드 흐름 재사용
+    _loadBettingMenu();
+  };
+
+  async function _loadBettingMenu() {
+    var session = _orderSession;
+    if (!session) return;
+    $('iomMenuList').innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">메뉴 불러오는 중...</div>';
+
+    // 먹던대로
+    if (_lastOrder) {
+      var loLabel = _lastOrder.menu + (_lastOrder.options ? ' (' + _lastOrder.options + ')' : '');
+      $('iomLastOrderLabel').textContent = loLabel;
+      $('iomLastOrder').classList.remove('hidden');
+    }
+
+    if (session.customMenus) {
+      try {
+        var cm = JSON.parse(session.customMenus);
+        _menuData = cm.map(function(m, i) { return { id: i, name: m.name, price: m.price || 0, category: '메뉴', img: '' }; });
+        _optionsData = {};
+        _renderCustomOrderMenu();
+      } catch (_) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 파싱 오류</div>'; }
+    } else {
+      try {
+        var token = localStorage.getItem('token');
+        var menuRes = await window.gasFetch(window.API_URL + '?action=getBanapressoMenu&token=' + encodeURIComponent(token));
+        if (menuRes && menuRes.menus) {
+          _menuData = menuRes.menus;
+          _optionsData = menuRes.options || {};
+          _renderOrderMenu();
+        }
+      } catch (_) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 로드 실패</div>'; }
+    }
+  }
+
   window.openItsOnMeOrder = function(sessionId) {
     _currentSessionId = sessionId;
     _showOrderView(sessionId);
@@ -888,6 +1024,7 @@ window._lifeAnimate = function(id, type) {
     $('iomStatusBar').classList.add('hidden');
     $('iomLastOrder').classList.add('hidden');
     $('iomAddMemberPanel').classList.add('hidden');
+    $('iomBettingArea').classList.add('hidden');
 
     try {
       var token = localStorage.getItem('token');
@@ -914,7 +1051,51 @@ window._lifeAnimate = function(id, type) {
         var myOpts = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
         $('iomMenuList').innerHTML = '';
         $('iomOrderDone').classList.remove('hidden');
-        $('iomOrderDone').textContent = '마감된 주문이야. 내 선택: ' + myMenu + myOpts;
+        if (session.betting === 'Y') {
+          // 내기 모드 마감: 결과 표시
+          var closedHtml = '마감된 내기야. 내 선택: ' + myMenu + myOpts;
+          var myScore = data.myResponse.gameScore;
+          if (myScore !== null) closedHtml += '<br><span class="text-accent font-semibold">내 점수: ' + myScore + '점</span>';
+          $('iomOrderDone').innerHTML = closedHtml;
+        } else {
+          $('iomOrderDone').textContent = '마감된 주문이야. 내 선택: ' + myMenu + myOpts;
+        }
+        return;
+      }
+
+      // 먹던대로 데이터 미리 저장 (내기 모드에서도 사용)
+      _lastOrder = data.lastOrder || null;
+
+      // 내기 모드: 게임 먼저, 메뉴는 나중에
+      if (session.betting === 'Y') {
+        $('iomMenuList').innerHTML = '';
+        $('iomBettingArea').classList.remove('hidden');
+        window._lifeAnimate('iomBettingArea');
+        var myGameScore = data.myResponse ? data.myResponse.gameScore : null;
+        var hasPlayed = myGameScore !== null;
+        var hasMenu = data.myResponse && data.myResponse.menu;
+
+        // 내 점수 표시
+        if (hasPlayed) {
+          $('iomBettingMyScore').classList.remove('hidden');
+          $('iomBettingScoreVal').textContent = myGameScore + '점';
+          $('iomBettingPlayBtn').classList.add('hidden');
+          if (!hasMenu) {
+            $('iomBettingMenuBtn').classList.remove('hidden');
+          } else {
+            $('iomBettingMenuBtn').classList.add('hidden');
+            $('iomOrderDone').classList.remove('hidden');
+            var optStr2 = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
+            $('iomOrderDone').innerHTML = '선택 완료: <strong>' + data.myResponse.menu + optStr2 + '</strong>';
+          }
+        } else {
+          $('iomBettingMyScore').classList.add('hidden');
+          $('iomBettingPlayBtn').classList.remove('hidden');
+          $('iomBettingMenuBtn').classList.add('hidden');
+        }
+
+        // 스코어보드
+        _renderBettingScoreboard(data.responses || []);
         return;
       }
 
@@ -928,7 +1109,6 @@ window._lifeAnimate = function(id, type) {
       }
 
       // 먹던대로
-      _lastOrder = data.lastOrder;
       if (_lastOrder) {
         var loLabel = _lastOrder.menu + (_lastOrder.options ? ' (' + _lastOrder.options + ')' : '');
         $('iomLastOrderLabel').textContent = loLabel;

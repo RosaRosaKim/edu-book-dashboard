@@ -198,6 +198,65 @@ var FLOW_MSG = {
     };
   },
 
+  // #12d 이쏜미 내기 모드 초대
+  itsOnMeBettingInvite: function(creatorName, store, deadlineStr, sessionId) {
+    return {
+      content: store + ' · ' + deadlineStr + ' 마감\n\n🎲 내기 모드! 퇴근러너 꼴찌가 쏜다!\n링크 눌러서 게임하고 메뉴 골라줘',
+      link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
+      previewTitle: '🎲 ' + creatorName + ' 프로가 내기를 걸었어!'
+    };
+  },
+  // #12e 이쏜미 내기 모드 결과
+  itsOnMeBettingSummary: function(store, responses, scoreboard, loser) {
+    var lines = [];
+    // 스코어보드 (높은 점수 → 낮은 점수)
+    var sorted = scoreboard.slice().sort(function(a, b) { return b.gameScore - a.gameScore; });
+    var medals = ['🥇','🥈','🥉'];
+    for (var i = 0; i < sorted.length; i++) {
+      var prefix = i < 3 ? medals[i] : (i + 1) + '위';
+      var suffix = sorted[i].knoxId === loser.knoxId ? ' ← 꼴찌!' : '';
+      lines.push(prefix + ' ' + sorted[i].name + ' ' + sorted[i].gameScore + '점' + suffix);
+    }
+    // 메뉴 취합 (기존 itsOnMeSummary와 동일 로직)
+    var totalPrice = 0;
+    var groups = {};
+    var noChoice = [];
+    for (var j = 0; j < responses.length; j++) {
+      var r = responses[j];
+      if (!r.menu) { noChoice.push(r.name); continue; }
+      totalPrice += (r.price || 0);
+      var key = r.menu + (r.options ? ' (' + r.options + ')' : '');
+      if (!groups[key]) groups[key] = { label: key, names: [], price: r.price || 0 };
+      groups[key].names.push(r.name);
+    }
+    if (Object.keys(groups).length) {
+      lines.push('');
+      var idx = 1;
+      var keys = Object.keys(groups);
+      for (var k = 0; k < keys.length; k++) {
+        var g = groups[keys[k]];
+        var priceTag = g.price ? ' ' + g.price.toLocaleString() + '원' : '';
+        lines.push(idx + '. ' + g.label + priceTag + ' x' + g.names.length);
+        idx++;
+      }
+    }
+    if (noChoice.length) lines.push('\n미선택 x' + noChoice.length);
+    if (totalPrice > 0) lines.push('\n총 금액: ' + totalPrice.toLocaleString() + '원');
+    return {
+      content: lines.join('\n'),
+      link: '',
+      previewTitle: '🎲 ' + store + ' 내기 결과 — ' + loser.name + '이(가) 쏜다! ☕'
+    };
+  },
+  // #12f 이쏜미 내기 모드 리마인드
+  itsOnMeBettingReminder: function(store, deadlineStr, sessionId) {
+    return {
+      content: '아직 게임을 안 했어! 곧 마감이야.\n안 하면 자동 0점으로 꼴찌야!',
+      link: FLOW_LINK.LIFE + '&itsOnMe=' + sessionId,
+      previewTitle: '⏰ ' + store + ' 내기 곧 마감!'
+    };
+  },
+
   // #13 투표 초대
   voteInvite: function(creatorName, title, deadlineStr, sessionId) {
     return {

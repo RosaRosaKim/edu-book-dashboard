@@ -467,6 +467,7 @@ const doGet = (e) => {
     submitItsOnMeMenu: handleSubmitItsOnMeMenu,
     addItsOnMeMembers: handleAddItsOnMeMembers,
     extendItsOnMe: handleExtendItsOnMe,
+    submitItsOnMeGameScore: handleSubmitItsOnMeGameScore,
     getItsOnMeTemplates: handleGetItsOnMeTemplates,
     saveItsOnMeTemplate: handleSaveItsOnMeTemplate,
     deleteItsOnMeTemplate: handleDeleteItsOnMeTemplate,
