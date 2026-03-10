@@ -248,12 +248,12 @@ var FLOW_MSG = {
   }
 };
 
-/** FLOW_MSG 헬퍼: 메시지 객체로 Flow 발송 (링크에 자동 인증 토큰 삽입) */
+/** FLOW_MSG 헬퍼: 메시지 객체로 Flow 발송 (이쏜미/투표 링크에만 자동 인증 토큰 삽입) */
 function sendFlowMsg(knoxId, msg) {
   var link = msg.link;
-  if (link) {
+  if (link && (link.indexOf('&itsOnMe=') !== -1 || link.indexOf('&vote=') !== -1)) {
     var ft = _generateFlowToken(knoxId);
-    link += (link.indexOf('?') !== -1 ? '&' : '?') + 'ft=' + ft;
+    link += '&ft=' + ft;
   }
   return sendFlowGAS(knoxId, msg.content, link, msg.previewTitle);
 }
