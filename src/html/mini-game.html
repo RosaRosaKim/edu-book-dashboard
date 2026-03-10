@@ -1193,10 +1193,8 @@
   }
 
   fetchRanking();
-  // 내기모드가 아닐 때만 시작버튼 표시
-  if (document.body.classList.contains('betting-mode')) {
-    $('mgHome').style.display = 'none';
-  } else {
+  // 일반 모드일 때만 시작버튼 표시 (딥링크/내기모드에서는 숨김 유지)
+  if (window._showMgHome) {
     $('mgHome').classList.remove('hidden');
   }
 })();

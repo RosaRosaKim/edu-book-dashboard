@@ -260,7 +260,7 @@ window._lifeAnimate = function(id, type) {
     // 내기모드 해제 + mgHome 복원
     document.body.classList.remove('betting-mode');
     var mgHome = document.getElementById('mgHome');
-    if (mgHome) mgHome.style.display = '';
+    if (mgHome) { mgHome.classList.remove('hidden'); mgHome.style.display = ''; }
   };
 
   window.initLife = function() {
@@ -274,16 +274,21 @@ window._lifeAnimate = function(id, type) {
     if (window._loadModule) window._loadModule('mini-game.html', 'miniGameContainer');
     // 딥링크 체크
     var pendingSid = sessionStorage.getItem('itsOnMe');
+    var pendingVote = sessionStorage.getItem('vote');
+    var isDeepLink = !!(pendingSid || pendingVote);
     if (pendingSid) {
       sessionStorage.removeItem('itsOnMe');
       _showOnlySection('sectionItsOnMe');
       window.openItsOnMeOrder(pendingSid);
     }
-    var pendingVote = sessionStorage.getItem('vote');
     if (pendingVote) {
       sessionStorage.removeItem('vote');
       _showOnlySection('sectionVote');
       window.openVoteView(pendingVote);
+    }
+    // 딥링크 아닐 때만 미니게임 시작버튼 표시 (모듈 로드 후)
+    if (!isDeepLink) {
+      window._showMgHome = true;
     }
   };
 })();
@@ -1094,19 +1099,9 @@ window._lifeAnimate = function(id, type) {
         // 미니게임 섹션도 표시 (딥링크로 이쏜미만 보일 때 대비)
         var mgEl = document.getElementById('sectionMiniGame');
         if (mgEl) mgEl.style.display = '';
-        // 미니게임 자체 시작버튼 숨김
+        // 미니게임 시작버튼은 _showMgHome 플래그 없으면 자동으로 숨김 유지
         document.body.classList.add('betting-mode');
-        var _hideMgHome = function() {
-          var h = document.getElementById('mgHome');
-          if (h) h.style.display = 'none';
-        };
-        _hideMgHome();
-        // 모듈 아직 미로드 대비: 컨테이너 감시
-        var mc = document.getElementById('miniGameContainer');
-        if (mc && !document.getElementById('mgHome')) {
-          var obs = new MutationObserver(function() { _hideMgHome(); obs.disconnect(); });
-          obs.observe(mc, { childList: true, subtree: true });
-        }
+        window._showMgHome = false;
         $('iomMenuList').innerHTML = '';
         $('iomBettingArea').classList.remove('hidden');
         window._lifeAnimate('iomBettingArea');
