@@ -309,6 +309,19 @@ window._lifeAnimate = function(id, type) {
 
     <!-- 메인 화면: 가게 선택 -->
     <div id="iomHome">
+      <!-- 진행중인 주문 복귀 버튼 -->
+      <div id="iomResumeBar" class="hidden mb-2">
+        <button onclick="iomResumeOrder()" class="w-full flex items-center justify-between bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 hover:bg-accent/15 transition">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">📋</span>
+            <div class="text-left">
+              <div class="text-[13px] font-semibold text-accent">진행중인 주문이 있어</div>
+              <div class="text-[11px] text-[#6e7f7b]" id="iomResumeStore"></div>
+            </div>
+          </div>
+          <span class="text-accent text-sm font-semibold">돌아가기 →</span>
+        </button>
+      </div>
       <div class="grid grid-cols-2 gap-2">
         <button onclick="iomSelectStore('당산SKV1 바나프레소')" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
           <span class="text-2xl">☕</span>
@@ -539,6 +552,8 @@ window._lifeAnimate = function(id, type) {
   var _userCache = null; // 사용자 목록 로컬 캐시
   var _myDept = ''; // 내 부서
   var _prevSessions = []; // 이전 세션 목록 [{sid, store, created, members:[knoxId]}]
+  var _pendingSessionId = null; // 뒤로가기로 나온 진행중 세션
+  var _pendingStore = '';
 
   /* ─── 사용자 목록 프리로드 (인코딩 전송 → 디코드) ─── */
   function _preloadUsers() {
@@ -647,6 +662,13 @@ window._lifeAnimate = function(id, type) {
   };
 
   window.iomBack = function(target) {
+    // 주문 화면에서 뒤로갈 때 진행중인 세션 보존
+    if (target === 'home' && _currentSessionId && _orderSession && _orderSession.status !== 'closed') {
+      _pendingSessionId = _currentSessionId;
+      _pendingStore = _orderSession.store || '';
+      $('iomResumeStore').textContent = _pendingStore;
+      $('iomResumeBar').classList.remove('hidden');
+    }
     $('iomHome').classList.toggle('hidden', target !== 'home');
     $('iomLoading').classList.add('hidden');
     $('iomSetup').classList.add('hidden');
@@ -657,6 +679,14 @@ window._lifeAnimate = function(id, type) {
       window._restoreAllSections();
       window._lifeAnimate('iomHome');
     }
+  };
+
+  window.iomResumeOrder = function() {
+    if (!_pendingSessionId) return;
+    $('iomResumeBar').classList.add('hidden');
+    window.openItsOnMeOrder(_pendingSessionId);
+    _pendingSessionId = null;
+    _pendingStore = '';
   };
 
   /* ─── 수동입력 ─── */
@@ -910,6 +940,8 @@ window._lifeAnimate = function(id, type) {
       if (data.error) { window.showToast(data.error, 'sad'); return; }
       // 본인도 주문 화면으로
       _currentSessionId = data.sessionId;
+      _pendingSessionId = null; _pendingStore = '';
+      $('iomResumeBar').classList.add('hidden');
       _showOrderView(data.sessionId);
       if (betting) {
         setTimeout(function() { window.showToast('내기 시작! 게임부터 해봐 🎲', 'smail'); }, 1000);
@@ -1017,16 +1049,10 @@ window._lifeAnimate = function(id, type) {
         _optionsData = {};
         _renderCustomOrderMenu();
       } catch (_) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 파싱 오류</div>'; }
+    } else if (session.store === '당산SKV1 바나프레소') {
+      await _loadMenuData(session.store);
     } else {
-      try {
-        var token = localStorage.getItem('token');
-        var menuRes = await window.gasFetch(window.API_URL + '?action=getBanapressoMenu&token=' + encodeURIComponent(token));
-        if (menuRes && menuRes.menus) {
-          _menuData = menuRes.menus;
-          _optionsData = menuRes.options || {};
-          _renderOrderMenu();
-        }
-      } catch (_) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 로드 실패</div>'; }
+      $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 정보가 없어. 발송자에게 문의해줘.</div>';
     }
   }
 
@@ -1422,6 +1448,8 @@ window._lifeAnimate = function(id, type) {
       $('iomOptionArea').classList.add('hidden');
       $('iomSubmitBtn').classList.add('hidden');
       window.showToast('메뉴 선택 완료!', 'smail');
+      _pendingSessionId = null; _pendingStore = '';
+      $('iomResumeBar').classList.add('hidden');
     } catch (err) {
       window.showToast('저장 실패', 'sad');
     } finally {
@@ -1704,6 +1732,7 @@ window._lifeAnimate = function(id, type) {
   var _voteTimer = null;
   var _voteUserCache = null; // [{knoxId, name, dept}]
   var _voteMyDept = '';
+  var _voteMyKnox = '';
 
   /* ═══════════════ 네비게이션 ═══════════════ */
 
@@ -1879,6 +1908,7 @@ window._lifeAnimate = function(id, type) {
         var arr = JSON.parse(new TextDecoder().decode(bytes));
         _voteUserCache = arr.map(function(u) { return { knoxId: u[0], name: u[1], dept: u[2] }; });
         _voteMyDept = results[1].dept || '';
+        _voteMyKnox = (results[1].m || '').toLowerCase();
       }
       // 멤버 선택 화면 전환
       _voteMembers = [];
@@ -1910,6 +1940,7 @@ window._lifeAnimate = function(id, type) {
     var selectedIds = {};
     _voteMembers.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
     var deptUsers = _voteUserCache.filter(function(u) {
+      if (_voteMyKnox && u.knoxId.toLowerCase() === _voteMyKnox) return false;
       return u.dept === _voteMyDept && !selectedIds[u.knoxId.toLowerCase()];
     });
     if (deptUsers.length) _voteRenderSearchResults(deptUsers);
@@ -1933,6 +1964,7 @@ window._lifeAnimate = function(id, type) {
     var selectedIds = {};
     _voteMembers.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
     var results = _voteUserCache.filter(function(u) {
+      if (_voteMyKnox && u.knoxId.toLowerCase() === _voteMyKnox) return false;
       if (selectedIds[u.knoxId.toLowerCase()]) return false;
       return u.name.toLowerCase().indexOf(q) !== -1 || u.knoxId.toLowerCase().indexOf(q) !== -1;
     }).slice(0, 20);

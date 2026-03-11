@@ -95,17 +95,33 @@ function _buildRefinedOptions(menus, typeMap) {
     // optionIds: "6,10,18,39,;10,18,39,;" (ICE타입;HOT타입;...)
     // 숫자는 nOptionType을 가리킴
     var groups = m.optionIds.split(';');
+    var parsedGroups = [];
     var seen = {};
     var allTypeIds = [];
     for (var gi = 0; gi < groups.length; gi++) {
       var ids = groups[gi].split(',');
+      var groupIds = [];
       for (var ii = 0; ii < ids.length; ii++) {
         var n = parseInt(ids[ii], 10);
-        if (!isNaN(n) && !seen[n]) { seen[n] = true; allTypeIds.push(n); }
+        if (!isNaN(n)) {
+          groupIds.push(n);
+          if (!seen[n]) { seen[n] = true; allTypeIds.push(n); }
+        }
       }
+      if (groupIds.length) parsedGroups.push(groupIds);
     }
 
     var cats = [];
+    // 2개 이상 비어있지 않은 그룹 → ICE/HOT 선택 가능 → 온도 옵션 추가
+    if (parsedGroups.length >= 2) {
+      cats.push({
+        id: '온도', name: '온도', required: true, type: 'radio',
+        options: [
+          { name: 'ICE', price: 0, isDefault: true },
+          { name: 'HOT', price: 0 }
+        ]
+      });
+    }
     for (var ai = 0; ai < allTypeIds.length; ai++) {
       var typeInfo = typeMap[allTypeIds[ai]];
       if (!typeInfo) continue;
@@ -116,6 +132,8 @@ function _buildRefinedOptions(menus, typeMap) {
         if (typeInfo.typeName.indexOf(BANA_SKIP_TYPES[si]) !== -1) { skip = true; break; }
       }
       if (skip) continue;
+      // 합성 온도 카테고리와 중복 방지
+      if (parsedGroups.length >= 2 && typeInfo.typeName === '온도') continue;
 
       var cat = {
         id: typeInfo.typeName,
