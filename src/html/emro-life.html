@@ -551,6 +551,7 @@ window._lifeAnimate = function(id, type) {
   var _tplFavorites = {}; // 템플릿 즐겨찾기 { "store_name": true }
   var _userCache = null; // 사용자 목록 로컬 캐시
   var _myDept = ''; // 내 부서
+  var _myKnox = ''; // 내 knoxId
   var _prevSessions = []; // 이전 세션 목록 [{sid, store, created, members:[knoxId]}]
   var _pendingSessionId = null; // 뒤로가기로 나온 진행중 세션
   var _pendingStore = '';
@@ -570,6 +571,7 @@ window._lifeAnimate = function(id, type) {
         var arr = JSON.parse(new TextDecoder().decode(bytes));
         _userCache = arr.map(function(u) { return { knoxId: u[0], name: u[1], dept: u[2] }; });
         _myDept = res.dept || '';
+        _myKnox = (res.m || '').toLowerCase();
         // 이전 세션 목록: knoxId → 유저 정보 매핑
         _prevSessions = [];
         if (res.p && res.p.length) {
@@ -605,6 +607,7 @@ window._lifeAnimate = function(id, type) {
     var selectedIds = {};
     _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
     var deptUsers = _userCache.filter(function(u) {
+      if (_myKnox && u.knoxId.toLowerCase() === _myKnox) return false;
       return u.dept === _myDept && !selectedIds[u.knoxId.toLowerCase()];
     });
     if (deptUsers.length) _renderSearchResults(deptUsers);
@@ -863,6 +866,7 @@ window._lifeAnimate = function(id, type) {
       var results = [];
       for (var i = 0; i < _userCache.length; i++) {
         var u = _userCache[i];
+        if (_myKnox && u.knoxId.toLowerCase() === _myKnox) continue;
         if (selectedIds[u.knoxId.toLowerCase()]) continue;
         if (u.name.toLowerCase().indexOf(word) !== -1 || u.knoxId.toLowerCase().indexOf(word) !== -1) {
           results.push(u);

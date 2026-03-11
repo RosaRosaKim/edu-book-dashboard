@@ -987,6 +987,7 @@
       swiped = false;
     }
     function onTouchMove(e) {
+      if (!running) return;
       e.preventDefault();
       if (touchStartY === null) return;
       var dy = e.touches[0].clientY - touchStartY;
@@ -1001,14 +1002,18 @@
     }
 
     function onKeyDown(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       var code = e.code || e.key;
-      if (!running) return; /* 게임오버 시 결과 화면으로 전환됨 */
+      if (!running) return;
       if (['ArrowUp', 'ArrowDown', 'Space', 'KeyW', 'KeyS'].indexOf(code) !== -1) e.preventDefault();
       keys[code] = true;
       if (code === 'ArrowUp' || code === 'KeyW') doJump();
       if (code === 'Space') triggerBomb(performance.now());
     }
-    function onKeyUp(e) { delete keys[e.code || e.key]; }
+    function onKeyUp(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      delete keys[e.code || e.key];
+    }
 
     /* ═══════════════ 리셋 ═══════════════ */
     function resetGame() {
