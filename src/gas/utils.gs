@@ -84,6 +84,7 @@ var ENCRYPT_SECRET = (function() {
   catch (_) { return 'edu-book-dashboard-card-v1'; }
 })();
 
+
 function _encryptPw(plain) {
   var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
   var nonce = _randomBytes(16);
