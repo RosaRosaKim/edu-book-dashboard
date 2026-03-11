@@ -95,6 +95,7 @@
   var BASE_SPEED = 170, MAX_SPEED = 380;
   var SLIDE_MS = 420;
   var _rankCache = [];
+  var _myKnox = '';
 
   /* ═══════════════ 랭킹 (구글시트 연동) ═══════════════ */
   function fetchRanking(cb) {
@@ -105,6 +106,7 @@
     window.gasFetch(window.API_URL + '?action=gameRankList&token=' + encodeURIComponent(token) + '&game=' + encodeURIComponent(GAME_NAME))
       .then(function(data) {
         _rankCache = (data && data.ranks) ? data.ranks : [];
+        if (data && data.myKnox) _myKnox = data.myKnox;
         renderRanking();
         if (cb) cb(_rankCache);
       }).catch(function() { renderRanking(); if (cb) cb(_rankCache); });
@@ -127,8 +129,10 @@
     if (!list.length) { box.innerHTML = '<div class="text-[11px] text-[#9ab0ab] text-center py-2">아직 기록이 없어</div>'; return; }
     var medals = ['🥇','🥈','🥉','4위','5위'];
     box.innerHTML = list.map(function(r,i) {
-      return '<div class="flex items-center justify-between bg-surface-2 rounded-lg px-3 py-1.5">' +
-        '<span class="text-[12px]">' + medals[i] + ' <span class="font-semibold text-[#47635f]">' + r.score + '점</span></span>' +
+      var isMe = _myKnox && r.knoxId === _myKnox;
+      return '<div class="flex items-center justify-between rounded-lg px-3 py-1.5 ' + (isMe ? 'bg-accent/10 border border-accent/20' : 'bg-surface-2') + '">' +
+        '<span class="text-[12px]">' + medals[i] + ' <span class="font-semibold ' + (isMe ? 'text-accent' : 'text-[#47635f]') + '">' + r.score + '점</span>' +
+        (isMe ? ' <span class="text-[10px] text-accent">나</span>' : '') + '</span>' +
         '<span class="text-[11px] text-[#6e7f7b]">' + _esc(r.message || '') + '</span></div>';
     }).join('');
   }
@@ -860,6 +864,23 @@
       }
 
       var minScore = _rankCache.length < 5 ? 0 : _rankCache[_rankCache.length - 1].score;
+      // 본인 기존 기록보다 낮으면 결과 화면 생략 (서버에서도 갱신 안 함)
+      var myExisting = null;
+      if (_myKnox) {
+        for (var ri = 0; ri < _rankCache.length; ri++) {
+          if (_rankCache[ri].knoxId === _myKnox) { myExisting = _rankCache[ri].score; break; }
+        }
+      }
+      if (myExisting !== null && sc <= myExisting) {
+        setTimeout(function() {
+          if (_cleanup) { _cleanup(); _cleanup = null; }
+          $('mgPlay').classList.add('hidden');
+          $('mgHome').classList.remove('hidden');
+          fetchRanking();
+          if (window.showToast) window.showToast('내 최고 기록(' + myExisting + '점)에는 못 미쳤어!', 'sad');
+        }, 1500);
+        return;
+      }
       if (sc > minScore || _rankCache.length < 5) {
         /* Top5 진입 → 결과 화면 표시, 메시지 입력 대기 */
         _pendingScore = sc;

@@ -182,17 +182,20 @@ const fi=document.getElementById('floor-img'), ml=document.getElementById('marke
 // ═══════════════════════════════════
 // INIT
 // ═══════════════════════════════════
+var _pendingRoomClick=null;
 function init(){
-  loadFloor(5);setupEvents();renderOvList();
   // URL 파라미터: ?room=성장
   const params=new URLSearchParams(location.search);
   const roomParam=params.get('room');
   if(roomParam){
     const r=rooms.find(x=>x.t==='meeting'&&x.name===roomParam);
-    if(r){closeSearch();setTimeout(()=>onRoomClick(r.id),300);return}
+    if(r){_pendingRoomClick=r.id;closeSearch();}
   }
-  // 파라미터 없으면 검색 오버레이 표시
-  setTimeout(()=>document.getElementById('ov-search').focus(),100);
+  loadFloor(roomParam?rooms.find(x=>x.t==='meeting'&&x.name===roomParam)?.f||5:5);
+  setupEvents();renderOvList();
+  if(!roomParam){
+    setTimeout(()=>document.getElementById('ov-search').focus(),100);
+  }
 }
 
 function loadFloor(f){
@@ -200,6 +203,8 @@ function loadFloor(f){
     imgW=fi.naturalWidth;imgH=fi.naturalHeight;
     mc.style.width=imgW+'px';mc.style.height=imgH+'px';
     renderMarkers();resetView();
+    // 이미지 로드 완료 후 대기 중인 room click 실행
+    if(_pendingRoomClick){var id=_pendingRoomClick;_pendingRoomClick=null;setTimeout(()=>onRoomClick(id),100);}
   };
   fi.src=f===5?'../img/5층도면.png':'../img/7층도면.png';
 }

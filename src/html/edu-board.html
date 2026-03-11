@@ -1,7 +1,7 @@
 <div class="fade-in">
   <!-- 글쓰기 -->
   <div class="bg-surface border border-border rounded-2xl p-3 mb-4">
-    <textarea id="boardInput" class="board-textarea" maxlength="200" placeholder="건의사항이나 불편한 점을 써줘"></textarea>
+    <textarea id="boardInput" class="board-textarea" maxlength="200" placeholder="건의사항이나 에러제보, 불편한 점을 써줘"></textarea>
     <div class="flex items-center justify-between mt-2">
       <span id="boardCharCount" class="text-xs text-[#aab5b2]">0/200</span>
       <button id="boardSubmitBtn" onclick="writePost()"
@@ -150,8 +150,8 @@ function _postCardHtml(p) {
         '<span style="font-size:14px">👎</span> 싫어요 <span>' + p.dislikes + '</span></button>' +
     '</div>';
 
-  // 답변 표시
-  if (p.reply) {
+  // 답변 표시 (관리자는 textarea로 표시하므로 생략)
+  if (p.reply && !isAdmin) {
     html += '<div class="board-reply">' +
       '<div class="board-reply-label">관리자 답변</div>' +
       '<div class="board-reply-text">' + escapeHtml(p.reply) + '</div>' +

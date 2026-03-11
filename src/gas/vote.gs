@@ -100,9 +100,8 @@ function handleGetVote(adminRow, e) {
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  var masterSheet = ss.getSheetByName(VOTE_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(VOTE_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var session = null;
   for (var i = 1; i < masterData.length; i++) {
     if (String(masterData[i][VOTE_COL.SID]) === sid) {
@@ -125,13 +124,12 @@ function handleGetVote(adminRow, e) {
   if (!session) return createResponse({ error: '세션을 찾을 수 없어.' });
 
   // 응답 조회
-  var respSheet = ss.getSheetByName(VOTE_RESP);
+  var respData = getCachedData(VOTE_RESP);
   var responses = [];
   var myResponse = null;
   var isMember = false;
   var votedCount = 0;
-  if (respSheet) {
-    var respData = respSheet.getDataRange().getValues();
+  if (respData.length > 1) {
     for (var j = 1; j < respData.length; j++) {
       if (String(respData[j][VOTE_R_COL.SID]) !== sid) continue;
       var choicesStr = String(respData[j][VOTE_R_COL.CHOICES] || '');
@@ -206,9 +204,8 @@ function handleSubmitVote(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // 세션 확인
-  var masterSheet = ss.getSheetByName(VOTE_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(VOTE_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var sessionIdx = -1;
   var sessionRow = null;
   for (var i = 1; i < masterData.length; i++) {
@@ -218,9 +215,8 @@ function handleSubmitVote(adminRow, e) {
   if (String(sessionRow[VOTE_COL.STATUS]) === 'closed') return createResponse({ error: '이미 마감된 투표야.' });
 
   // 응답 업데이트
-  var respSheet = ss.getSheetByName(VOTE_RESP);
-  if (!respSheet) return createResponse({ error: '응답 시트 오류' });
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(VOTE_RESP);
+  if (respData.length < 2) return createResponse({ error: '응답 시트 오류' });
   var updated = false;
   var allVoted = true;
 
@@ -232,8 +228,10 @@ function handleSubmitVote(adminRow, e) {
         return createResponse({ error: '이미 투표했어. 변경할 수 없어.' });
       }
       var rowNum = j + 1;
+      var respSheet = ss.getSheetByName(VOTE_RESP);
       respSheet.getRange(rowNum, VOTE_R_COL.CHOICES + 1).setValue(choices);
       respSheet.getRange(rowNum, VOTE_R_COL.VOTED_AT + 1).setValue(new Date());
+      invalidateCache(VOTE_RESP);
       updated = true;
     } else {
       if (!String(respData[j][VOTE_R_COL.CHOICES]).trim()) allVoted = false;
@@ -244,6 +242,8 @@ function handleSubmitVote(adminRow, e) {
 
   // 전원 투표 시 즉시 마감
   if (allVoted) {
+    var masterSheet = ss.getSheetByName(VOTE_SHEET);
+    if (!respSheet) respSheet = ss.getSheetByName(VOTE_RESP);
     _closeVoteSession(ss, masterSheet, respSheet, sid, sessionIdx);
   }
 
@@ -261,9 +261,8 @@ function handleAddVoteItem(adminRow, e) {
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  var masterSheet = ss.getSheetByName(VOTE_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(VOTE_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var sessionIdx = -1;
   var sessionRow = null;
   for (var i = 1; i < masterData.length; i++) {
@@ -284,11 +283,12 @@ function handleAddVoteItem(adminRow, e) {
 
   // 마스터 시트에 항목 추가
   existingItems.push(newItem);
+  var masterSheet = ss.getSheetByName(VOTE_SHEET);
   masterSheet.getRange(sessionIdx + 1, VOTE_COL.ITEMS + 1).setValue(JSON.stringify(existingItems));
+  invalidateCache(VOTE_SHEET);
 
   // 자동 투표: 응답 시트에서 내 행 업데이트
-  var respSheet = ss.getSheetByName(VOTE_RESP);
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(VOTE_RESP);
   var allVoted = true;
 
   for (var j = 1; j < respData.length; j++) {
@@ -304,8 +304,10 @@ function handleAddVoteItem(adminRow, e) {
         existingChoices = [newItem];
       }
       var rowNum = j + 1;
+      var respSheet = ss.getSheetByName(VOTE_RESP);
       respSheet.getRange(rowNum, VOTE_R_COL.CHOICES + 1).setValue(JSON.stringify(existingChoices));
       respSheet.getRange(rowNum, VOTE_R_COL.VOTED_AT + 1).setValue(new Date());
+      invalidateCache(VOTE_RESP);
     } else {
       if (!String(respData[j][VOTE_R_COL.CHOICES]).trim()) allVoted = false;
     }
@@ -313,6 +315,8 @@ function handleAddVoteItem(adminRow, e) {
 
   // 전원 투표 시 즉시 마감
   if (allVoted) {
+    if (!masterSheet) masterSheet = ss.getSheetByName(VOTE_SHEET);
+    if (!respSheet) respSheet = ss.getSheetByName(VOTE_RESP);
     _closeVoteSession(ss, masterSheet, respSheet, sid, sessionIdx);
   }
 
@@ -323,15 +327,16 @@ function handleAddVoteItem(adminRow, e) {
 
 function _closeVoteSession(ss, masterSheet, respSheet, sid, masterIdx) {
   masterSheet.getRange(masterIdx + 1, VOTE_COL.STATUS + 1).setValue('closed');
+  invalidateCache(VOTE_SHEET);
 
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(VOTE_SHEET);
   var title = String(masterData[masterIdx][VOTE_COL.TITLE]);
   var opts = {};
   try { opts = JSON.parse(String(masterData[masterIdx][VOTE_COL.OPTIONS] || '{}')); } catch (_) {}
   var isAnon = !!opts.anon;
 
   // 응답 수집
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(VOTE_RESP);
   var responses = [];
   var allKnox = [];
   for (var i = 1; i < respData.length; i++) {
@@ -381,17 +386,16 @@ function handleGetVoteTemplates(adminRow, e) {
   var sheet = ss.getSheetByName(VOTE_TPL);
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ ok: true, templates: [] });
 
-  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   var nameMap = {};
-  if (adminSheet) {
-    var ad = adminSheet.getDataRange().getValues();
+  var ad = getCachedData(SHEET_NAME.ADMIN);
+  if (ad.length > 1) {
     for (var a = 1; a < ad.length; a++) {
       var ak = String(ad[a][ADMIN_COL.KNOX_ID] || '').trim().toLowerCase();
       if (ak) nameMap[ak] = String(ad[a][ADMIN_COL.NAME] || '').trim();
     }
   }
 
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(VOTE_TPL);
   var templates = [];
   for (var i = 1; i < data.length; i++) {
     var knox = String(data[i][VOTE_TPL_COL.KNOX]).trim().toLowerCase();
@@ -417,7 +421,7 @@ function handleSaveVoteTemplate(adminRow, e) {
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = _getOrCreateVoteTplSheet(ss);
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(VOTE_TPL);
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][VOTE_TPL_COL.KNOX]).trim().toLowerCase() === myKnox &&
@@ -425,10 +429,12 @@ function handleSaveVoteTemplate(adminRow, e) {
       sheet.getRange(i + 1, VOTE_TPL_COL.ITEMS + 1).setValue(items);
       sheet.getRange(i + 1, VOTE_TPL_COL.OPTIONS + 1).setValue(options);
       sheet.getRange(i + 1, VOTE_TPL_COL.UPDATED + 1).setValue(new Date());
+      invalidateCache(VOTE_TPL);
       return createResponse({ ok: true });
     }
   }
   sheet.appendRow([myKnox, title, items, options, new Date()]);
+  invalidateCache(VOTE_TPL);
   return createResponse({ ok: true });
 }
 
@@ -441,11 +447,12 @@ function handleDeleteVoteTemplate(adminRow, e) {
   var sheet = ss.getSheetByName(VOTE_TPL);
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ error: '템플릿이 없어.' });
 
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(VOTE_TPL);
   for (var i = data.length - 1; i >= 1; i--) {
     if (String(data[i][VOTE_TPL_COL.KNOX]).trim().toLowerCase() === myKnox &&
         String(data[i][VOTE_TPL_COL.TITLE]).trim() === title) {
       sheet.deleteRow(i + 1);
+      invalidateCache(VOTE_TPL);
       return createResponse({ ok: true });
     }
   }
@@ -461,9 +468,8 @@ function handleCloseVote(adminRow, e) {
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  var masterSheet = ss.getSheetByName(VOTE_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(VOTE_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var sessionIdx = -1;
   for (var i = 1; i < masterData.length; i++) {
     if (String(masterData[i][VOTE_COL.SID]) === sid) { sessionIdx = i; break; }
@@ -474,6 +480,7 @@ function handleCloseVote(adminRow, e) {
     return createResponse({ error: '생성자만 마감할 수 있어.' });
   }
 
+  var masterSheet = ss.getSheetByName(VOTE_SHEET);
   var respSheet = ss.getSheetByName(VOTE_RESP);
   if (!respSheet) return createResponse({ error: '응답 시트 오류' });
 
@@ -485,14 +492,14 @@ function handleCloseVote(adminRow, e) {
 
 function pollVoteClose() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var masterSheet = ss.getSheetByName(VOTE_SHEET);
-  if (!masterSheet || masterSheet.getLastRow() < 2) return;
+  var data = getCachedData(VOTE_SHEET);
+  if (data.length < 2) return;
 
   var now = new Date();
-  var data = masterSheet.getDataRange().getValues();
+  var masterSheet = ss.getSheetByName(VOTE_SHEET);
   var respSheet = ss.getSheetByName(VOTE_RESP);
   if (!respSheet) return;
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(VOTE_RESP);
 
   var props = PropertiesService.getScriptProperties();
   var reminded = (props.getProperty('VOTE_REMINDED') || '').split(',').filter(Boolean);
@@ -544,7 +551,7 @@ function _cleanupVote() {
 
   var respSheet = ss.getSheetByName(VOTE_RESP);
   if (respSheet && respSheet.getLastRow() > 1) {
-    var respData = respSheet.getDataRange().getValues();
+    var respData = getCachedData(VOTE_RESP);
     var sidSet = {};
     for (var s = 0; s < sids.length; s++) sidSet[sids[s]] = true;
     for (var i = respData.length - 1; i >= 1; i--) {
@@ -554,7 +561,7 @@ function _cleanupVote() {
 
   var masterSheet = ss.getSheetByName(VOTE_SHEET);
   if (masterSheet && masterSheet.getLastRow() > 1) {
-    var masterData = masterSheet.getDataRange().getValues();
+    var masterData = getCachedData(VOTE_SHEET);
     for (var j = masterData.length - 1; j >= 1; j--) {
       if (sids.indexOf(String(masterData[j][VOTE_COL.SID])) !== -1) masterSheet.deleteRow(j + 1);
     }

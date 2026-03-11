@@ -39,16 +39,13 @@ function handleSearchBizFlowUsers(adminRow, e) {
   var word = String(e.parameter.searchWord || '').trim().toLowerCase();
   if (word.length < 1) return createResponse({ status: 'success', users: [] });
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'success', users: [] });
+  var data = getCachedData(SHEET_NAME.ADMIN);
+  if (data.length < 2) return createResponse({ status: 'success', users: [] });
 
-  var data = sheet.getDataRange().getValues();
-  data.shift();
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var results = [];
 
-  for (var i = 0; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
@@ -67,16 +64,13 @@ function handleSearchBizFlowUsers(adminRow, e) {
  * - Network 탭에서 평문 노출 방지: 간단한 문자 시프트 + base64
  */
 function handleGetBizFlowUserList(adminRow, e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME.ADMIN);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ ok: true, d: '' });
+  var data = getCachedData(SHEET_NAME.ADMIN);
+  if (data.length < 2) return createResponse({ ok: true, d: '' });
 
-  var data = sheet.getDataRange().getValues();
-  data.shift();
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var myDept = '';
   var users = [];
-  for (var i = 0; i < data.length; i++) {
+  for (var i = 1; i < data.length; i++) {
     var knoxId = String(data[i][ADMIN_COL.KNOX_ID] || '').trim();
     var name   = String(data[i][ADMIN_COL.NAME] || '').trim();
     var dept   = String(data[i][ADMIN_COL.DEPT] || '').trim();
@@ -91,9 +85,9 @@ function handleGetBizFlowUserList(adminRow, e) {
 
   // 이전 세션 목록 조회 (최근 5개, 세션별 멤버 포함)
   var prevSessions = [];
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (masterSheet && masterSheet.getLastRow() > 1) {
-    var masterData = masterSheet.getDataRange().getValues();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var masterData = getCachedData(IOM_SHEET);
+  if (masterData.length > 1) {
     // 역순으로 내 세션 최대 5개
     for (var k = masterData.length - 1; k >= 1 && prevSessions.length < 5; k--) {
       if (String(masterData[k][IOM_COL.CREATOR_KNOX]).trim().toLowerCase() === myKnox) {
@@ -106,9 +100,8 @@ function handleGetBizFlowUserList(adminRow, e) {
       }
     }
     if (prevSessions.length) {
-      var respSheet = ss.getSheetByName(IOM_RESP);
-      if (respSheet && respSheet.getLastRow() > 1) {
-        var respData = respSheet.getDataRange().getValues();
+      var respData = getCachedData(IOM_RESP);
+      if (respData.length > 1) {
         var sidMap = {};
         for (var s = 0; s < prevSessions.length; s++) sidMap[prevSessions[s].sid] = prevSessions[s];
         for (var r = 1; r < respData.length; r++) {
@@ -124,6 +117,8 @@ function handleGetBizFlowUserList(adminRow, e) {
 
   return createResponse({ ok: true, d: reversed, m: myKnox, dept: myDept, p: prevSessions });
 }
+
+
 
 /* ═══════════════ 세션 생성 ═══════════════ */
 
@@ -167,6 +162,7 @@ function handleCreateItsOnMe(adminRow, e) {
 
   masterSheet.appendRow([sid, creatorKnox, creatorName, store,
     deadline, 'open', now, allMembers.length, customMenus, betting]);
+  invalidateCache(IOM_SHEET);
 
   // 응답 시트에 전원 행 삽입
   var respSheet = ss.getSheetByName(IOM_RESP);
@@ -178,7 +174,10 @@ function handleCreateItsOnMe(adminRow, e) {
   for (var j = 0; j < allMembers.length; j++) {
     respRows.push([sid, allMembers[j].knoxId, allMembers[j].name, '', '', '', '', '']);
   }
-  if (respRows.length) respSheet.getRange(respSheet.getLastRow() + 1, 1, respRows.length, 8).setValues(respRows);
+  if (respRows.length) {
+    respSheet.getRange(respSheet.getLastRow() + 1, 1, respRows.length, 8).setValues(respRows);
+    invalidateCache(IOM_RESP);
+  }
 
   // Flow 발송 (생성자 제외)
   var deadlineStr = Utilities.formatDate(deadline, 'Asia/Seoul', 'HH:mm');
@@ -215,9 +214,8 @@ function handleGetItsOnMe(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // 세션 마스터 조회
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(IOM_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var session = null;
   for (var i = 1; i < masterData.length; i++) {
     if (String(masterData[i][IOM_COL.SID]) === sid) {
@@ -238,12 +236,11 @@ function handleGetItsOnMe(adminRow, e) {
   if (!session) return createResponse({ error: '세션을 찾을 수 없어.' });
 
   // 응답 조회
-  var respSheet = ss.getSheetByName(IOM_RESP);
+  var respData = getCachedData(IOM_RESP);
   var responses = [];
   var myResponse = null;
   var isMember = false;
-  if (respSheet) {
-    var respData = respSheet.getDataRange().getValues();
+  if (respData.length > 1) {
     for (var j = 1; j < respData.length; j++) {
       if (String(respData[j][IOM_R_COL.SID]) !== sid) continue;
       var rawScore = respData[j][IOM_R_COL.GAME_SCORE];
@@ -265,16 +262,13 @@ function handleGetItsOnMe(adminRow, e) {
 
   if (!isMember) return createResponse({ error: '이 주문에 포함되지 않았어.' });
 
-  // 먹던대로: 이 사용자의 가장 최근 주문(이 세션 제외)
+  // 먹던대로: 이 사용자의 가장 최근 주문(이 세션 제외) — respData 캐시 재사용
   var lastOrder = null;
-  if (respSheet) {
-    var allResp = respSheet.getDataRange().getValues();
-    for (var r = allResp.length - 1; r >= 1; r--) {
-      if (String(allResp[r][IOM_R_COL.SID]) === sid) continue;
-      if (String(allResp[r][IOM_R_COL.KNOX]).trim().toLowerCase() === myKnox && String(allResp[r][IOM_R_COL.MENU]).trim()) {
-        lastOrder = { menu: String(allResp[r][IOM_R_COL.MENU]).trim(), options: String(allResp[r][IOM_R_COL.OPTIONS]).trim(), price: Number(allResp[r][IOM_R_COL.PRICE]) || 0 };
-        break;
-      }
+  for (var r = respData.length - 1; r >= 1; r--) {
+    if (String(respData[r][IOM_R_COL.SID]) === sid) continue;
+    if (String(respData[r][IOM_R_COL.KNOX]).trim().toLowerCase() === myKnox && String(respData[r][IOM_R_COL.MENU]).trim()) {
+      lastOrder = { menu: String(respData[r][IOM_R_COL.MENU]).trim(), options: String(respData[r][IOM_R_COL.OPTIONS]).trim(), price: Number(respData[r][IOM_R_COL.PRICE]) || 0 };
+      break;
     }
   }
 
@@ -309,9 +303,8 @@ function handleSubmitItsOnMeMenu(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // 세션 상태 확인
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(IOM_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var sessionIdx = -1;
   var sessionStatus = '';
   for (var i = 1; i < masterData.length; i++) {
@@ -325,9 +318,8 @@ function handleSubmitItsOnMeMenu(adminRow, e) {
   if (sessionStatus === 'closed') return createResponse({ error: '이미 마감된 주문이야.' });
 
   // 응답 업데이트
-  var respSheet = ss.getSheetByName(IOM_RESP);
-  if (!respSheet) return createResponse({ error: '응답 시트 오류' });
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(IOM_RESP);
+  if (respData.length < 2) return createResponse({ error: '응답 시트 오류' });
   var updated = false;
   var allDone = true;
 
@@ -336,10 +328,12 @@ function handleSubmitItsOnMeMenu(adminRow, e) {
     if (String(respData[j][IOM_R_COL.KNOX]).trim().toLowerCase() === myKnox) {
       // 내 행 업데이트
       var rowNum = j + 1;
+      var respSheet = ss.getSheetByName(IOM_RESP);
       respSheet.getRange(rowNum, IOM_R_COL.MENU + 1).setValue(menu);
       respSheet.getRange(rowNum, IOM_R_COL.OPTIONS + 1).setValue(opts);
       respSheet.getRange(rowNum, IOM_R_COL.PRICE + 1).setValue(price);
       respSheet.getRange(rowNum, IOM_R_COL.UPDATED + 1).setValue(new Date());
+      invalidateCache(IOM_RESP);
       updated = true;
       // 이 행은 방금 업데이트했으니 done
     } else {
@@ -352,7 +346,9 @@ function handleSubmitItsOnMeMenu(adminRow, e) {
 
   // 전원 완료 시 즉시 마감
   if (allDone) {
-    _closeItsOnMeSession(ss, masterSheet, respSheet, sid, sessionIdx);
+    var masterSheet = ss.getSheetByName(IOM_SHEET);
+    var _respSheet = ss.getSheetByName(IOM_RESP);
+    _closeItsOnMeSession(ss, masterSheet, _respSheet, sid, sessionIdx);
   }
 
   return createResponse({ status: 'success', allDone: allDone });
@@ -370,9 +366,8 @@ function handleAddItsOnMeMembers(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // 세션 확인 (생성자만 가능)
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(IOM_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var sessionIdx = -1;
   var session = null;
   for (var i = 1; i < masterData.length; i++) {
@@ -386,8 +381,7 @@ function handleAddItsOnMeMembers(adminRow, e) {
   if (String(session[IOM_COL.STATUS]) === 'closed') return createResponse({ error: '이미 마감된 주문이야.' });
 
   // 참여자(멤버) 여부 확인
-  var respSheet = ss.getSheetByName(IOM_RESP);
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(IOM_RESP);
   var existingKnox = {};
   var isMember = false;
   for (var j = 1; j < respData.length; j++) {
@@ -414,10 +408,14 @@ function handleAddItsOnMeMembers(adminRow, e) {
   }
 
   if (respRows.length) {
+    var respSheet = ss.getSheetByName(IOM_RESP);
+    var masterSheet = ss.getSheetByName(IOM_SHEET);
     respSheet.getRange(respSheet.getLastRow() + 1, 1, respRows.length, 7).setValues(respRows);
+    invalidateCache(IOM_RESP);
     // 총 인원 업데이트
     var newTotal = Number(session[IOM_COL.TOTAL]) + respRows.length;
     masterSheet.getRange(sessionIdx + 1, IOM_COL.TOTAL + 1).setValue(newTotal);
+    invalidateCache(IOM_SHEET);
   }
 
   // 추가된 멤버에게 Flow 발송
@@ -458,9 +456,8 @@ function handleExtendItsOnMe(adminRow, e) {
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(IOM_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var sessionIdx = -1;
   var session = null;
   for (var i = 1; i < masterData.length; i++) {
@@ -470,8 +467,7 @@ function handleExtendItsOnMe(adminRow, e) {
   if (String(session[IOM_COL.STATUS]) === 'closed') return createResponse({ error: '이미 마감된 주문이야.' });
 
   // 참여자 확인
-  var respSheet = ss.getSheetByName(IOM_RESP);
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(IOM_RESP);
   var isMember = false;
   for (var j = 1; j < respData.length; j++) {
     if (String(respData[j][IOM_R_COL.SID]) === sid && String(respData[j][IOM_R_COL.KNOX]).trim().toLowerCase() === myKnox) {
@@ -483,7 +479,9 @@ function handleExtendItsOnMe(adminRow, e) {
   var oldDeadline = new Date(session[IOM_COL.DEADLINE]);
   var base = new Date() > oldDeadline ? new Date() : oldDeadline;
   var newDeadline = new Date(base.getTime() + addMinutes * 60000);
+  var masterSheet = ss.getSheetByName(IOM_SHEET);
   masterSheet.getRange(sessionIdx + 1, IOM_COL.DEADLINE + 1).setValue(newDeadline);
+  invalidateCache(IOM_SHEET);
 
   var dlStr = Utilities.formatDate(newDeadline, 'Asia/Seoul', 'HH:mm');
 
@@ -510,9 +508,8 @@ function handleSubmitItsOnMeGameScore(adminRow, e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // 세션 확인 (open + betting)
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (!masterSheet) return createResponse({ error: '세션을 찾을 수 없어.' });
-  var masterData = masterSheet.getDataRange().getValues();
+  var masterData = getCachedData(IOM_SHEET);
+  if (masterData.length < 2) return createResponse({ error: '세션을 찾을 수 없어.' });
   var found = false;
   var masterIdx = -1;
   for (var i = 1; i < masterData.length; i++) {
@@ -527,9 +524,8 @@ function handleSubmitItsOnMeGameScore(adminRow, e) {
   if (!found) return createResponse({ error: '세션을 찾을 수 없어.' });
 
   // 응답 행에서 내 행 찾기
-  var respSheet = ss.getSheetByName(IOM_RESP);
-  if (!respSheet) return createResponse({ error: '응답 시트 오류' });
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(IOM_RESP);
+  if (respData.length < 2) return createResponse({ error: '응답 시트 오류' });
 
   for (var j = 1; j < respData.length; j++) {
     if (String(respData[j][IOM_R_COL.SID]) !== sid) continue;
@@ -541,10 +537,12 @@ function handleSubmitItsOnMeGameScore(adminRow, e) {
       return createResponse({ error: '이미 게임을 했어! 재도전은 안 돼.' });
     }
 
+    var respSheet = ss.getSheetByName(IOM_RESP);
     respSheet.getRange(j + 1, IOM_R_COL.GAME_SCORE + 1).setValue(gameScore);
+    invalidateCache(IOM_RESP);
 
     // 전원 게임 완료 체크 → 꼴찌 결정 + Flow 발송
-    var refreshed = respSheet.getDataRange().getValues();
+    var refreshed = getCachedData(IOM_RESP);
     var allPlayed = true;
     var scoreboard = [];
     for (var k = 1; k < refreshed.length; k++) {
@@ -584,10 +582,11 @@ function handleSubmitItsOnMeGameScore(adminRow, e) {
 function _closeItsOnMeSession(ss, masterSheet, respSheet, sid, masterIdx) {
   // 상태를 closed로
   masterSheet.getRange(masterIdx + 1, IOM_COL.STATUS + 1).setValue('closed');
+  invalidateCache(IOM_SHEET);
 
   // 응답 수집
-  var masterRow = masterSheet.getDataRange().getValues()[masterIdx];
-  var respData = respSheet.getDataRange().getValues();
+  var masterRow = getCachedData(IOM_SHEET)[masterIdx];
+  var respData = getCachedData(IOM_RESP);
   var responses = [];
   var creatorKnox = String(masterRow[IOM_COL.CREATOR_KNOX]);
   var store = String(masterRow[IOM_COL.STORE]);
@@ -667,25 +666,24 @@ function handleGetItsOnMeTemplates(adminRow, e) {
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ ok: true, templates: [] });
 
   // knoxId → 이름 맵 구축
-  var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   var nameMap = {};
-  if (adminSheet) {
-    var ad = adminSheet.getDataRange().getValues();
+  var ad = getCachedData(SHEET_NAME.ADMIN);
+  if (ad.length > 1) {
     for (var a = 1; a < ad.length; a++) {
       var ak = String(ad[a][ADMIN_COL.KNOX_ID] || '').trim().toLowerCase();
       if (ak) nameMap[ak] = String(ad[a][ADMIN_COL.NAME] || '').trim();
     }
   }
 
-  var data = sheet.getDataRange().getValues();
+  var tplData = getCachedData(IOM_TPL);
   var templates = [];
-  for (var i = 1; i < data.length; i++) {
-    var knox = String(data[i][IOM_TPL_COL.KNOX]).trim().toLowerCase();
+  for (var i = 1; i < tplData.length; i++) {
+    var knox = String(tplData[i][IOM_TPL_COL.KNOX]).trim().toLowerCase();
     templates.push({
       idx: i,
-      store: String(data[i][IOM_TPL_COL.STORE]),
-      menus: String(data[i][IOM_TPL_COL.MENUS]),
-      updated: data[i][IOM_TPL_COL.UPDATED] ? Utilities.formatDate(new Date(data[i][IOM_TPL_COL.UPDATED]), 'Asia/Seoul', 'M/d HH:mm') : '',
+      store: String(tplData[i][IOM_TPL_COL.STORE]),
+      menus: String(tplData[i][IOM_TPL_COL.MENUS]),
+      updated: tplData[i][IOM_TPL_COL.UPDATED] ? Utilities.formatDate(new Date(tplData[i][IOM_TPL_COL.UPDATED]), 'Asia/Seoul', 'M/d HH:mm') : '',
       isMine: knox === myKnox,
       ownerName: nameMap[knox] || ''
     });
@@ -701,7 +699,7 @@ function handleSaveItsOnMeTemplate(adminRow, e) {
   var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim().toLowerCase();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = _getOrCreateTplSheet(ss);
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(IOM_TPL);
 
   // 같은 상호명이 있으면 덮어쓰기
   for (var i = 1; i < data.length; i++) {
@@ -709,11 +707,13 @@ function handleSaveItsOnMeTemplate(adminRow, e) {
         String(data[i][IOM_TPL_COL.STORE]).trim() === store) {
       sheet.getRange(i + 1, IOM_TPL_COL.MENUS + 1).setValue(menus);
       sheet.getRange(i + 1, IOM_TPL_COL.UPDATED + 1).setValue(new Date());
+      invalidateCache(IOM_TPL);
       return createResponse({ ok: true });
     }
   }
   // 신규
   sheet.appendRow([myKnox, store, menus, new Date()]);
+  invalidateCache(IOM_TPL);
   return createResponse({ ok: true });
 }
 
@@ -726,11 +726,12 @@ function handleDeleteItsOnMeTemplate(adminRow, e) {
   var sheet = ss.getSheetByName(IOM_TPL);
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ error: '템플릿이 없어.' });
 
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(IOM_TPL);
   for (var i = data.length - 1; i >= 1; i--) {
     if (String(data[i][IOM_TPL_COL.KNOX]).trim().toLowerCase() === myKnox &&
         String(data[i][IOM_TPL_COL.STORE]).trim() === store) {
       sheet.deleteRow(i + 1);
+      invalidateCache(IOM_TPL);
       return createResponse({ ok: true });
     }
   }
@@ -741,14 +742,14 @@ function handleDeleteItsOnMeTemplate(adminRow, e) {
 
 function pollItsOnMeClose() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var masterSheet = ss.getSheetByName(IOM_SHEET);
-  if (!masterSheet || masterSheet.getLastRow() < 2) return;
+  var data = getCachedData(IOM_SHEET);
+  if (data.length < 2) return;
 
   var now = new Date();
-  var data = masterSheet.getDataRange().getValues();
+  var masterSheet = ss.getSheetByName(IOM_SHEET);
   var respSheet = ss.getSheetByName(IOM_RESP);
   if (!respSheet) return;
-  var respData = respSheet.getDataRange().getValues();
+  var respData = getCachedData(IOM_RESP);
 
   var props = PropertiesService.getScriptProperties();
   var reminded = (props.getProperty('IOM_REMINDED') || '').split(',').filter(Boolean);
@@ -808,7 +809,7 @@ function _cleanupItsOnMe() {
   // 응답 시트 정리
   var respSheet = ss.getSheetByName(IOM_RESP);
   if (respSheet && respSheet.getLastRow() > 1) {
-    var respData = respSheet.getDataRange().getValues();
+    var respData = getCachedData(IOM_RESP);
     var sidSet = {};
     for (var s = 0; s < sids.length; s++) sidSet[sids[s]] = true;
     // 뒤에서부터 삭제
@@ -822,7 +823,7 @@ function _cleanupItsOnMe() {
   // 마스터 시트 정리
   var masterSheet = ss.getSheetByName(IOM_SHEET);
   if (masterSheet && masterSheet.getLastRow() > 1) {
-    var masterData = masterSheet.getDataRange().getValues();
+    var masterData = getCachedData(IOM_SHEET);
     for (var j = masterData.length - 1; j >= 1; j--) {
       if (sids.indexOf(String(masterData[j][IOM_COL.SID])) !== -1) {
         masterSheet.deleteRow(j + 1);

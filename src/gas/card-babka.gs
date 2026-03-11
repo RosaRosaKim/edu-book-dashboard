@@ -23,8 +23,7 @@ var BIZPLAY_ID_COL = 9; // 1-based: I열
 /** 웹페이지관리 시트 밥카 자동결재 모드 컬럼 (J열 = index 9) */
 var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 
-/** AES 암호화 키 (SHA-256 → 32바이트 AES-CBC 키) */
-var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
+// 암호화 함수 → utils.gs로 이동 (ENCRYPT_SECRET, _encryptPw, _decryptPw 등)
 
 /** 교통비 업종명 */
 var TRANSPORT_CATEGORY = '대중교통';
@@ -44,10 +43,8 @@ function isTransportRecord(r) {
 
 /** 사용자 카드 목록 조회 */
 function _getUserCards(knoxId) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME.CARD_INFO);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(SHEET_NAME.CARD_INFO);
+  if (data.length < 2) return [];
   var result = [];
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === knoxId) {
@@ -72,7 +69,7 @@ function _saveUserCards(knoxId, cards) {
   }
   // 기존 행 삭제 (역순)
   if (sheet.getLastRow() >= 2) {
-    var data = sheet.getDataRange().getValues();
+    var data = getCachedData(SHEET_NAME.CARD_INFO);
     for (var i = data.length - 1; i >= 1; i--) {
       if (String(data[i][0]).trim() === knoxId) sheet.deleteRow(i + 1);
     }
@@ -81,6 +78,7 @@ function _saveUserCards(knoxId, cards) {
   cards.forEach(function(c) {
     sheet.appendRow([knoxId, c.cardNo, c.alias || '', c.limit || 0, c.isLunchCard ? 'Y' : 'N']);
   });
+  invalidateCache(SHEET_NAME.CARD_INFO);
 }
 
 /** 기존 설정 유지하며 새 카드만 추가 */
@@ -757,79 +755,7 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
   return false;
 }
 
-/* ═══════════════ 암호화/복호화 (HMAC-CTR) ═══════════════ */
-/*
- * GAS V8에는 AES API가 없으므로 HMAC-SHA256 기반 CTR 스트림 암호 사용
- * - 매 암호화마다 랜덤 nonce(16바이트) 생성 → 같은 평문도 다른 암호문
- * - keystream = HMAC(key, nonce||counter) 블록을 이어붙여 생성
- * - 저장 형식: "enc1:" + base64(nonce + ciphertext)
- */
-
-function _encryptPw(plain) {
-  var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
-  var nonce = _randomBytes(16);
-  var plainBytes = Utilities.newBlob(plain, 'UTF-8').getBytes();
-  var keystream = _hmacKeystream(key, nonce, plainBytes.length);
-
-  var cipherBytes = [];
-  for (var i = 0; i < plainBytes.length; i++) {
-    cipherBytes.push(plainBytes[i] ^ keystream[i]);
-  }
-
-  return 'enc1:' + Utilities.base64Encode(nonce.concat(cipherBytes));
-}
-
-function _decryptPw(cipher) {
-  if (!cipher) return '';
-
-  // 레거시 XOR 형식 (접두어 없음)
-  if (String(cipher).indexOf('enc1:') !== 0) {
-    return _decryptPwLegacyXor(cipher);
-  }
-
-  var raw = Utilities.base64Decode(cipher.substring(5));
-  var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
-  var nonce = raw.slice(0, 16);
-  var cipherBytes = raw.slice(16);
-  var keystream = _hmacKeystream(key, nonce, cipherBytes.length);
-
-  var plainBytes = [];
-  for (var i = 0; i < cipherBytes.length; i++) {
-    plainBytes.push(cipherBytes[i] ^ keystream[i]);
-  }
-
-  return Utilities.newBlob(plainBytes).getDataAsString();
-}
-
-/** HMAC-SHA256 카운터 모드 키스트림 생성 */
-function _hmacKeystream(key, nonce, length) {
-  var stream = [];
-  var counter = 0;
-  while (stream.length < length) {
-    var input = nonce.concat([counter >> 24 & 0xff, counter >> 16 & 0xff, counter >> 8 & 0xff, counter & 0xff]);
-    var block = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, input, key);
-    for (var i = 0; i < block.length && stream.length < length; i++) {
-      stream.push(block[i]);
-    }
-    counter++;
-  }
-  return stream;
-}
-
-/** 랜덤 바이트 배열 생성 */
-function _randomBytes(n) {
-  var bytes = [];
-  for (var i = 0; i < n; i++) bytes.push(Math.floor(Math.random() * 256) - 128);
-  return bytes;
-}
-
-/** 레거시 XOR 복호화 (하위 호환) */
-function _decryptPwLegacyXor(cipher) {
-  var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);
-  var enc = Utilities.base64Decode(cipher);
-  var dec = enc.map(function(b, i) { return b ^ key[i % key.length]; });
-  return Utilities.newBlob(dec).getDataAsString();
-}
+// 암호화/복호화 함수 → utils.gs (_encryptPw, _decryptPw, _hmacKeystream, _randomBytes, _decryptPwLegacyXor)
 
 /**
  * 일회성 마이그레이션: 기존 XOR 암호화 PW → HMAC-CTR로 변환

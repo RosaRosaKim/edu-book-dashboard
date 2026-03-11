@@ -25,7 +25,7 @@ function _getEduAdminCredentials() {
   var managerSheet = ss.getSheetByName(SHEET_NAME.MANAGER);
   if (!managerSheet) return null;
 
-  var data = managerSheet.getDataRange().getValues();
+  var data = getCachedData(SHEET_NAME.MANAGER);
   var mgrRow = null, mgrRowIdx = -1;
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][2]).trim() === '교육') { mgrRow = data[i]; mgrRowIdx = i; break; }
@@ -292,8 +292,8 @@ function _sendCompletionFlow(ss, reqType, completedDocs) {
   // 수신동의 맵 (웹페이지관리 시트)
   var adminSheet = ss.getSheetByName(SHEET_NAME.ADMIN);
   var agreeMap = {};
-  if (adminSheet && adminSheet.getLastRow() >= 2) {
-    var aData = adminSheet.getDataRange().getValues();
+  var aData = getCachedData(SHEET_NAME.ADMIN);
+  if (aData.length >= 2) {
     for (var a = 1; a < aData.length; a++) {
       agreeMap[String(aData[a][ADMIN_COL.KNOX_ID]).trim()] = String(aData[a][ADMIN_COL.AGREE]).trim();
     }
@@ -301,9 +301,9 @@ function _sendCompletionFlow(ss, reqType, completedDocs) {
 
   // 예산 사용액 계산: 교육+도서 시트의 완료 건 합산
   var budgetMap = {};
-  var _acc = function(sheet, colDef) {
-    if (!sheet || sheet.getLastRow() < 2) return;
-    var rows = sheet.getDataRange().getValues();
+  var _acc = function(sheetName, colDef) {
+    var rows = getCachedData(sheetName);
+    if (rows.length < 2) return;
     for (var j = 1; j < rows.length; j++) {
       var kid = _normalizeKnoxId(rows[j][colDef.KNOX_ID]);
       if (rows[j][colDef.STATUS] === '완료') {
@@ -311,8 +311,8 @@ function _sendCompletionFlow(ss, reqType, completedDocs) {
       }
     }
   };
-  _acc(ss.getSheetByName(SHEET_NAME.DATA), DATA_COL);
-  _acc(ss.getSheetByName(SHEET_NAME.BOOK), BOOK_COL);
+  _acc(SHEET_NAME.DATA, DATA_COL);
+  _acc(SHEET_NAME.BOOK, BOOK_COL);
 
   var sent = 0;
   for (var i = 0; i < completedDocs.length; i++) {
@@ -509,10 +509,8 @@ function syncEduBookRequests() {
 
 /** 관리자 시트에서 Knox ID 목록 조회 */
 function _getAdminKnoxIds() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME.MANAGER);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(SHEET_NAME.MANAGER);
+  if (data.length < 2) return [];
   var ids = [];
   for (var i = 1; i < data.length; i++) {
     var kid = String(data[i][0]).trim();

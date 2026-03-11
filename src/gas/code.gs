@@ -99,7 +99,7 @@ const doGet = (e) => {
 
   if (!adminSheet || !managerSheet) return createResponse({ error: "필수 시트 부재" });
 
-  const adminData = adminSheet.getDataRange().getValues();
+  const adminData = getCachedData(SHEET_NAME.ADMIN);
 
   // ── O(1) 룩업용 Map 구축 ──
   const adminByKnoxId = new Map();
@@ -113,7 +113,7 @@ const doGet = (e) => {
   });
 
   // ── 관리자 Set 구축 (managerSheet 1회 읽기) ──
-  const managerData = managerSheet.getDataRange().getValues();
+  const managerData = getCachedData(SHEET_NAME.MANAGER);
   const managerSet = new Set(managerData.slice(1).map(row => String(row[0]).trim().toLowerCase()));
 
   // [기능 16] 관리자 자동 로그인 → sync-edu.gs
@@ -148,8 +148,8 @@ const doGet = (e) => {
 
     const targetKnoxId = e.parameter.targetKnoxId;
     let allApplyData = [];
-    if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; }); allApplyData.push(...d); }
-    if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; }); allApplyData.push(...d); }
+    if (dataSheet) { const d = getCachedData(SHEET_NAME.DATA).slice(1); d.forEach(row => { row._reqType = "교육"; }); allApplyData.push(...d); }
+    if (bookSheet) { const d = getCachedData(SHEET_NAME.BOOK).slice(1); d.forEach(row => { row._reqType = "도서"; }); allApplyData.push(...d); }
 
     let used = 0, pending = 0;
     allApplyData.forEach(row => {
@@ -495,8 +495,7 @@ const doGet = (e) => {
     try {
       const rnSheet = ss.getSheetByName(SHEET_NAME.RELEASE);
       if (!rnSheet || rnSheet.getLastRow() < 2) return createResponse({ status: 'success', notes: [] });
-      const rnData = rnSheet.getDataRange().getValues();
-      rnData.shift();
+      const rnData = rnSheet.getDataRange().getValues().slice(1);
       const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
       var currentVersion = '';
       const notes = rnData.filter(r => r[0]).map(r => {
@@ -552,8 +551,8 @@ const doGet = (e) => {
     // ── Phase 2: 교육/도서 내역 + 템플릿 + Bizplay + 관리자통계 ──
     if (phase === '2') {
       let allApplyData = [];
-      if (dataSheet) { const d = dataSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "교육"; allApplyData.push(row); }); }
-      if (bookSheet) { const d = bookSheet.getDataRange().getValues(); d.shift(); d.forEach(row => { row._reqType = "도서"; allApplyData.push(row); }); }
+      if (dataSheet) { const d = getCachedData(SHEET_NAME.DATA).slice(1); d.forEach(row => { row._reqType = "교육"; allApplyData.push(row); }); }
+      if (bookSheet) { const d = getCachedData(SHEET_NAME.BOOK).slice(1); d.forEach(row => { row._reqType = "도서"; allApplyData.push(row); }); }
 
       const myRows = allApplyData.filter(row => _normalizeKnoxId(row[colFor(row).KNOX_ID]) === String(currentKnoxId));
       let myUsed = 0;
@@ -586,7 +585,7 @@ const doGet = (e) => {
 
       const tplSheet = ensureTemplateSheet(ss);
       let templates = [];
-      if (tplSheet && tplSheet.getLastRow() > 1) { const tplData = tplSheet.getDataRange().getValues(); tplData.shift(); templates = tplData.map(r => ({ courseName: r[0], institution: r[1], eduType: r[2], billing: r[3], cost: Number(r[4]) || 0, purpose: r[5], remark: r[6] })); }
+      if (tplSheet && tplSheet.getLastRow() > 1) { const tplData = getCachedData(SHEET_NAME.TEMPLATE).slice(1); templates = tplData.map(r => ({ courseName: r[0], institution: r[1], eduType: r[2], billing: r[3], cost: Number(r[4]) || 0, purpose: r[5], remark: r[6] })); }
 
       let bizplaySession = null;
       const encPw = adminRow[7];
@@ -627,13 +626,11 @@ const doGet = (e) => {
     // --- 교육/도서 데이터 병합 (phase 없음 = 하위호환 전체 응답) ---
     let allApplyData = [];
     if (dataSheet) {
-      const eduData = dataSheet.getDataRange().getValues();
-      eduData.shift();
+      const eduData = getCachedData(SHEET_NAME.DATA).slice(1);
       eduData.forEach(row => { row._reqType = "교육"; allApplyData.push(row); });
     }
     if (bookSheet) {
-      const bData = bookSheet.getDataRange().getValues();
-      bData.shift();
+      const bData = getCachedData(SHEET_NAME.BOOK).slice(1);
       bData.forEach(row => { row._reqType = "도서"; allApplyData.push(row); });
     }
 
@@ -744,8 +741,7 @@ const doGet = (e) => {
     const tplSheet = ensureTemplateSheet(ss);
     let templates = [];
     if (tplSheet && tplSheet.getLastRow() > 1) {
-      const tplData = tplSheet.getDataRange().getValues();
-      tplData.shift();
+      const tplData = getCachedData(SHEET_NAME.TEMPLATE).slice(1);
       templates = tplData.map(r => ({
         courseName: r[0], institution: r[1], eduType: r[2],
         billing: r[3], cost: Number(r[4]) || 0, purpose: r[5], remark: r[6]
@@ -843,7 +839,7 @@ function ensureTemplateSheet(ss) {
   return sheet;
 }
 
-const createResponse = (obj) => ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+// createResponse → utils.gs로 이동됨
 
 // [설정 유지]
 const DOC_ID_COL = 6; // G열: 문서번호 (0부터 시작하므로 6)
@@ -897,7 +893,7 @@ function handleGameRankSave(adminRow, e) {
   var name = String(adminRow[ADMIN_COL.NAME] || knoxId);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = _ensureGameRankSheet(ss);
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(SHEET_NAME.GAME_RANK);
 
   // 해당 게임의 기존 랭킹 가져오기
   var ranks = [];
@@ -930,7 +926,8 @@ function handleGameRankSave(adminRow, e) {
   }
 
   // Top 5 밖의 오래된 레코드 정리 (6위 이상 삭제)
-  var updated = sheet.getDataRange().getValues();
+  invalidateCache(SHEET_NAME.GAME_RANK);
+  var updated = getCachedData(SHEET_NAME.GAME_RANK);
   var gameRanks = [];
   for (var k = 1; k < updated.length; k++) {
     if (String(updated[k][0]).trim() === game) {
@@ -955,15 +952,16 @@ function handleGameRankList(adminRow, e) {
   var sheet = ss.getSheetByName(SHEET_NAME.GAME_RANK);
   if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'success', ranks: [] });
 
-  var data = sheet.getDataRange().getValues();
+  var data = getCachedData(SHEET_NAME.GAME_RANK);
   var ranks = [];
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === game) {
       var rawMsg = String(data[i][4] || '').replace(/\s*\d+m\b/g, '').replace(/\s*Wave\d+/gi, '').replace(/\s*\d+점\s*/g, '').trim();
-      ranks.push({ score: Number(data[i][3]), message: rawMsg });
+      ranks.push({ knoxId: String(data[i][1]).trim(), name: String(data[i][2]).trim(), score: Number(data[i][3]), message: rawMsg });
     }
   }
   ranks.sort(function(a, b) { return b.score - a.score; });
-  return createResponse({ status: 'success', ranks: ranks.slice(0, 5) });
+  var myKnox = String(adminRow[ADMIN_COL.KNOX_ID]).trim();
+  return createResponse({ status: 'success', ranks: ranks.slice(0, 5), myKnox: myKnox });
 }
 

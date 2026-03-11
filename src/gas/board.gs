@@ -7,13 +7,11 @@ const BOARD_COL = { ID: 0, CONTENT: 1, DATE: 2, LIKES: 3, DISLIKES: 4, REPLY: 5,
 function handleBoardList(adminRow, e) {
   const token = String(adminRow[ADMIN_COL.KNOX_ID]);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'success', posts: [] });
+  const data = getCachedData(SHEET_NAME.BOARD);
+  if (data.length < 2) return createResponse({ status: 'success', posts: [] });
 
-  const data = sheet.getDataRange().getValues();
-  data.shift();
 
-  const posts = data.map(row => {
+  const posts = data.slice(1).map(row => {
     const likes = row[BOARD_COL.LIKES] ? String(row[BOARD_COL.LIKES]).split(',').filter(Boolean) : [];
     const dislikes = row[BOARD_COL.DISLIKES] ? String(row[BOARD_COL.DISLIKES]).split(',').filter(Boolean) : [];
 
@@ -68,10 +66,9 @@ function handleBoardReact(adminRow, e) {
   }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
+  const data = getCachedData(SHEET_NAME.BOARD);
+  if (data.length < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  const data = sheet.getDataRange().getValues();
   const rowIndex = data.findIndex((row, i) => i > 0 && String(row[BOARD_COL.ID]) === String(postId));
   if (rowIndex === -1) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
@@ -95,8 +92,10 @@ function handleBoardReact(adminRow, e) {
     }
   }
 
+  const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
   sheet.getRange(rowIndex + 1, BOARD_COL.LIKES + 1).setValue(likes.join(','));
   sheet.getRange(rowIndex + 1, BOARD_COL.DISLIKES + 1).setValue(dislikes.join(','));
+  invalidateCache(SHEET_NAME.BOARD);
 
   let myReaction = null;
   if (likes.includes(token)) myReaction = 'like';
@@ -111,8 +110,7 @@ function handleBoardReact(adminRow, e) {
 function handleBoardReply(adminRow, e, managerSet) {
   const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
   if (!managerSet) {
-    const ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
-    managerSet = new Set(ms.getDataRange().getValues().slice(1).map(r => String(r[0]).trim().toLowerCase()));
+    managerSet = new Set(getCachedData(SHEET_NAME.MANAGER).slice(1).map(r => String(r[0]).trim().toLowerCase()));
   }
   const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
   if (!isAdmin) return createResponse({ status: 'error', message: '관리자만 답변할 수 있어.' });
@@ -122,15 +120,15 @@ function handleBoardReply(adminRow, e, managerSet) {
   if (!postId) return createResponse({ status: 'error', message: '잘못된 요청이야.' });
   if (!reply) return createResponse({ status: 'error', message: '답변을 입력해줘. (1~200자)' });
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
+  const data = getCachedData(SHEET_NAME.BOARD);
+  if (data.length < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  const data = sheet.getDataRange().getValues();
   const rowIndex = data.findIndex((row, i) => i > 0 && String(row[BOARD_COL.ID]) === String(postId));
   if (rowIndex === -1) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  sheet.getRange(rowIndex + 1, BOARD_COL.REPLY + 1).setValue(reply);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheetByName(SHEET_NAME.BOARD).getRange(rowIndex + 1, BOARD_COL.REPLY + 1).setValue(reply);
+  invalidateCache(SHEET_NAME.BOARD);
   return createResponse({ status: 'success', reply: reply });
 }
 
@@ -140,8 +138,7 @@ function handleBoardReply(adminRow, e, managerSet) {
 function handleBoardReplyDelete(adminRow, e, managerSet) {
   const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
   if (!managerSet) {
-    const ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
-    managerSet = new Set(ms.getDataRange().getValues().slice(1).map(r => String(r[0]).trim().toLowerCase()));
+    managerSet = new Set(getCachedData(SHEET_NAME.MANAGER).slice(1).map(r => String(r[0]).trim().toLowerCase()));
   }
   const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
   if (!isAdmin) return createResponse({ status: 'error', message: '관리자만 삭제할 수 있어.' });
@@ -149,15 +146,14 @@ function handleBoardReplyDelete(adminRow, e, managerSet) {
   const postId = e.parameter.postId;
   if (!postId) return createResponse({ status: 'error', message: '잘못된 요청이야.' });
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
+  const data = getCachedData(SHEET_NAME.BOARD);
+  if (data.length < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  const data = sheet.getDataRange().getValues();
   const rowIndex = data.findIndex((row, i) => i > 0 && String(row[BOARD_COL.ID]) === String(postId));
   if (rowIndex === -1) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  sheet.getRange(rowIndex + 1, BOARD_COL.REPLY + 1).setValue('');
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.BOARD).getRange(rowIndex + 1, BOARD_COL.REPLY + 1).setValue('');
+  invalidateCache(SHEET_NAME.BOARD);
   return createResponse({ status: 'success' });
 }
 
@@ -167,8 +163,7 @@ function handleBoardReplyDelete(adminRow, e, managerSet) {
 function handleBoardPin(adminRow, e, managerSet) {
   const currentKnoxId = adminRow[ADMIN_COL.KNOX_ID];
   if (!managerSet) {
-    const ms = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.MANAGER);
-    managerSet = new Set(ms.getDataRange().getValues().slice(1).map(r => String(r[0]).trim().toLowerCase()));
+    managerSet = new Set(getCachedData(SHEET_NAME.MANAGER).slice(1).map(r => String(r[0]).trim().toLowerCase()));
   }
   const isAdmin = managerSet.has(String(currentKnoxId).trim().toLowerCase());
   if (!isAdmin) return createResponse({ status: 'error', message: '관리자만 고정할 수 있어.' });
@@ -177,15 +172,14 @@ function handleBoardPin(adminRow, e, managerSet) {
   const pin = e.parameter.pin; // 'Y' or 'N'
   if (!postId || (pin !== 'Y' && pin !== 'N')) return createResponse({ status: 'error', message: '잘못된 요청이야.' });
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME.BOARD);
-  if (!sheet || sheet.getLastRow() < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
+  const data = getCachedData(SHEET_NAME.BOARD);
+  if (data.length < 2) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  const data = sheet.getDataRange().getValues();
   const rowIndex = data.findIndex((row, i) => i > 0 && String(row[BOARD_COL.ID]) === String(postId));
   if (rowIndex === -1) return createResponse({ status: 'error', message: '게시물을 찾을 수 없어.' });
 
-  sheet.getRange(rowIndex + 1, BOARD_COL.PINNED + 1).setValue(pin === 'Y' ? 'Y' : '');
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.BOARD).getRange(rowIndex + 1, BOARD_COL.PINNED + 1).setValue(pin === 'Y' ? 'Y' : '');
+  invalidateCache(SHEET_NAME.BOARD);
   return createResponse({ status: 'success', pinned: pin === 'Y' });
 }
 
