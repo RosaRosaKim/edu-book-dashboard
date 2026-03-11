@@ -14,10 +14,7 @@ var SYNC_EDU_HEADERS = [
 ];
 var SYNC_STS_MAP = { '9': '진행', '2': '진행', '3': '완료', '4': '반송', '5': '취소' };
 
-/** 녹스ID에서 @emro.co.kr 제거 (일부 사용자가 이메일 전체를 입력하는 경우 대응) */
-function _normalizeKnoxId(knoxId) {
-  return String(knoxId || '').trim().replace(/@emro\.co\.kr$/i, '');
-}
+// _normalizeKnoxId → utils.gs로 이동
 
 /** 관리자 시트에서 C열="교육" 행의 계정정보 읽기 */
 function _getEduAdminCredentials() {

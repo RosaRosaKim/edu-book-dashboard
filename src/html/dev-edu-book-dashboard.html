@@ -1142,7 +1142,7 @@ async function loadDashboard() {
     const [p2] = await Promise.all([
       gasFetch(`${API_URL}?token=${encodeURIComponent(token)}&phase=2`),
       initCard(p1),
-      loadBizplayModule()
+      initBizplay()
     ]);
 
     if (p2.error) {
@@ -1509,28 +1509,8 @@ async function loadModule(name, containerId) {
 }
 window._loadModule = loadModule;
 
-/* ─── Bizplay 모듈 로드 ─── */
-async function loadBizplayModule() {
-  try {
-    const resp = await fetch('edu-bizplay.html?v=' + Date.now());
-    if (!resp.ok) return;
-    const html = await resp.text();
-    const container = $('bizplayContainer');
-    if (!container) return;
-    container.innerHTML = html;
-    // HTML 안의 <script> 태그를 실행
-    container.querySelectorAll('script').forEach(old => {
-      const s = document.createElement('script');
-      s.textContent = old.textContent;
-      old.replaceWith(s);
-    });
-  } catch (e) {
-    console.warn('[bizplay] 모듈 로드 실패:', e.message);
-  }
-}
-
 function initBizplay() {
-  loadBizplayModule();
+  loadModule('edu-bizplay.html', 'bizplayContainer');
 }
 
 let msgBoxTimer = null;
@@ -1873,21 +1853,7 @@ function renderTemplateCards() {
 
 /* ─── 밥카 모듈 로드 ─── */
 async function loadCardModule() {
-  try {
-    const resp = await fetch('card-babka.html?v=' + Date.now());
-    if (!resp.ok) return;
-    const html = await resp.text();
-    const container = $('cardContainer');
-    if (!container) return;
-    container.innerHTML = html;
-    container.querySelectorAll('script').forEach(old => {
-      const s = document.createElement('script');
-      s.textContent = old.textContent;
-      old.replaceWith(s);
-    });
-  } catch (e) {
-    console.warn('[card] 모듈 로드 실패:', e.message);
-  }
+  await loadModule('card-babka.html', 'cardContainer');
 }
 
 async function initCard(data) {

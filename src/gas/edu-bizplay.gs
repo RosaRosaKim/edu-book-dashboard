@@ -13,8 +13,7 @@
 
 /* ═══════════════ 상수 ═══════════════ */
 
-/** GAS 기본 UA가 앱 설치 페이지를 유발하므로 브라우저 UA 사용 */
-var BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+// BROWSER_UA → utils.gs로 이동
 
 /** Approval SSO 세션 재사용 허용 시간 (초) */
 var APPROVAL_SSO_TTL = 1800; // 30분

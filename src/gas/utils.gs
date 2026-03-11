@@ -3,6 +3,7 @@
  * - 시트 캐싱 (같은 요청 내 중복 읽기 제거)
  * - 암호화/복호화 (HMAC-CTR)
  * - 응답 헬퍼
+ * - 공용 상수 (BROWSER_UA 등)
  */
 
 /* ═══════════════ 시트 캐싱 ═══════════════ */
@@ -50,10 +51,25 @@ function invalidateCache(sheetName) {
   }
 }
 
+/* ═══════════════ 공용 상수 ═══════════════ */
+
+/** GAS 기본 UA가 앱 설치 페이지를 유발하므로 브라우저 UA 사용 */
+var BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+/** 녹스ID에서 @emro.co.kr 제거 (이메일 전체 입력 대응) */
+function _normalizeKnoxId(knoxId) {
+  return String(knoxId || '').trim().replace(/@emro\.co\.kr$/i, '');
+}
+
 /* ═══════════════ JSON 응답 ═══════════════ */
 function createResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/** 에러 응답 표준 형식 */
+function createErrorResponse(code, message) {
+  return createResponse({ error: code, message: message || code });
 }
 
 /* ═══════════════ 암호화/복호화 (HMAC-CTR) ═══════════════ */
@@ -63,7 +79,10 @@ function createResponse(obj) {
  * - keystream = HMAC(key, nonce||counter) 블록을 이어붙여 생성
  * - 저장 형식: "enc1:" + base64(nonce + ciphertext)
  */
-var ENCRYPT_SECRET = 'edu-book-dashboard-card-v1';
+var ENCRYPT_SECRET = (function() {
+  try { return PropertiesService.getScriptProperties().getProperty('ENCRYPT_SECRET') || 'edu-book-dashboard-card-v1'; }
+  catch (_) { return 'edu-book-dashboard-card-v1'; }
+})();
 
 function _encryptPw(plain) {
   var key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, ENCRYPT_SECRET);

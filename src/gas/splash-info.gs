@@ -224,7 +224,7 @@ function _getStockInfo() {
   var fmt = Number(price).toLocaleString();
 
   var absPct = Math.abs(parseFloat(pct));
-  if (diff > 0 && absPct >= 5) return '🚀 엠로 ' + fmt + '원 (+' + pct + '%) 오늘 치킨 사도 되겠는데?';
+  if (diff > 0 && absPct >= 5) return '🚀 엠로 ' + fmt + '원 (+' + pct + '%)';
   if (diff < 0 && absPct >= 5) return '🫣 오늘 회사 주식은 확인하지 않는 게 좋을 것 같아..';
   if (diff > 0) return '📈 엠로 ' + fmt + '원 (+' + pct + '%)';
   if (diff < 0) return '📉 엠로 ' + fmt + '원 (' + pct + '%)';
