@@ -56,7 +56,13 @@
       "Bash(git:*)",
       "Bash(xargs cat:*)",
       "WebFetch(domain:script.google.com)",
-      "WebFetch(domain:script.googleusercontent.com)"
+      "WebFetch(domain:script.googleusercontent.com)",
+      "Bash(find /c/project/workspace/emroEduDashboard -type f \\\\\\( -name \"*.html\" -o -name \"*.gs\" -o -name \"build.js\" -o -name \"deploy.js\" -o -name \"package.json\" \\\\\\) -exec wc -l {} + | sort -rn)",
+      "Bash(grep -c \"fetch\\\\|UrlFetchApp\\\\|\\\\.getDataRange\\\\|\\\\.getValues\" /c/project/workspace/emroEduDashboard/src/gas/*.gs | sort -t: -k2 -rn)",
+      "Bash(for file:*)",
+      "Bash(grep -c \"onclick=\\\\|<script>\\\\|<style>\" /c/project/workspace/emroEduDashboard/src/html/*.html | sort -t: -k2 -rn)",
+      "Bash(grep -c \"try {\" /c/project/workspace/emroEduDashboard/src/gas/*.gs | sort -t: -k2 -rn | head -10)",
+      "Bash(find \"C:\\\\project\\\\workspace\\\\emroEduDashboard/src/gas\" -name \"*.gs\" -type f -exec wc -l {} + | sort -rn)"
     ]
   }
 }

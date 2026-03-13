@@ -54,14 +54,14 @@ var FLOW_MSG = {
     var fmt = _fmtMoney(amount);
     if (mode === 'draft') {
       return {
-        content: 'Bizplay에 임시저장했어',
+        content: 'Bizplay에 임시저장했어 !!!지금은 베타기간이니 꼭 다시 한번 확인해줘. 문제가 있다면 게시판에 남겨줘야 개선할 수 있어',
         link: FLOW_LINK.APPROVAL,
         previewTitle: '📝 밥카 ' + fmt + '원 임시저장'
       };
     }
     // submit
     return {
-      content: 'Bizplay에 결재요청했어',
+      content: 'Bizplay에 결재요청했어 !!!지금은 베타기간이니 꼭 다시 한번 확인해줘. 문제가 있다면 게시판에 남겨줘야 개선할 수 있어',
       link: FLOW_LINK.APPROVAL,
       previewTitle: '🚀 밥카 ' + fmt + '원 결재요청'
     };
@@ -105,7 +105,7 @@ var FLOW_MSG = {
   // #7 밥카 초과 사용 환불 안내
   cardRefund: function(overAmount, periodLabel) {
     return {
-      content: periodLabel + ' 밥카 한도 초과분 ' + _fmtMoney(overAmount) + '원을 환불해 줘.\n\n🏦 신한은행 100-023-136929 (주)엠로',
+      content: periodLabel + ' 밥카 한도 초과분 ' + _fmtMoney(overAmount) + '원을 환불해 줘.\n\n🏦 신한은행 100-023-136929 (주)엠로\n\n !!!지금은 베타기간이니 꼭 다시 한번 확인해줘. 문제가 있다면 게시판에 남겨줘야 개선할 수 있어',
       link: FLOW_LINK.CARD,
       previewTitle: '🐷 왜케 많이 먹었어..'
     };

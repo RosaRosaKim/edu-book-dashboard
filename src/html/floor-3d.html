@@ -124,6 +124,14 @@ body{overflow:hidden;background:#0f0f1a;font-family:'Noto Sans KR',sans-serif;co
   <button onclick="resetView()"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></button>
 </div>
 
+<!-- 이미지 로딩 오버레이 -->
+<div id="loading-overlay" style="position:fixed;inset:0;z-index:300;background:#0f0f1a;display:flex;align-items:center;justify-content:center;transition:opacity 0.3s">
+  <div style="text-align:center">
+    <svg class="animate-spin" style="width:32px;height:32px;margin:0 auto 12px;color:#6366f1" viewBox="0 0 24 24"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+    <div style="color:#6b7280;font-size:13px">도면 로딩 중...</div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════
 // DATA
@@ -199,11 +207,15 @@ function init(){
 }
 
 function loadFloor(f){
+  var lo=document.getElementById('loading-overlay');
+  if(lo)lo.style.display='flex';
   fi.onload=()=>{
     imgW=fi.naturalWidth;imgH=fi.naturalHeight;
     mc.style.width=imgW+'px';mc.style.height=imgH+'px';
     renderMarkers();resetView();
-    // 이미지 로드 완료 후 대기 중인 room click 실행
+    // 이미지 로드 완료 → 로딩 오버레이 제거
+    if(lo){lo.style.opacity='0';setTimeout(()=>{lo.style.display='none';lo.style.opacity='1'},300);}
+    // 대기 중인 room click 실행
     if(_pendingRoomClick){var id=_pendingRoomClick;_pendingRoomClick=null;setTimeout(()=>onRoomClick(id),100);}
   };
   fi.src=f===5?'../img/5층도면.png':'../img/7층도면.png';
