@@ -398,10 +398,11 @@ function _processAutoMode(knoxId, encPw, mode) {
       return;
     }
 
-    // Step 2: 전체 카드 내역 조회
-    var rawResult = _callWebankApiRaw(loginResult.webankCookies);
+    // Step 2: 전체 카드 내역 조회 (이전 기간 — 마감된 기간의 내역을 결재)
+    var prevPeriod = _getPrevCardPeriod();
+    var rawResult = _callWebankApiRaw(loginResult.webankCookies, prevPeriod.from, prevPeriod.to);
     if (rawResult.expired || !rawResult.records || rawResult.records.length === 0) {
-      Logger.log('[자동결재] 카드 내역 없음 - ' + knoxId);
+      Logger.log('[자동결재] 카드 내역 없음 - ' + knoxId + ' (기간: ' + prevPeriod.from + '~' + prevPeriod.to + ')');
       // 내역이 없으면 성공도 실패도 아님 — 알림만
       sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '카드 사용내역이 없거나 조회에 실패했어.'));
       return;
@@ -444,6 +445,28 @@ function _processAutoMode(knoxId, encPw, mode) {
   } catch (ex) {
     Logger.log('[자동결재] 예외 - ' + knoxId + ': ' + ex.message);
     try { sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, ex.message)); } catch (e) {}
+  }
+}
+
+/**
+ * [임시] 자동결재(draft/submit) 사용자만 재실행 — 날짜 체크 없음
+ * 버그 수정 후 1회 수동 실행용. 실행 후 삭제할 것.
+ */
+function retryAutoApproval() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = data[i][0];
+    if (!knoxId) continue;
+
+    var encPw = data[i][CARD_DAILY_COL - 1];
+    var autoMode = String(data[i][CARD_AUTO_MODE_COL - 1] || '').trim().toLowerCase();
+
+    if (autoMode === 'draft' || autoMode === 'submit') {
+      Logger.log('[재실행] ' + knoxId + ' (' + autoMode + ')');
+      _processAutoMode(knoxId, encPw, autoMode);
+    }
   }
 }
 
@@ -1602,8 +1625,8 @@ function _parseFormFields(html, formId) {
 }
 
 /** webank 카드 내역 raw API 호출 (매핑하지 않은 원본 REC 반환) */
-function _callWebankApiRaw(webankCookies) {
-  var period = _getCardQueryPeriod();
+function _callWebankApiRaw(webankCookies, fromDt, toDt) {
+  var period = (fromDt && toDt) ? { from: fromDt, to: toDt } : _getCardQueryPeriod();
   var payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
     PAGE_NO: '1', PAGE_SZ: '100',
     APV_YN: 'A', PROC_STS: '', ORD_COL: 'APV_DT', ORD_MT: 'DESC',

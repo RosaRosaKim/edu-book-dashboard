@@ -200,6 +200,28 @@ function _getCardQueryPeriod() {
   return { from: fmt(start), to: fmt(end) };
 }
 
+/** 이전 카드 기간 (자동결재용 — 마감된 직전 기간) */
+function _getPrevCardPeriod() {
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  var start, end;
+  if (d >= 15) {
+    // 15일 이후 → 직전 기간: 전월 15일 ~ 이번달 14일
+    start = new Date(y, m - 1, 15);
+    end = new Date(y, m, 14);
+  } else {
+    // 1~14일 → 직전 기간: 전전월 15일 ~ 전월 14일
+    start = new Date(y, m - 2, 15);
+    end = new Date(y, m - 1, 14);
+  }
+  var fmt = function(dt) {
+    var mm = ('0' + (dt.getMonth() + 1)).slice(-2);
+    var dd = ('0' + dt.getDate()).slice(-2);
+    return '' + dt.getFullYear() + mm + dd;
+  };
+  return { from: fmt(start), to: fmt(end) };
+}
+
 /** 승인일시 포맷: 20260227 + 151510 → 02.27 15:15 */
 function _fmtApvDt(apvDt, apvTm) {
   if (!apvDt) return '';
