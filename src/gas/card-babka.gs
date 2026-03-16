@@ -398,6 +398,19 @@ function _processAutoMode(knoxId, encPw, mode) {
       return;
     }
 
+    // Step 1.5: 중복 결재 체크
+    if (loginResult.approvalCookies) {
+      try {
+        var sso = { approvalCookies: loginResult.approvalCookies, formFields: loginResult.formFields || {}, useInttId: loginResult.useInttId || '' };
+        if (_hasCardDraftWithSso(sso, userId)) {
+          Logger.log('[자동결재] 이미 상신됨 스킵 - ' + knoxId);
+          return;
+        }
+      } catch (chkErr) {
+        Logger.log('[자동결재] 중복체크 실패(계속진행) - ' + knoxId + ': ' + chkErr.message);
+      }
+    }
+
     // Step 2: 전체 카드 내역 조회 (이전 기간 — 마감된 기간의 내역을 결재)
     var prevPeriod = _getPrevCardPeriod();
     var rawResult = _callWebankApiRaw(loginResult.webankCookies, prevPeriod.from, prevPeriod.to);
@@ -586,17 +599,28 @@ function sendCardRefundAlert(data) {
 /**
  * 사용자가 이미 "지출결의서(법인카드)"를 상신했는지 확인
  * approval SSO → r007 기안문서 목록 조회 → PAPER_NM 매칭
+ *
+ * @param {string} bizUserId - Bizplay 사용자 ID (xxx@emro.co.kr)
+ * @param {string} encPw - 암호화된 비밀번호
+ * @returns {boolean} true = 이미 상신/진행/완료 건이 있음
  */
 function _checkUserHasCardDraft(bizUserId, encPw) {
-  var userId = bizUserId;
   var password = _decryptPw(String(encPw));
 
   // approval SSO 획득
-  var sso = _approvalSsoOnly(userId, password);
+  var sso = _approvalSsoOnly(bizUserId, password);
   if (!sso.approvalCookies) return false; // SSO 실패 → 판별 불가, 알림 발송
 
-  // r007 호출: 검색 기간 = 결재월 15일 ~ 오늘
-  var period = _getCardQueryPeriod();
+  return _hasCardDraftWithSso(sso, bizUserId);
+}
+
+/**
+ * approval SSO가 이미 있는 경우 상신 여부 확인 (중복 로그인 방지)
+ * 자동결재/수동결재에서 재활용
+ */
+function _hasCardDraftWithSso(sso, bizUserId) {
+  // 직전 기간 기준으로 조회 (결재 대상 = 마감된 이전 기간)
+  var prevPeriod = _getPrevCardPeriod();
   var now = new Date();
   var enDate = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2);
   var ff = sso.formFields || {};
@@ -605,8 +629,8 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
     PTL_ID: ff.PTL_ID || 'PTL_3',
     CHNL_ID: ff.CHNL_ID || 'CHNL_1',
     USE_INTT_ID: ff.USE_INTT_ID || sso.useInttId || '',
-    DRAFT_USER_ID: userId,
-    ST_DRAFT_DATE: period.from,
+    DRAFT_USER_ID: bizUserId,
+    ST_DRAFT_DATE: prevPeriod.from,
     EN_DRAFT_DATE: enDate,
     SRCH_WD: '',
     SRCH_DV: 'pp',
@@ -633,8 +657,8 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
   var data;
   try { data = JSON.parse(resp.getContentText()); } catch (e) { return false; }
 
-  // 상신해야 할 월: period.from 기준 YYYYMM
-  var targetYM = period.from.substring(0, 6);
+  // 직전 기간 시작월 기준 YYYYMM
+  var targetYM = prevPeriod.from.substring(0, 6);
   var recs = data.REC || [];
   for (var i = 0; i < recs.length; i++) {
     var paperNm = recs[i].PAPER_NM || '';
@@ -642,7 +666,7 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
     if (paperNm.indexOf('지출결의서(법인카드)') >= 0 && draftDttm.substring(0, 6) === targetYM
         && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
-      return true; // 이미 상신함 (진행 or 완료)
+      return true;
     }
   }
   return false;
@@ -1262,6 +1286,18 @@ function handleCardApproval(adminRow, e) {
 
   var mode = e.parameter.mode || 'temp'; // 'temp' = 임시저장, 'approve' = 결재요청
   var knoxId = adminRow[ADMIN_COL.KNOX_ID];
+
+  // 중복 결재 체크 (결재요청 모드만)
+  if (mode === 'approve' && session.approvalCookies) {
+    try {
+      var sso = { approvalCookies: session.approvalCookies, formFields: session.formFields || {}, useInttId: session.useInttId || '' };
+      if (_hasCardDraftWithSso(sso, session.userId || (knoxId + '@emro.co.kr'))) {
+        return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
+      }
+    } catch (chkErr) {
+      Logger.log('[수동결재] 중복체크 실패(계속진행) - ' + knoxId + ': ' + chkErr.message);
+    }
+  }
 
   // 직전 기간 전체 조회 (결재 대상 = 마감된 이전 기간)
   var prevPeriod = _getPrevCardPeriod();
