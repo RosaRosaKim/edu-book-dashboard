@@ -684,7 +684,7 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
     var paperNm = recs[i].PAPER_NM || '';
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
     debugInfo.docs.push({ name: paperNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
-    if (paperNm.indexOf('지출결의서') >= 0
+    if ((paperNm.indexOf('법인카드') >= 0 && paperNm.indexOf('지출결의') >= 0)
         && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
       return { found: true, debug: debugInfo };
     }
