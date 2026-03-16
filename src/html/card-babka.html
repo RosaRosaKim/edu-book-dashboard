@@ -474,13 +474,13 @@
     return months;
   }
 
-  /** rawDate(YYYYMMDD) 기반 청구월 필터 (15일~다음달14일 주기) */
+  /** rawDate(YYYYMMDD) 기반 청구월 필터 (당월 15일~다음달 14일 주기) */
   function filterStatsByMonth(records, billingMonth) {
     if (!billingMonth) return records;
     const by = parseInt(billingMonth.substring(0, 4), 10);
     const bm = parseInt(billingMonth.substring(4, 6), 10) - 1; // 0-indexed
-    const startDt = new Date(by, bm - 1, 15); // 전월 15일
-    const endDt = new Date(by, bm, 14); // 당월 14일
+    const startDt = new Date(by, bm, 15); // 당월 15일
+    const endDt = new Date(by, bm + 1, 14); // 다음달 14일
     const fmt = d => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
     const startNum = fmt(startDt);
     const endNum = fmt(endDt);
