@@ -449,6 +449,63 @@ function _processAutoMode(knoxId, encPw, mode) {
 }
 
 /**
+ * [임시] 자동결재(draft/submit) 사용자에게 결과 Flow 메시지 재전송
+ * 실제 결재는 이미 완료된 상태 — 메시지만 [재실행] 표시로 다시 보냄
+ * 실행 후 삭제할 것.
+ */
+function retryAutoApprovalMsg() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
+  var prevPeriod = _getPrevCardPeriod();
+
+  for (var i = 1; i < data.length; i++) {
+    var knoxId = data[i][0];
+    if (!knoxId) continue;
+
+    var encPw = data[i][CARD_DAILY_COL - 1];
+    var autoMode = String(data[i][CARD_AUTO_MODE_COL - 1] || '').trim().toLowerCase();
+    if (autoMode !== 'draft' && autoMode !== 'submit') continue;
+    if (!encPw || !String(encPw).trim()) continue;
+
+    try {
+      var userId = knoxId + '@emro.co.kr';
+      var password = _decryptPw(String(encPw));
+      var loginResult = _bizplayLoginCore(userId, password);
+      if (loginResult.error || !loginResult.webankCookies) continue;
+
+      var rawResult = _callWebankApiRaw(loginResult.webankCookies, prevPeriod.from, prevPeriod.to);
+      if (rawResult.expired || !rawResult.records || rawResult.records.length === 0) continue;
+
+      var userCards = [];
+      try { userCards = _getUserCards(knoxId); } catch (uce) {}
+      var lunchCard = userCards.find(function(c) { return c.isLunchCard; });
+      if (lunchCard) {
+        rawResult.records = rawResult.records.filter(function(r) {
+          return String(r.CARD_NO || '') === lunchCard.cardNo;
+        });
+      }
+      var records = rawResult.records.filter(function(r) { return !isTransportRecord(r); });
+      if (records.length === 0) continue;
+
+      var totalCost = 0;
+      records.forEach(function(r) { totalCost += Math.round(Number(r.BUY_SUM || 0)); });
+
+      var fmt = _fmtMoney(totalCost);
+      var msg;
+      if (autoMode === 'draft') {
+        msg = { content: '[재실행] Bizplay에 임시저장했어 !!! 만약 문제가 있다면 게시판에 남겨줘', link: FLOW_LINK.APPROVAL, previewTitle: '📝 밥카 ' + fmt + '원 임시저장' };
+      } else {
+        msg = { content: '[재실행] Bizplay에 결재요청했어 !!! 만약 문제가 있다면 게시판에 남겨줘', link: FLOW_LINK.APPROVAL, previewTitle: '🚀 밥카 ' + fmt + '원 결재요청' };
+      }
+      sendFlowMsg(knoxId, msg);
+      Logger.log('[재실행] 메시지 발송 - ' + knoxId + ' (' + autoMode + ', ' + totalCost + '원)');
+    } catch (ex) {
+      Logger.log('[재실행] 실패 - ' + knoxId + ': ' + ex.message);
+    }
+  }
+}
+
+/**
  * 미결재 리마인드 스마트 알림 (매일 오전 트리거)
  * 14일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
  * 트리거 설정: 시간 기반 트리거 → 매일 오전 9~10시
