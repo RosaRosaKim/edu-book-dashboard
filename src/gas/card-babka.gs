@@ -437,8 +437,8 @@ function _processAutoMode(knoxId, encPw, mode) {
     });
 
     if (records.length === 0) {
-      Logger.log('[자동결재] 교통비 제외 후 내역 없음 - ' + knoxId);
-      sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '교통비를 제외하면 결재할 내역이 없어.'));
+      Logger.log('[자동결재] 결재 대상 내역 없음 - ' + knoxId);
+      sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(mode, '결재할 내역이 없어.'));
       return;
     }
 
@@ -1340,10 +1340,6 @@ function handleCardApproval(adminRow, e) {
   }
 
   var matched = rawResult.records;
-
-  if (matched.length === 0) {
-    return createResponse({ error: 'NO_RECORDS', message: '교통비를 제외하면 결재할 내역이 없어.' });
-  }
 
   // 수정된 결재라인 파라미터 확인
   var modifiedApprLine = null;
