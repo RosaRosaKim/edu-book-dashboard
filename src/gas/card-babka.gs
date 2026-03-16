@@ -657,14 +657,13 @@ function _hasCardDraftWithSso(sso, bizUserId) {
   var data;
   try { data = JSON.parse(resp.getContentText()); } catch (e) { return false; }
 
-  // 직전 기간 시작월 기준 YYYYMM
-  var targetYM = prevPeriod.from.substring(0, 6);
+  // API 조회 범위(prevPeriod.from ~ 오늘)가 이미 기간을 제한하므로
+  // 해당 범위 내 지출결의서(법인카드)가 있으면 이미 상신한 것
   var recs = data.REC || [];
   for (var i = 0; i < recs.length; i++) {
     var paperNm = recs[i].PAPER_NM || '';
-    var draftDttm = recs[i].DRAFT_DTTM || '';
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-    if (paperNm.indexOf('지출결의서(법인카드)') >= 0 && draftDttm.substring(0, 6) === targetYM
+    if (paperNm.indexOf('지출결의서(법인카드)') >= 0
         && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
       return true;
     }
