@@ -621,74 +621,75 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
  * 자동결재/수동결재에서 재활용
  */
 function _hasCardDraftWithSso(sso, bizUserId) {
-  // 직전 기간 기준으로 조회 (결재 대상 = 마감된 이전 기간)
   var prevPeriod = _getPrevCardPeriod();
   var now = new Date();
   var enDate = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2);
-  var ff = sso.formFields || {};
 
+  var result = _callR007ForCardCheck(sso, bizUserId, prevPeriod.from, enDate);
+  return result;
+}
+
+/** r007 호출 + 지출결의서 매칭 (내부 헬퍼) */
+function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
+  var ff = sso.formFields || {};
   var useInttId = ff.USE_INTT_ID || sso.useInttId || '';
   var debugInfo = {
-    userId: bizUserId, period: prevPeriod.from + '~' + enDate,
-    USE_INTT_ID: useInttId, PTL_ID: ff.PTL_ID || '', cookieLen: (sso.approvalCookies || '').length,
-    formFieldKeys: Object.keys(ff).join(','),
-    docs: []
+    userId: bizUserId, period: stDate + '~' + enDate,
+    cookieLen: (sso.approvalCookies || '').length, docs: []
   };
 
-  // DATE_GB: 1=기안일, 2=결재일 — 둘 다 시도
-  for (var dg = 1; dg <= 2; dg++) {
-    var r007Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
-      PTL_ID: ff.PTL_ID || 'PTL_3',
-      CHNL_ID: ff.CHNL_ID || 'CHNL_1',
-      USE_INTT_ID: useInttId,
-      DRAFT_USER_ID: bizUserId,
-      ST_DRAFT_DATE: prevPeriod.from,
-      EN_DRAFT_DATE: enDate,
-      SRCH_WD: '',
-      SRCH_DV: 'pp',
-      DRAFT_USER_NM: 'pp',
-      PG_NO: '1',
-      PG_PER_CNT: '30',
-      PAPER_SEQ_NO: '',
-      DATE_GB: String(dg)
-    }));
+  var r007Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+    PTL_ID: ff.PTL_ID || 'PTL_3',
+    CHNL_ID: ff.CHNL_ID || 'CHNL_1',
+    USE_INTT_ID: useInttId,
+    DRAFT_USER_ID: bizUserId,
+    ST_DRAFT_DATE: stDate,
+    EN_DRAFT_DATE: enDate,
+    SRCH_WD: '',
+    SRCH_DV: 'pp',
+    DRAFT_USER_NM: 'pp',
+    PG_NO: '1',
+    PG_PER_CNT: '30',
+    PAPER_SEQ_NO: '',
+    DATE_GB: '1'
+  }));
 
-    var resp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_r007.jct', {
-      method: 'post',
-      contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
-      headers: {
-        'User-Agent': BROWSER_UA,
-        'Cookie': sso.approvalCookies,
-        'X-Requested-With': 'XMLHttpRequest',
-        'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
-      },
-      payload: r007Payload,
-      muteHttpExceptions: true
-    });
+  var resp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_r007.jct', {
+    method: 'post',
+    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+    headers: {
+      'User-Agent': BROWSER_UA,
+      'Cookie': sso.approvalCookies,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
+    },
+    payload: r007Payload,
+    muteHttpExceptions: true
+  });
 
-    var respText = resp.getContentText();
-    var data;
-    try { data = JSON.parse(respText); } catch (e) { debugInfo['dg' + dg + '_parseErr'] = respText.substring(0, 200); continue; }
+  var data;
+  try { data = JSON.parse(resp.getContentText()); } catch (e) {
+    debugInfo.parseErr = true;
+    return { found: false, expired: true, debug: debugInfo };
+  }
 
-    // 세션 만료 에러 감지
-    if (data.COMMON_HEAD && data.COMMON_HEAD.ERROR === true) {
-      debugInfo['dg' + dg + '_ssoExpired'] = data.COMMON_HEAD.MESSAGE || 'ERROR';
-      continue;
-    }
+  if (data.COMMON_HEAD && data.COMMON_HEAD.ERROR === true) {
+    debugInfo.ssoExpired = data.COMMON_HEAD.MESSAGE || 'ERROR';
+    return { found: false, expired: true, debug: debugInfo };
+  }
 
-    var recs = data.REC || [];
-    debugInfo['dg' + dg + '_count'] = recs.length;
-    for (var i = 0; i < recs.length; i++) {
-      var paperNm = recs[i].PAPER_NM || '';
-      var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-      debugInfo.docs.push({ dg: dg, name: paperNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
-      if (paperNm.indexOf('지출결의서') >= 0
-          && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
-        return { found: true, debug: debugInfo };
-      }
+  var recs = data.REC || [];
+  debugInfo.docCount = recs.length;
+  for (var i = 0; i < recs.length; i++) {
+    var paperNm = recs[i].PAPER_NM || '';
+    var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
+    debugInfo.docs.push({ name: paperNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
+    if (paperNm.indexOf('지출결의서') >= 0
+        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
+      return { found: true, debug: debugInfo };
     }
   }
-  return { found: false, debug: debugInfo };
+  return { found: false, expired: false, debug: debugInfo };
 }
 
 // 암호화/복호화 함수 → utils.gs (_encryptPw, _decryptPw, _hmacKeystream, _randomBytes, _decryptPwLegacyXor)
@@ -1306,46 +1307,42 @@ function handleCardApproval(adminRow, e) {
   var mode = e.parameter.mode || 'temp'; // 'temp' = 임시저장, 'approve' = 결재요청, 'check' = 중복체크만
   var knoxId = adminRow[ADMIN_COL.KNOX_ID];
 
-  // 중복 결재 체크 (결재요청 또는 check 모드)
+  // 중복 결재 체크 (결재요청 또는 check 모드) — 기안현황과 동일한 세션 흐름
   if (mode === 'approve' || mode === 'check') {
-    var bizUserId = session.userId || (knoxId + '@emro.co.kr');
-    var dupResult = null;
     var dupDebug = {};
+    try {
+      // _getApprovalSso: 저장된 세션 재활용 or PW fresh SSO
+      var ssoResult = _getApprovalSso(session, adminRow);
+      if (!ssoResult.error && ssoResult.sso && ssoResult.sso.approvalCookies) {
+        var sso = ssoResult.sso;
+        var bizUserId = session.userId || (knoxId + '@emro.co.kr');
+        var dupResult = _hasCardDraftWithSso(sso, bizUserId);
+        dupDebug.first = dupResult.debug;
 
-    // 1차: 세션 SSO로 시도
-    if (session.approvalCookies) {
-      try {
-        var sso = { approvalCookies: session.approvalCookies, formFields: session.formFields || {}, useInttId: session.useInttId || '' };
-        dupResult = _hasCardDraftWithSso(sso, bizUserId);
-        dupDebug.sso = dupResult.debug;
-      } catch (chkErr) {
-        dupDebug.ssoError = chkErr.message;
-      }
-    } else {
-      dupDebug.ssoSkip = 'no approvalCookies';
-    }
+        // 세션 만료 → _retryApprovalSso로 재시도
+        if (dupResult.expired) {
+          var retrySso = _retryApprovalSso(session, adminRow);
+          if (retrySso && retrySso.approvalCookies) {
+            _saveApprovalSession(propKey, session, retrySso);
+            dupResult = _hasCardDraftWithSso(retrySso, bizUserId);
+            dupDebug.retry = dupResult.debug;
+          } else {
+            dupDebug.retryFail = true;
+          }
+        } else {
+          _saveApprovalSession(propKey, session, sso);
+        }
 
-    // 2차: 1차에서 못 찾았으면 PW로 재시도
-    if (!dupResult || !dupResult.found) {
-      var encPw = adminRow[7];
-      if (encPw && String(encPw).trim()) {
-        try {
-          dupResult = _checkUserHasCardDraft(bizUserId, encPw);
-          dupDebug.pw = typeof dupResult === 'object' ? dupResult.debug : { found: dupResult };
-        } catch (ignore) {
-          dupDebug.pwError = ignore.message;
+        if (dupResult && dupResult.found) {
+          return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.', debug: dupDebug });
         }
       } else {
-        dupDebug.pwSkip = 'no encPw';
+        dupDebug.ssoError = ssoResult.error || 'no cookies';
       }
+    } catch (chkErr) {
+      dupDebug.error = chkErr.message;
     }
 
-    var dupFound = dupResult && (dupResult.found === true || dupResult === true);
-    if (dupFound) {
-      return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.', debug: dupDebug });
-    }
-
-    // check 모드는 여기까지 — 중복 아니면 OK (디버그 포함)
     if (mode === 'check') {
       return createResponse({ status: 'ok', debug: dupDebug });
     }
