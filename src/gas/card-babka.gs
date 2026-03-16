@@ -1261,35 +1261,36 @@ function handleCardApproval(adminRow, e) {
   if (!webankCookies) return createResponse({ error: 'NO_SESSION', message: 'webank 인증 정보가 없어. Bizplay 재로그인 해줘.' });
 
   var mode = e.parameter.mode || 'temp'; // 'temp' = 임시저장, 'approve' = 결재요청
-  var selectedJson = e.parameter.selectedRecords;
-  if (!selectedJson) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없어.' });
+  var knoxId = adminRow[ADMIN_COL.KNOX_ID];
 
-  var selected;
-  try { selected = JSON.parse(selectedJson); } catch (pe) {
-    return createResponse({ error: 'INVALID_PARAM', message: '선택 레코드 파싱 실패' });
-  }
-  if (!selected || selected.length === 0) return createResponse({ error: 'NO_SELECTION', message: '선택된 레코드가 없어.' });
-
-  // 카드 내역 raw API 호출 → 선택 레코드 매칭
-  var rawResult = _callWebankApiRaw(webankCookies);
+  // 직전 기간 전체 조회 (결재 대상 = 마감된 이전 기간)
+  var prevPeriod = _getPrevCardPeriod();
+  var rawResult = _callWebankApiRaw(webankCookies, prevPeriod.from, prevPeriod.to);
   if (rawResult.expired) {
     session.webankCookies = '';
     PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(session));
     return createResponse({ error: 'SESSION_EXPIRED', message: '세션 만료' });
   }
 
-  var matched = [];
-  selected.forEach(function(sel) {
-    var found = rawResult.records.filter(function(r) {
-      return r.CARD_NO === sel.cardNo
-        && String(r.SEQ) === String(sel.seq)
-        && (!sel.apvNo || String(r.APV_NO) === String(sel.apvNo));
+  if (!rawResult.records || rawResult.records.length === 0) {
+    return createResponse({ error: 'NO_RECORDS', message: '직전 기간(' + prevPeriod.from + '~' + prevPeriod.to + ') 카드 내역이 없어.' });
+  }
+
+  // 중식대 카드 필터링
+  var userCards = [];
+  try { userCards = _getUserCards(knoxId); } catch (uce) {}
+  var lunchCard = userCards.find(function(c) { return c.isLunchCard; });
+  if (lunchCard) {
+    rawResult.records = rawResult.records.filter(function(r) {
+      return String(r.CARD_NO || '') === lunchCard.cardNo;
     });
-    if (found.length > 0) matched.push(found[0]);
-  });
+  }
+
+  // 교통비 제외
+  var matched = rawResult.records.filter(function(r) { return !isTransportRecord(r); });
 
   if (matched.length === 0) {
-    return createResponse({ error: 'NO_MATCH', message: '선택한 레코드를 찾을 수 없어.' });
+    return createResponse({ error: 'NO_RECORDS', message: '교통비를 제외하면 결재할 내역이 없어.' });
   }
 
   // 수정된 결재라인 파라미터 확인
