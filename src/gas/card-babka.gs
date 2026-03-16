@@ -435,7 +435,7 @@ function _processAutoMode(knoxId, encPw, mode) {
 
     if (result.status === 'success') {
       var totalCost = 0;
-      records.forEach(function(r) { totalCost += Number(r.cost || r.APV_AMT || 0); });
+      records.forEach(function(r) { totalCost += Math.round(Number(r.BUY_SUM || r.cost || 0)); });
       Logger.log('[자동결재] 성공 - ' + knoxId + ' (' + mode + ', ' + records.length + '건, ' + totalCost + '원, 교통비 제외)');
       sendFlowMsg(knoxId, FLOW_MSG.cardAutoAlarm(mode, totalCost));
     } else {
