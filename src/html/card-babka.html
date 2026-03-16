@@ -394,14 +394,13 @@
   async function loadHolidays(year) {
     if (holidayCache[year]) return holidayCache[year];
     try {
-      const resp = await fetch(`https://holidays.hyunbin.page/${year}.json`);
+      const resp = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/KR`);
       if (!resp.ok) throw new Error(resp.status);
       const data = await resp.json();
-      holidayCache[year] = new Set(Object.keys(data));
+      holidayCache[year] = new Set(data.map(h => h.date));
 
       // 근로자의 날(5/1)은 공휴일은 아니지만 회사 휴일
-      const mayDay = `${year}-05-01`;
-      holidayCache[year].add(mayDay);
+      holidayCache[year].add(`${year}-05-01`);
 
       return holidayCache[year];
     } catch (e) {
