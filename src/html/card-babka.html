@@ -375,6 +375,19 @@
     return { start, end };
   }
 
+  function getPrevCardPeriod(now) {
+    now = now || new Date();
+    let start, end;
+    if (now.getDate() >= 15) {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+      end = new Date(now.getFullYear(), now.getMonth(), 14);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+      end = new Date(now.getFullYear(), now.getMonth() - 1, 14);
+    }
+    return { start, end };
+  }
+
   /* ─── 공휴일 API (holidays.hyunbin.page) ─── */
   const holidayCache = {}; // { 2026: Set(['2026-02-16', ...]) }
 
@@ -1497,9 +1510,12 @@
           { APPR_ORD: '0', APPRLINE_KIND: '4', APPR_USER_GB: '1', APPR_USER_NM: '', APPR_DEPT_CD: '157', APPR_DEPT_NM: '관리그룹' }
         ];
 
-        // 결재라인 팝업 표시 (읽기전용 확인)
+        // 결재라인 팝업 표시 (직전 기간 안내 포함)
         resetBtn();
-        const apprResult = await window.showApprLinePopup(fixedApprLine);
+        const prev = getPrevCardPeriod();
+        const fmtPeriod = (d) => (d.getMonth()+1) + '/' + d.getDate();
+        const periodLabel = '결재 대상: ' + fmtPeriod(prev.start) + ' ~ ' + fmtPeriod(prev.end);
+        const apprResult = await window.showApprLinePopup(fixedApprLine, { subtitle: periodLabel });
         if (!apprResult) return;
 
         // 확인 후 전체 플로우 실행 (webank 세션 유지를 위해 한번에)

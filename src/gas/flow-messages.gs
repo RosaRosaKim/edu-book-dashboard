@@ -54,14 +54,14 @@ var FLOW_MSG = {
     var fmt = _fmtMoney(amount);
     if (mode === 'draft') {
       return {
-        content: 'Bizplay에 임시저장했어 !!!지금은 베타기간이니 꼭 다시 한번 확인해줘. 문제가 있다면 게시판에 남겨줘야 개선할 수 있어',
+        content: 'Bizplay에 임시저장했어 !!! 만약 문제가 있다면 게시판에 남겨줘',
         link: FLOW_LINK.APPROVAL,
         previewTitle: '📝 밥카 ' + fmt + '원 임시저장'
       };
     }
     // submit
     return {
-      content: 'Bizplay에 결재요청했어 !!!지금은 베타기간이니 꼭 다시 한번 확인해줘. 문제가 있다면 게시판에 남겨줘야 개선할 수 있어',
+      content: 'Bizplay에 결재요청했어 !!!  만약 문제가 있다면 게시판에 남겨줘',
       link: FLOW_LINK.APPROVAL,
       previewTitle: '🚀 밥카 ' + fmt + '원 결재요청'
     };

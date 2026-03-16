@@ -405,7 +405,7 @@ function _searchApprUsersLocal(word) {
 }
 
 /* ─── 결재라인 팝업 표시 → Promise<apprLine[]|false> ─── */
-function showApprLinePopup(apprLine) {
+function showApprLinePopup(apprLine, opts) {
   return new Promise(resolve => {
     const box = $('apprLineBox');
     const content = $('apprLineContent');
@@ -419,6 +419,19 @@ function showApprLinePopup(apprLine) {
     const addBtn = $('apprLineAddBtn');
     const searchBack = $('apprLineSearchBack');
     const searchInput = $('apprLineSearchInput');
+
+    // 서브타이틀 표시 (기간 등)
+    var subtitleEl = document.getElementById('apprLineSubtitle');
+    if (!subtitleEl) {
+      var headerEl = box.querySelector('.text-\\[10px\\].font-bold');
+      if (headerEl) {
+        subtitleEl = document.createElement('div');
+        subtitleEl.id = 'apprLineSubtitle';
+        subtitleEl.className = 'text-[11px] text-accent font-semibold mt-0.5';
+        headerEl.parentNode.insertBefore(subtitleEl, headerEl.nextSibling);
+      }
+    }
+    if (subtitleEl) subtitleEl.textContent = (opts && opts.subtitle) || '';
 
     // 내부 상태
     let editableApprLine = JSON.parse(JSON.stringify(apprLine || []));
