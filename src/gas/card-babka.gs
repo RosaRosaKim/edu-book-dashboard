@@ -627,50 +627,53 @@ function _hasCardDraftWithSso(sso, bizUserId) {
   var enDate = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2);
   var ff = sso.formFields || {};
 
-  var r007Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
-    PTL_ID: ff.PTL_ID || 'PTL_3',
-    CHNL_ID: ff.CHNL_ID || 'CHNL_1',
-    USE_INTT_ID: ff.USE_INTT_ID || sso.useInttId || '',
-    DRAFT_USER_ID: bizUserId,
-    ST_DRAFT_DATE: prevPeriod.from,
-    EN_DRAFT_DATE: enDate,
-    SRCH_WD: '',
-    SRCH_DV: 'pp',
-    DRAFT_USER_NM: 'pp',
-    PG_NO: '1',
-    PG_PER_CNT: '30',
-    PAPER_SEQ_NO: '',
-    DATE_GB: '1'
-  }));
+  var useInttId = ff.USE_INTT_ID || sso.useInttId || '';
+  var debugInfo = { userId: bizUserId, period: prevPeriod.from + '~' + enDate, docs: [] };
 
-  var resp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_r007.jct', {
-    method: 'post',
-    contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
-    headers: {
-      'User-Agent': BROWSER_UA,
-      'Cookie': sso.approvalCookies,
-      'X-Requested-With': 'XMLHttpRequest',
-      'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
-    },
-    payload: r007Payload,
-    muteHttpExceptions: true
-  });
+  // DATE_GB: 1=기안일, 2=결재일 — 둘 다 시도
+  for (var dg = 1; dg <= 2; dg++) {
+    var r007Payload = '_JSON_=' + encodeURIComponent(JSON.stringify({
+      PTL_ID: ff.PTL_ID || 'PTL_3',
+      CHNL_ID: ff.CHNL_ID || 'CHNL_1',
+      USE_INTT_ID: useInttId,
+      DRAFT_USER_ID: bizUserId,
+      ST_DRAFT_DATE: prevPeriod.from,
+      EN_DRAFT_DATE: enDate,
+      SRCH_WD: '',
+      SRCH_DV: '',
+      DRAFT_USER_NM: '',
+      PG_NO: '1',
+      PG_PER_CNT: '30',
+      PAPER_SEQ_NO: '',
+      DATE_GB: String(dg)
+    }));
 
-  var data;
-  try { data = JSON.parse(resp.getContentText()); } catch (e) { return false; }
+    var resp = UrlFetchApp.fetch('https://approval.appplay.co.kr/appr_r007.jct', {
+      method: 'post',
+      contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Cookie': sso.approvalCookies,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://approval.appplay.co.kr/appr/gate/appr_doc_layout2.act'
+      },
+      payload: r007Payload,
+      muteHttpExceptions: true
+    });
 
-  // API 조회 범위(prevPeriod.from ~ 오늘)가 이미 기간을 제한하므로
-  // 해당 범위 내 지출결의서(법인카드)가 있으면 이미 상신한 것
-  var recs = data.REC || [];
-  var debugInfo = { userId: bizUserId, period: prevPeriod.from + '~' + enDate, docCount: recs.length, docs: [] };
-  for (var i = 0; i < recs.length; i++) {
-    var paperNm = recs[i].PAPER_NM || '';
-    var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-    debugInfo.docs.push({ name: paperNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
-    if (paperNm.indexOf('지출결의서(법인카드)') >= 0
-        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
-      debugInfo.found = true;
-      return { found: true, debug: debugInfo };
+    var data;
+    try { data = JSON.parse(resp.getContentText()); } catch (e) { continue; }
+
+    var recs = data.REC || [];
+    debugInfo['dg' + dg + '_count'] = recs.length;
+    for (var i = 0; i < recs.length; i++) {
+      var paperNm = recs[i].PAPER_NM || '';
+      var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
+      debugInfo.docs.push({ dg: dg, name: paperNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
+      if (paperNm.indexOf('지출결의서') >= 0
+          && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
+        return { found: true, debug: debugInfo };
+      }
     }
   }
   return { found: false, debug: debugInfo };
