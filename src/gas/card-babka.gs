@@ -1284,19 +1284,32 @@ function handleCardApproval(adminRow, e) {
   var webankCookies = session.webankCookies || '';
   if (!webankCookies) return createResponse({ error: 'NO_SESSION', message: 'webank 인증 정보가 없어. Bizplay 재로그인 해줘.' });
 
-  var mode = e.parameter.mode || 'temp'; // 'temp' = 임시저장, 'approve' = 결재요청
+  var mode = e.parameter.mode || 'temp'; // 'temp' = 임시저장, 'approve' = 결재요청, 'check' = 중복체크만
   var knoxId = adminRow[ADMIN_COL.KNOX_ID];
 
-  // 중복 결재 체크 (결재요청 모드만)
-  if (mode === 'approve' && session.approvalCookies) {
+  // 중복 결재 체크 (결재요청 또는 check 모드)
+  if ((mode === 'approve' || mode === 'check') && session.approvalCookies) {
     try {
       var sso = { approvalCookies: session.approvalCookies, formFields: session.formFields || {}, useInttId: session.useInttId || '' };
       if (_hasCardDraftWithSso(sso, session.userId || (knoxId + '@emro.co.kr'))) {
         return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
       }
     } catch (chkErr) {
-      Logger.log('[수동결재] 중복체크 실패(계속진행) - ' + knoxId + ': ' + chkErr.message);
+      // SSO 만료 시 PW로 재시도
+      var encPw = adminRow[7];
+      if (encPw && String(encPw).trim()) {
+        try {
+          if (_checkUserHasCardDraft(session.userId || (knoxId + '@emro.co.kr'), encPw)) {
+            return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
+          }
+        } catch (ignore) {}
+      }
     }
+  }
+
+  // check 모드는 여기까지 — 중복 아니면 OK
+  if (mode === 'check') {
+    return createResponse({ status: 'ok' });
   }
 
   // 직전 기간 전체 조회 (결재 대상 = 마감된 이전 기간)

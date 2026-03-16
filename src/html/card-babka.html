@@ -1502,8 +1502,20 @@
       const token = localStorage.getItem('token');
       const selParam = '&selectedRecords=' + encodeURIComponent(JSON.stringify(selectedRecords));
 
-      // === 결재요청: 하드코딩된 결재라인으로 팝업 → 전체 플로우 실행 ===
+      // === 결재요청: 중복 체크 → 결재라인 팝업 → 전체 플로우 실행 ===
       if (!isTemp) {
+        // 중복 결재 사전 체크
+        setLoading('확인 중...');
+        try {
+          const checkUrl = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token) + '&mode=check';
+          const checkData = await window.gasFetch(checkUrl);
+          if (checkData.error === 'ALREADY_SUBMITTED') {
+            window.showToast(checkData.message || '이번 달은 이미 결재요청했어.', 'sad', anchorBtn);
+            return;
+          }
+        } catch (ignore) {}
+        resetBtn();
+
         // 밥카 결재라인 고정: 결재=재무그룹, 참조=관리그룹
         const fixedApprLine = [
           { APPR_ORD: '1', APPRLINE_KIND: '2', APPR_USER_GB: '1', APPR_USER_NM: '', DEPT_NM: '재무그룹', DEPT_CD: '19' },
@@ -1511,7 +1523,6 @@
         ];
 
         // 결재라인 팝업 표시 (직전 기간 안내 포함)
-        resetBtn();
         const prev = getPrevCardPeriod();
         const fmtPeriod = (d) => (d.getMonth()+1) + '/' + d.getDate();
         const periodLabel = '결재 대상: ' + fmtPeriod(prev.start) + ' ~ ' + fmtPeriod(prev.end);
