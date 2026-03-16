@@ -642,7 +642,7 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
     PTL_ID: ff.PTL_ID || 'PTL_3',
     CHNL_ID: ff.CHNL_ID || 'CHNL_1',
     USE_INTT_ID: useInttId,
-    DRAFT_USER_ID: '',
+    DRAFT_USER_ID: bizUserId,
     ST_DRAFT_DATE: stDate,
     EN_DRAFT_DATE: enDate,
     SRCH_WD: '',
@@ -678,7 +678,7 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
     return { found: false, expired: true, debug: debugInfo };
   }
 
-  var recs = data.REC || [];
+  var recs = data.REC || data.APPR_REC || [];
   debugInfo.docCount = recs.length;
   for (var i = 0; i < recs.length; i++) {
     var paperNm = recs[i].PAPER_NM || '';
