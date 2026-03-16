@@ -1466,20 +1466,20 @@
     // 2. 해당 월 전체 레코드 수집
     const btnId = isTemp ? 'cardBtnTemp' : 'cardBtnApprove';
     const anchorBtn = $(btnId);
-    if (cardFilteredRecords.length === 0) {
-      window.showToast('결재할 내역이 없어.', 'sad', anchorBtn);
-      return;
+
+    // 임시저장은 현재 기간 내역 필요, 결재요청은 백엔드에서 직전 기간 조회
+    if (isTemp) {
+      if (cardFilteredRecords.length === 0) {
+        window.showToast('결재할 내역이 없어.', 'sad', anchorBtn);
+        return;
+      }
+      const ok = await window.showConfirm(cardFilteredRecords.length + '건을 임시저장할까?', anchorBtn);
+      if (!ok) return;
     }
 
     const selectedRecords = cardFilteredRecords.map(r => ({
       cardNo: r.cardNo, txSeq: r.txSeq, seq: r.seq, apvNo: r.apvNo
     }));
-
-    // 3. 확인 메시지 (임시저장만 — 결재요청은 결재라인 팝업이 확인 역할)
-    if (isTemp) {
-      const ok = await window.showConfirm(selectedRecords.length + '건을 임시저장할까?', anchorBtn);
-      if (!ok) return;
-    }
 
     // 4. 로딩 상태
     if (cardApprovalLoading) return;
