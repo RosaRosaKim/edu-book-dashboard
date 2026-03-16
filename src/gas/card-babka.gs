@@ -660,14 +660,18 @@ function _hasCardDraftWithSso(sso, bizUserId) {
   // API 조회 범위(prevPeriod.from ~ 오늘)가 이미 기간을 제한하므로
   // 해당 범위 내 지출결의서(법인카드)가 있으면 이미 상신한 것
   var recs = data.REC || [];
+  Logger.log('[중복체크] userId=' + bizUserId + ', 기간=' + prevPeriod.from + '~' + enDate + ', 문서수=' + recs.length);
   for (var i = 0; i < recs.length; i++) {
     var paperNm = recs[i].PAPER_NM || '';
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
+    Logger.log('[중복체크] [' + i + '] PAPER_NM=' + paperNm + ', STS=' + stsNm + ', DRAFT_DTTM=' + (recs[i].DRAFT_DTTM || ''));
     if (paperNm.indexOf('지출결의서(법인카드)') >= 0
         && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
+      Logger.log('[중복체크] → 이미 상신됨');
       return true;
     }
   }
+  Logger.log('[중복체크] → 상신 이력 없음');
   return false;
 }
 
@@ -1287,22 +1291,34 @@ function handleCardApproval(adminRow, e) {
   var knoxId = adminRow[ADMIN_COL.KNOX_ID];
 
   // 중복 결재 체크 (결재요청 또는 check 모드)
-  if ((mode === 'approve' || mode === 'check') && session.approvalCookies) {
-    try {
-      var sso = { approvalCookies: session.approvalCookies, formFields: session.formFields || {}, useInttId: session.useInttId || '' };
-      if (_hasCardDraftWithSso(sso, session.userId || (knoxId + '@emro.co.kr'))) {
-        return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
+  if (mode === 'approve' || mode === 'check') {
+    var bizUserId = session.userId || (knoxId + '@emro.co.kr');
+    var dupFound = false;
+
+    // 1차: 세션 SSO로 시도
+    if (session.approvalCookies) {
+      try {
+        var sso = { approvalCookies: session.approvalCookies, formFields: session.formFields || {}, useInttId: session.useInttId || '' };
+        dupFound = _hasCardDraftWithSso(sso, bizUserId);
+      } catch (chkErr) {
+        Logger.log('[중복체크] SSO 실패: ' + chkErr.message);
       }
-    } catch (chkErr) {
-      // SSO 만료 시 PW로 재시도
+    }
+
+    // 2차: SSO 없거나 실패 시 PW로 재시도
+    if (!dupFound) {
       var encPw = adminRow[7];
       if (encPw && String(encPw).trim()) {
         try {
-          if (_checkUserHasCardDraft(session.userId || (knoxId + '@emro.co.kr'), encPw)) {
-            return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
-          }
-        } catch (ignore) {}
+          dupFound = _checkUserHasCardDraft(bizUserId, encPw);
+        } catch (ignore) {
+          Logger.log('[중복체크] PW 재시도 실패: ' + ignore.message);
+        }
       }
+    }
+
+    if (dupFound) {
+      return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
     }
   }
 
