@@ -449,28 +449,6 @@ function _processAutoMode(knoxId, encPw, mode) {
 }
 
 /**
- * [임시] 자동결재(draft/submit) 사용자만 재실행 — 날짜 체크 없음
- * 버그 수정 후 1회 수동 실행용. 실행 후 삭제할 것.
- */
-function retryAutoApproval() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
-
-  for (var i = 1; i < data.length; i++) {
-    var knoxId = data[i][0];
-    if (!knoxId) continue;
-
-    var encPw = data[i][CARD_DAILY_COL - 1];
-    var autoMode = String(data[i][CARD_AUTO_MODE_COL - 1] || '').trim().toLowerCase();
-
-    if (autoMode === 'draft' || autoMode === 'submit') {
-      Logger.log('[재실행] ' + knoxId + ' (' + autoMode + ')');
-      _processAutoMode(knoxId, encPw, autoMode);
-    }
-  }
-}
-
-/**
  * 미결재 리마인드 스마트 알림 (매일 오전 트리거)
  * 14일부터 3번째 영업일에만 실행, 이미 상신한 사용자 제외
  * 트리거 설정: 시간 기반 트리거 → 매일 오전 9~10시
