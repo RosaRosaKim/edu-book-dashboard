@@ -642,7 +642,7 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
     PTL_ID: ff.PTL_ID || 'PTL_3',
     CHNL_ID: ff.CHNL_ID || 'CHNL_1',
     USE_INTT_ID: useInttId,
-    DRAFT_USER_ID: bizUserId,
+    DRAFT_USER_ID: '',
     ST_DRAFT_DATE: stDate,
     EN_DRAFT_DATE: enDate,
     SRCH_WD: '',
