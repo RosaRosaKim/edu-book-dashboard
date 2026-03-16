@@ -628,7 +628,12 @@ function _hasCardDraftWithSso(sso, bizUserId) {
   var ff = sso.formFields || {};
 
   var useInttId = ff.USE_INTT_ID || sso.useInttId || '';
-  var debugInfo = { userId: bizUserId, period: prevPeriod.from + '~' + enDate, docs: [] };
+  var debugInfo = {
+    userId: bizUserId, period: prevPeriod.from + '~' + enDate,
+    USE_INTT_ID: useInttId, PTL_ID: ff.PTL_ID || '', cookieLen: (sso.approvalCookies || '').length,
+    formFieldKeys: Object.keys(ff).join(','),
+    docs: []
+  };
 
   // DATE_GB: 1=기안일, 2=결재일 — 둘 다 시도
   for (var dg = 1; dg <= 2; dg++) {
