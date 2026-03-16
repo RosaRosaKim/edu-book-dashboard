@@ -471,7 +471,11 @@ function retryAutoApprovalMsg() {
       var userId = knoxId + '@emro.co.kr';
       var password = _decryptPw(String(encPw));
       var loginResult = _bizplayLoginCore(userId, password);
-      if (loginResult.error || !loginResult.webankCookies) continue;
+      if (loginResult.error || !loginResult.webankCookies) {
+        Logger.log('[재실행] 로그인 실패 - ' + knoxId);
+        sendFlowMsg(knoxId, FLOW_MSG.cardAutoFail(autoMode, '[재실행] Bizplay 로그인 실패. 비밀번호를 확인해줘.'));
+        continue;
+      }
 
       var rawResult = _callWebankApiRaw(loginResult.webankCookies, prevPeriod.from, prevPeriod.to);
       if (rawResult.expired || !rawResult.records || rawResult.records.length === 0) continue;
