@@ -666,8 +666,15 @@ function _hasCardDraftWithSso(sso, bizUserId) {
       muteHttpExceptions: true
     });
 
+    var respText = resp.getContentText();
     var data;
-    try { data = JSON.parse(resp.getContentText()); } catch (e) { continue; }
+    try { data = JSON.parse(respText); } catch (e) { debugInfo['dg' + dg + '_parseErr'] = respText.substring(0, 200); continue; }
+
+    // 세션 만료 에러 감지
+    if (data.COMMON_HEAD && data.COMMON_HEAD.ERROR === true) {
+      debugInfo['dg' + dg + '_ssoExpired'] = data.COMMON_HEAD.MESSAGE || 'ERROR';
+      continue;
+    }
 
     var recs = data.REC || [];
     debugInfo['dg' + dg + '_count'] = recs.length;
