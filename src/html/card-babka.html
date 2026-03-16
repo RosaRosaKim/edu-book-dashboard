@@ -1508,11 +1508,12 @@
         try {
           const checkUrl = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token) + '&mode=check';
           const checkData = await window.gasFetch(checkUrl);
+          console.log('[cardCheck]', JSON.stringify(checkData));
           if (checkData.error === 'ALREADY_SUBMITTED') {
             window.showToast(checkData.message || '이번 달은 이미 결재요청했어.', 'sad', anchorBtn);
             return;
           }
-        } catch (ignore) {}
+        } catch (chkErr) { console.warn('[cardCheck] error', chkErr); }
         resetBtn();
 
         // 밥카 결재라인 고정: 결재=재무그룹, 참조=관리그룹
