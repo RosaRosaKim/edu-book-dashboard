@@ -1308,22 +1308,38 @@ function handleCardApproval(adminRow, e) {
     return createResponse({ error: 'SESSION_EXPIRED', message: '세션 만료' });
   }
 
-  if (!rawResult.records || rawResult.records.length === 0) {
+  // 내역 없음 → 이미 결재했는지 확인
+  var noRecords = !rawResult.records || rawResult.records.length === 0;
+  if (!noRecords) {
+    // 중식대 카드 필터링
+    var userCards = [];
+    try { userCards = _getUserCards(knoxId); } catch (uce) {}
+    var lunchCard = userCards.find(function(c) { return c.isLunchCard; });
+    if (lunchCard) {
+      rawResult.records = rawResult.records.filter(function(r) {
+        return String(r.CARD_NO || '') === lunchCard.cardNo;
+      });
+    }
+    // 교통비 제외
+    rawResult.records = rawResult.records.filter(function(r) { return !isTransportRecord(r); });
+    noRecords = rawResult.records.length === 0;
+  }
+
+  if (noRecords) {
+    // 내역이 없으면 이미 결재했는지 체크
+    var encPw = adminRow[7]; // H열
+    if (encPw && String(encPw).trim()) {
+      try {
+        var bizUserId = session.userId || (knoxId + '@emro.co.kr');
+        if (_checkUserHasCardDraft(bizUserId, encPw)) {
+          return createResponse({ error: 'ALREADY_SUBMITTED', message: '이번 달은 이미 결재요청했어.' });
+        }
+      } catch (ignore) {}
+    }
     return createResponse({ error: 'NO_RECORDS', message: '직전 기간(' + prevPeriod.from + '~' + prevPeriod.to + ') 카드 내역이 없어.' });
   }
 
-  // 중식대 카드 필터링
-  var userCards = [];
-  try { userCards = _getUserCards(knoxId); } catch (uce) {}
-  var lunchCard = userCards.find(function(c) { return c.isLunchCard; });
-  if (lunchCard) {
-    rawResult.records = rawResult.records.filter(function(r) {
-      return String(r.CARD_NO || '') === lunchCard.cardNo;
-    });
-  }
-
-  // 교통비 제외
-  var matched = rawResult.records.filter(function(r) { return !isTransportRecord(r); });
+  var matched = rawResult.records;
 
   if (matched.length === 0) {
     return createResponse({ error: 'NO_RECORDS', message: '교통비를 제외하면 결재할 내역이 없어.' });
