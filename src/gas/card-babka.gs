@@ -31,8 +31,9 @@ var TRANSPORT_CATEGORY = '대중교통';
 var TRANSPORT_KEYWORDS = ['티머니', '시내버스', '시외버스', '대중교통'];
 
 function isTransportRecord(r) {
-  if ((r.category || '') === TRANSPORT_CATEGORY) return true;
-  var m = (r.merchant || '').trim();
+  var cat = r.category || r.CARD_TPBZ_NM || '';
+  if (cat === TRANSPORT_CATEGORY) return true;
+  var m = (r.merchant || r.MEST_NM || '').trim();
   for (var i = 0; i < TRANSPORT_KEYWORDS.length; i++) {
     if (m.indexOf(TRANSPORT_KEYWORDS[i]) !== -1) return true;
   }
