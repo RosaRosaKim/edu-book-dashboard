@@ -182,6 +182,14 @@ function _trySyncMenu() {
 }
 
 /**
+ * 카카오 채널에서 식단 이미지 URL만 조회
+ * @return {string|null}
+ */
+function _getMenuImageUrl() {
+  return _getKakaoMenuImageUrl();
+}
+
+/**
  * 식단 자동 동기화 (트리거: 매일 오전 8~9시)
  * 카카오 채널 → 이미지 URL 추출 → OCR → 시트 기록
  */

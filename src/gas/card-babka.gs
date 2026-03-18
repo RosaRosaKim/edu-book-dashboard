@@ -746,6 +746,11 @@ function sendDailyAlarm(data) {
   // 식단 정보 조회
   var menuInfo = _getTodayMenu();
   var menuMissing = !menuInfo;
+  var menuImageUrl = null;
+  if (menuMissing) {
+    try { menuImageUrl = _getMenuImageUrl(); } catch (mie) {}
+    Logger.log('[일일알림] 식단 없음, 이미지 URL=' + (menuImageUrl || 'null'));
+  }
   var menuOnlyUsers = [];
   Logger.log('[일일알림] 사용자 ' + (data.length - 1) + '명, 식단=' + (menuInfo ? '있음' : '없음'));
 
@@ -846,11 +851,13 @@ function sendDailyAlarm(data) {
         msg = FLOW_MSG.cardDailyBalance(remain, budget, usedSum, usedCount);
       }
 
-      // 식단 합산 or 대기 안내
+      // 식단 합산 or 이미지 URL 안내
       if (wantsMenu && menuInfo) {
         msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
+      } else if (wantsMenu && menuMissing && menuImageUrl) {
+        msg.content += '\n\n🍽 오늘 식단 (OCR 실패, 이미지로 확인해줘)\n' + menuImageUrl;
       } else if (wantsMenu && menuMissing) {
-        msg.content += '\n\n🍽 오늘 식단정보가 아직 없어. 찾아보고 있으면 보내줄게';
+        msg.content += '\n\n🍽 오늘은 식단정보가 업로드 되지 않았어..';
       }
       sendFlowMsg(knoxId, msg);
       Logger.log('[일일알림] 발송 완료 - ' + knoxId + (wantsMenu && menuInfo ? ' (+식단)' : wantsMenu ? ' (식단대기)' : ''));
@@ -859,21 +866,13 @@ function sendDailyAlarm(data) {
     }
   }
 
-  // ── 2단계: 식단이 없었으면 OCR 재시도 후 후속 발송 ──
+  // ── 2단계: 식단이 없었으면 이미지 URL로 발송 ──
   if (menuMissing && menuOnlyUsers.length > 0) {
-    Logger.log('[일일알림] 식단 없음 → OCR 재시도');
-    try { _trySyncMenu(); } catch (ex) { Logger.log('[일일알림] OCR 재시도 실패: ' + ex.message); }
-    var retryMenu = _getTodayMenu();
-
     for (var j = 0; j < menuOnlyUsers.length; j++) {
       var u = menuOnlyUsers[j];
-      if (retryMenu) {
-        if (!_shouldSendMenu(retryMenu.todayMenu, u.like, u.dislike)) {
-          Logger.log('[일일알림] 재시도 선호 미매칭 → 생략 - ' + u.knoxId);
-          continue;
-        }
-        sendFlowMsg(u.knoxId, FLOW_MSG.todayMenu(retryMenu.todayStr, retryMenu.todayMenu));
-        Logger.log('[일일알림] 식단 재시도 발송 - ' + u.knoxId);
+      if (menuImageUrl) {
+        sendFlowMsg(u.knoxId, { content: '🍽 오늘 식단 (OCR 실패, 이미지로 확인해줘)\n' + menuImageUrl, link: '', previewTitle: '오늘의 당산푸드스토리' });
+        Logger.log('[일일알림] 식단 이미지 URL 발송 - ' + u.knoxId);
       } else {
         sendFlowMsg(u.knoxId, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
         Logger.log('[일일알림] 식단 미등록 안내 - ' + u.knoxId);
