@@ -28,7 +28,7 @@ var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 /** 교통비 업종명 */
 var TRANSPORT_CATEGORY = '대중교통';
 /** 교통비 제외 키워드 (가맹점명 포함 여부) */
-var TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+var TRANSPORT_KEYWORDS = ['티머니', '시내버스', '시외버스', '대중교통'];
 
 function isTransportRecord(r) {
   if ((r.category || '') === TRANSPORT_CATEGORY) return true;
@@ -685,7 +685,8 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
     debugInfo.docs.push({ name: paperNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
     if ((paperNm.indexOf('법인카드') >= 0 && paperNm.indexOf('지출결의') >= 0)
-        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
+        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)
+        && stsNm.indexOf('반송') < 0) {
       return { found: true, debug: debugInfo };
     }
   }
