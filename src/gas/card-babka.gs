@@ -684,8 +684,10 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
   for (var i = 0; i < recs.length; i++) {
     var markDocNm = recs[i].MARK_DOC_NM || '';
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-    debugInfo.docs.push({ markDocNm: markDocNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
+    var apprDate = (recs[i].APPR_DATE || '').replace(/[^0-9]/g, '').slice(0, 8);
+    debugInfo.docs.push({ markDocNm: markDocNm, sts: stsNm, apprDate: apprDate, date: recs[i].DRAFT_DTTM || '' });
     if (markDocNm === CARD_DOC_NM
+        && apprDate >= stDate && apprDate <= enDate
         && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)
         && stsNm.indexOf('반송') < 0) {
       return { found: true, debug: debugInfo };
