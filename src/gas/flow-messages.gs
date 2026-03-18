@@ -340,5 +340,31 @@ function sendFlowMsg(knoxId, msg) {
     var ft = _generateFlowToken(knoxId);
     link += '&ft=' + ft;
   }
-  return sendFlowGAS(knoxId, msg.content, link, msg.previewTitle);
+  var result = sendFlowGAS(knoxId, msg.content, link, msg.previewTitle);
+  // Flow 발송이력 기록
+  try { _logFlowHistory(knoxId, msg.content); } catch (e) {}
+  return result;
+}
+
+/** Flow 발송이력 시트에 기록 */
+var _flowNameCache = null;
+function _logFlowHistory(knoxId, content) {
+  // knoxId → 이름 조회 (캐시)
+  if (!_flowNameCache) {
+    _flowNameCache = {};
+    var adminData = getCachedData(SHEET_NAME.ADMIN);
+    for (var i = 1; i < adminData.length; i++) {
+      var kid = String(adminData[i][ADMIN_COL.KNOX_ID]).trim();
+      if (kid) _flowNameCache[kid] = String(adminData[i][ADMIN_COL.NAME] || '');
+    }
+  }
+  var name = _flowNameCache[knoxId] || '';
+  var now = new Date();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Flow발송이력');
+  if (!sheet) {
+    sheet = ss.insertSheet('Flow발송이력');
+    sheet.appendRow(['knoxId', '이름', '발송일시', '메세지']);
+  }
+  sheet.appendRow([knoxId, name, now, content]);
 }
