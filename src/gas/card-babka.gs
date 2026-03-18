@@ -678,30 +678,16 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
     return { found: false, expired: true, debug: debugInfo };
   }
 
+  var CARD_DOC_NM = '지출결의서(법인카드)';
   var recs = data.REC || data.APPR_REC || [];
   debugInfo.docCount = recs.length;
-  var hasReturned = false; // 반송 건 존재 여부
   for (var i = 0; i < recs.length; i++) {
-    var paperNm = recs[i].PAPER_NM || '';
+    var markDocNm = recs[i].MARK_DOC_NM || '';
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-    var title = recs[i].DRAFT_TITLE || recs[i].TITLE || '';
-    debugInfo.docs.push({ name: paperNm, sts: stsNm, title: title, date: recs[i].DRAFT_DTTM || '', allKeys: Object.keys(recs[i]).join(',') });
-    // 법인카드지출결의 중 반송 건이 있으면 재결재 허용
-    if (paperNm.indexOf('법인카드') >= 0 && paperNm.indexOf('지출결의') >= 0
-        && stsNm.indexOf('반송') >= 0) {
-      hasReturned = true;
-    }
-  }
-  // 반송 건이 있으면 재결재 허용 (중복 차단 안 함)
-  if (hasReturned) {
-    debugInfo.skippedReason = '반송 건 존재 → 재결재 허용';
-    return { found: false, expired: false, debug: debugInfo };
-  }
-  for (var i = 0; i < recs.length; i++) {
-    var paperNm = recs[i].PAPER_NM || '';
-    var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-    if ((paperNm.indexOf('법인카드') >= 0 && paperNm.indexOf('지출결의') >= 0)
-        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)) {
+    debugInfo.docs.push({ markDocNm: markDocNm, sts: stsNm, date: recs[i].DRAFT_DTTM || '' });
+    if (markDocNm === CARD_DOC_NM
+        && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)
+        && stsNm.indexOf('반송') < 0) {
       return { found: true, debug: debugInfo };
     }
   }
