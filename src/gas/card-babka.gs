@@ -621,13 +621,10 @@ function _checkUserHasCardDraft(bizUserId, encPw) {
  * 자동결재/수동결재에서 재활용
  */
 function _hasCardDraftWithSso(sso, bizUserId) {
-  var prevPeriod = _getPrevCardPeriod();
-  // 결재 상신일은 기간 종료(14일) 이후이므로, 시작일 = 종료일+1 (15일)
-  var endDt = new Date(+prevPeriod.to.slice(0,4), +prevPeriod.to.slice(4,6) - 1, +prevPeriod.to.slice(6,8) + 1);
-  var fmt = function(d) { return '' + d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2); };
-  var stDate = fmt(endDt);
   var now = new Date();
-  var enDate = fmt(now);
+  var yyyyMM = '' + now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2);
+  var stDate = yyyyMM + '01';
+  var enDate = yyyyMM + ('0' + now.getDate()).slice(-2);
 
   var result = _callR007ForCardCheck(sso, bizUserId, stDate, enDate);
   return result;
