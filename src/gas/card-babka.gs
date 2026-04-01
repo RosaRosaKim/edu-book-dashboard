@@ -555,6 +555,24 @@ function sendCardRefundAlert(data) {
     data = ss.getSheetByName(SHEET_NAME.ADMIN).getDataRange().getValues();
   }
 
+  // 사용자카드정보 로드 (중식대카드 필터링용)
+  var allCardInfo = {};
+  try {
+    var ciSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME.CARD_INFO);
+    if (ciSheet && ciSheet.getLastRow() >= 2) {
+      var ciData = ciSheet.getDataRange().getValues();
+      for (var ci = 1; ci < ciData.length; ci++) {
+        var kid = String(ciData[ci][0]).trim();
+        if (!kid) continue;
+        if (!allCardInfo[kid]) allCardInfo[kid] = [];
+        allCardInfo[kid].push({
+          cardNo: String(ciData[ci][1] || ''),
+          isLunchCard: String(ciData[ci][4]).trim().toUpperCase() === 'Y'
+        });
+      }
+    }
+  } catch (ciErr) {}
+
   for (var i = 1; i < data.length; i++) {
     var knoxId = data[i][0];
     var bizplayId = String(data[i][BIZPLAY_ID_COL - 1] || '').trim(); // I열: Bizplay ID
@@ -577,9 +595,14 @@ function sendCardRefundAlert(data) {
         continue;
       }
 
+      // 중식대카드만 필터링 (다중카드 대응)
+      var userCards = allCardInfo[knoxId] || [];
+      var lunchCard = userCards.find(function(c) { return c.isLunchCard; });
+
       var usedSum = 0;
       (result.records || []).forEach(function(r) {
         if (isTransportRecord(r)) return;
+        if (lunchCard && r.cardNo !== lunchCard.cardNo) return;
         usedSum += Number(r.cost) || 0;
       });
 
