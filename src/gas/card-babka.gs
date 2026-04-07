@@ -878,7 +878,8 @@ function sendDailyAlarm(data) {
       if (wantsMenu && menuInfo) {
         msg.content += '\n\n🍽 오늘의 식단 (' + menuInfo.todayStr + ')\n' + menuInfo.todayMenu;
       } else if (wantsMenu && menuMissing && menuImageUrl) {
-        msg.content += '\n\n🍽 오늘 식단 (OCR 실패, 이미지로 확인해줘)\n' + menuImageUrl;
+        msg.content += '\n\n🍽 오늘 식단 (OCR 실패, 이미지로 확인해줘)';
+        msg.link = menuImageUrl;
       } else if (wantsMenu && menuMissing) {
         msg.content += '\n\n🍽 오늘은 식단정보가 업로드 되지 않았어..';
       }
@@ -894,7 +895,7 @@ function sendDailyAlarm(data) {
     for (var j = 0; j < menuOnlyUsers.length; j++) {
       var u = menuOnlyUsers[j];
       if (menuImageUrl) {
-        sendFlowMsg(u.knoxId, { content: '🍽 오늘 식단 (OCR 실패, 이미지로 확인해줘)\n' + menuImageUrl, link: '', previewTitle: '오늘의 당산푸드스토리' });
+        sendFlowMsg(u.knoxId, { content: '🍽 오늘 식단 (OCR 실패, 이미지로 확인해줘)', link: menuImageUrl, previewTitle: '오늘의 당산푸드스토리' });
         Logger.log('[일일알림] 식단 이미지 URL 발송 - ' + u.knoxId);
       } else {
         sendFlowMsg(u.knoxId, { content: '오늘은 식단정보가 업로드 되지 않았어..', link: '', previewTitle: '🍽 오늘은 식단정보가 없어' });
