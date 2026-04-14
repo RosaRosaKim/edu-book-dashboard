@@ -27,24 +27,87 @@ function _getKakaoMenuImageUrl() {
 }
 
 /**
- * 이미지 URL → Google Drive OCR → 텍스트 반환
+ * 이미지 URL → Gemini Vision API → 구조화된 식단 JSON 반환
+ * ScriptProperties에 GEMINI_API_KEY 필요
+ * @param {string} imageUrl
+ * @return {{ date: string, day: string, meal: string, menus: string[], price: string }|null}
+ */
+function _ocrImageWithGemini(imageUrl) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) {
+    Logger.log('[menu] GEMINI_API_KEY가 설정되지 않음');
+    return null;
+  }
+
+  var blob = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true }).getBlob();
+  var base64 = Utilities.base64Encode(blob.getBytes());
+  var mimeType = blob.getContentType() || 'image/jpeg';
+
+  var payload = {
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64 } },
+        { text: '이 식단 이미지에서 정보를 추출해서 아래 JSON 형식으로만 답해줘. 다른 설명이나 마크다운 없이 순수 JSON만:\n'
+              + '{"date":"4월 14일","day":"화요일","meal":"중식","menus":["잡곡밥/백미밥","청국장찌개"],"price":"9000원"}' }
+      ]
+    }],
+    generationConfig: { temperature: 0 }
+  };
+
+  var resp = UrlFetchApp.fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey,
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true }
+  );
+
+  var code = resp.getResponseCode();
+  if (code !== 200) {
+    Logger.log('[menu] Gemini API 오류 (HTTP ' + code + '): ' + resp.getContentText().substring(0, 300));
+    return null;
+  }
+
+  var body = JSON.parse(resp.getContentText());
+  var text = body.candidates && body.candidates[0] && body.candidates[0].content.parts[0].text;
+  if (!text) {
+    Logger.log('[menu] Gemini 응답에 텍스트 없음');
+    return null;
+  }
+
+  // JSON 블록 추출 (```json ... ``` 또는 순수 JSON)
+  var jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
+  var jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    Logger.log('[menu] Gemini 응답에서 JSON 파싱 실패: ' + text.substring(0, 200));
+    return null;
+  }
+
+  try {
+    var parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.date || !Array.isArray(parsed.menus) || parsed.menus.length === 0) {
+      Logger.log('[menu] Gemini JSON 필수 필드 누락: ' + jsonMatch[0].substring(0, 200));
+      return null;
+    }
+    return parsed;
+  } catch (e) {
+    Logger.log('[menu] Gemini JSON 파싱 오류: ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * (폴백) 이미지 URL → Google Drive OCR → 텍스트 반환
  * Drive Advanced Service 필요 (appsscript.json에 "drive" 활성화)
  */
 function _ocrImageToText(imageUrl) {
   var blob = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true }).getBlob();
   blob.setName('menu_ocr_temp.jpg');
 
-  // Drive API로 이미지를 Google Doc으로 변환 (OCR 자동 적용)
   var resource = { title: 'menu_ocr_temp' };
   var file = Drive.Files.insert(resource, blob, { ocr: true, ocrLanguage: 'ko', convert: true });
 
-  // Doc에서 텍스트 추출
   var doc = DocumentApp.openById(file.id);
   var text = doc.getBody().getText();
 
-  // 임시 파일 삭제
   Drive.Files.remove(file.id);
-
   return text.trim();
 }
 
@@ -131,19 +194,33 @@ function handleOcrMenu(e) {
   if (!imageUrl) return createResponse({ error: 'NO_URL', message: '이미지 URL을 찾을 수 없어.' });
 
   try {
-    var text = _ocrImageToText(imageUrl);
-    if (!text) return createResponse({ status: 'fail', message: 'OCR 결과가 비어있어.' });
+    var parsed = null;
+    var method = '';
 
-    var parsed = _parseMenuText(text);
-    if (!parsed.date) return createResponse({ status: 'fail', message: '날짜를 파싱할 수 없어.', rawText: text });
+    // 1차: Gemini Vision
+    try {
+      parsed = _ocrImageWithGemini(imageUrl);
+      if (parsed) method = 'gemini';
+    } catch (ge) {
+      Logger.log('[ocrMenu] Gemini 예외: ' + ge.message);
+    }
+
+    // 2차 폴백: Drive OCR
+    if (!parsed) {
+      var text = _ocrImageToText(imageUrl);
+      if (!text) return createResponse({ status: 'fail', message: 'OCR 결과가 비어있어.' });
+      parsed = _parseMenuText(text);
+      if (!parsed.date) return createResponse({ status: 'fail', message: '날짜를 파싱할 수 없어.', rawText: text });
+      method = 'drive';
+    }
 
     var result = _writeMenuToSheet(parsed);
 
     return createResponse({
       status: 'success',
+      method: method,
       message: parsed.date + ' ' + parsed.meal + ' - ' + (result.skipped ? '이미 등록됨 (스킵)' : parsed.menus.length + '개 메뉴 등록'),
-      parsed: parsed,
-      rawText: text
+      parsed: parsed
     });
   } catch (err) {
     return createResponse({ status: 'fail', message: 'OCR 오류: ' + err.message });
@@ -151,7 +228,7 @@ function handleOcrMenu(e) {
 }
 
 /**
- * 카카오 채널 → OCR → 시트 기록 (성공 여부 반환)
+ * 카카오 채널 → Gemini Vision OCR (→ Drive OCR 폴백) → 시트 기록
  * @return {boolean} 시트에 기록 성공 여부
  */
 function _trySyncMenu() {
@@ -162,19 +239,39 @@ function _trySyncMenu() {
   }
   Logger.log('[menu] 이미지 URL: ' + imageUrl);
 
-  var text = _ocrImageToText(imageUrl);
-  if (!text) {
-    Logger.log('[menu] OCR 결과가 비어있음');
-    return false;
+  // 1차: Gemini Vision (구조화된 JSON 직접 반환)
+  var parsed = null;
+  try {
+    parsed = _ocrImageWithGemini(imageUrl);
+    if (parsed) Logger.log('[menu] Gemini OCR 성공: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
+  } catch (ge) {
+    Logger.log('[menu] Gemini OCR 예외: ' + ge.message);
   }
-  Logger.log('[menu] OCR 텍스트:\n' + text);
 
-  var parsed = _parseMenuText(text);
-  if (!parsed.date) {
-    Logger.log('[menu] 날짜 파싱 실패. rawText: ' + text);
+  // 2차 폴백: Google Drive OCR + 텍스트 파싱
+  if (!parsed) {
+    Logger.log('[menu] Gemini 실패 → Drive OCR 폴백 시도');
+    try {
+      var text = _ocrImageToText(imageUrl);
+      if (text) {
+        Logger.log('[menu] Drive OCR 텍스트:\n' + text);
+        parsed = _parseMenuText(text);
+        if (!parsed.date) {
+          Logger.log('[menu] Drive OCR 날짜 파싱 실패. rawText: ' + text);
+          parsed = null;
+        }
+      } else {
+        Logger.log('[menu] Drive OCR 결과가 비어있음');
+      }
+    } catch (de) {
+      Logger.log('[menu] Drive OCR 예외: ' + de.message);
+    }
+  }
+
+  if (!parsed) {
+    Logger.log('[menu] 모든 OCR 실패');
     return false;
   }
-  Logger.log('[menu] 파싱: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
 
   var result = _writeMenuToSheet(parsed);
   Logger.log('[menu] 시트 기록 완료: row ' + result.row + (result.updated ? ' (덮어쓰기)' : ' (신규)'));
@@ -258,6 +355,33 @@ function _sendMenuFlowToUser(knoxId) {
   sendFlowMsg(knoxId, FLOW_MSG.todayMenu(info.todayStr, info.todayMenu));
   Logger.log('[menu] 즉시 발송 완료: ' + knoxId);
   return true;
+}
+
+/**
+ * Gemini Vision OCR 테스트 (GAS 에디터에서 직접 실행)
+ * 결과를 Logger에 출력
+ */
+function testGeminiOcr() {
+  var testUrl = 'https://k.kakaocdn.net/dn/GQqh0/dJMcagFaKP6/O6vvbC91ZHpWcIJcaN7kjK/img_xl.jpg';
+  Logger.log('=== Gemini Vision OCR 테스트 ===');
+  Logger.log('이미지 URL: ' + testUrl);
+
+  var parsed = _ocrImageWithGemini(testUrl);
+  if (!parsed) {
+    Logger.log('❌ Gemini OCR 실패');
+    Logger.log('GEMINI_API_KEY 설정 확인: 프로젝트 설정 → 스크립트 속성 → GEMINI_API_KEY');
+    return;
+  }
+
+  Logger.log('✅ Gemini OCR 성공!');
+  Logger.log('날짜: ' + parsed.date + ' (' + parsed.day + '/' + parsed.meal + ')');
+  Logger.log('메뉴 (' + parsed.menus.length + '개):');
+  parsed.menus.forEach(function(m, i) { Logger.log('  ' + (i + 1) + '. ' + m); });
+  Logger.log('가격: ' + parsed.price);
+
+  // 시트 기록 테스트
+  var result = _writeMenuToSheet(parsed);
+  Logger.log('시트 기록: row ' + result.row + (result.updated ? ' (덮어쓰기)' : ' (신규)'));
 }
 
 /**
