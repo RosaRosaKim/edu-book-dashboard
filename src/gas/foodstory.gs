@@ -27,15 +27,15 @@ function _getKakaoMenuImageUrl() {
 }
 
 /**
- * 이미지 URL → Gemini Vision API → 구조화된 식단 JSON 반환
- * ScriptProperties에 GEMINI_API_KEY 필요
+ * 이미지 URL → Groq Vision API (Llama 4) → 구조화된 식단 JSON 반환
+ * ScriptProperties에 GROQ_API_KEY 필요 (console.groq.com에서 발급)
  * @param {string} imageUrl
  * @return {{ date: string, day: string, meal: string, menus: string[], price: string }|null}
  */
-function _ocrImageWithGemini(imageUrl) {
-  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+function _ocrImageWithVision(imageUrl) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
   if (!apiKey) {
-    Logger.log('[menu] GEMINI_API_KEY가 설정되지 않음');
+    Logger.log('[menu] GROQ_API_KEY가 설정되지 않음');
     return null;
   }
 
@@ -44,51 +44,58 @@ function _ocrImageWithGemini(imageUrl) {
   var mimeType = blob.getContentType() || 'image/jpeg';
 
   var payload = {
-    contents: [{
-      parts: [
-        { inline_data: { mime_type: mimeType, data: base64 } },
-        { text: '이 식단 이미지에서 정보를 추출해서 아래 JSON 형식으로만 답해줘. 다른 설명이나 마크다운 없이 순수 JSON만:\n'
+    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: 'data:' + mimeType + ';base64,' + base64 } },
+        { type: 'text', text: '이 식단 이미지에서 정보를 추출해서 아래 JSON 형식으로만 답해줘. 다른 설명이나 마크다운 없이 순수 JSON만:\n'
               + '{"date":"4월 14일","day":"화요일","meal":"중식","menus":["잡곡밥/백미밥","청국장찌개"],"price":"9000원"}' }
       ]
     }],
-    generationConfig: { temperature: 0 }
+    temperature: 0,
+    max_tokens: 1024
   };
 
-  var resp = UrlFetchApp.fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey,
-    { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true }
-  );
+  var resp = UrlFetchApp.fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'Bearer ' + apiKey },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
 
   var code = resp.getResponseCode();
   if (code !== 200) {
-    Logger.log('[menu] Gemini API 오류 (HTTP ' + code + '): ' + resp.getContentText().substring(0, 300));
+    Logger.log('[menu] Groq API 오류 (HTTP ' + code + '): ' + resp.getContentText().substring(0, 300));
     return null;
   }
 
   var body = JSON.parse(resp.getContentText());
-  var text = body.candidates && body.candidates[0] && body.candidates[0].content.parts[0].text;
+  var text = body.choices && body.choices[0] && body.choices[0].message && body.choices[0].message.content;
   if (!text) {
-    Logger.log('[menu] Gemini 응답에 텍스트 없음');
+    Logger.log('[menu] Groq 응답에 텍스트 없음');
     return null;
   }
+  Logger.log('[menu] Groq 원본 응답: ' + text.substring(0, 300));
 
   // JSON 블록 추출 (```json ... ``` 또는 순수 JSON)
   var jsonStr = text.replace(/```json\s*/g, '').replace(/```/g, '').trim();
   var jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    Logger.log('[menu] Gemini 응답에서 JSON 파싱 실패: ' + text.substring(0, 200));
+    Logger.log('[menu] Groq 응답에서 JSON 파싱 실패: ' + text.substring(0, 200));
     return null;
   }
 
   try {
     var parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.date || !Array.isArray(parsed.menus) || parsed.menus.length === 0) {
-      Logger.log('[menu] Gemini JSON 필수 필드 누락: ' + jsonMatch[0].substring(0, 200));
+      Logger.log('[menu] Groq JSON 필수 필드 누락: ' + jsonMatch[0].substring(0, 200));
       return null;
     }
     return parsed;
   } catch (e) {
-    Logger.log('[menu] Gemini JSON 파싱 오류: ' + e.message);
+    Logger.log('[menu] Groq JSON 파싱 오류: ' + e.message);
     return null;
   }
 }
@@ -199,8 +206,8 @@ function handleOcrMenu(e) {
 
     // 1차: Gemini Vision
     try {
-      parsed = _ocrImageWithGemini(imageUrl);
-      if (parsed) method = 'gemini';
+      parsed = _ocrImageWithVision(imageUrl);
+      if (parsed) method = 'groq';
     } catch (ge) {
       Logger.log('[ocrMenu] Gemini 예외: ' + ge.message);
     }
@@ -242,15 +249,15 @@ function _trySyncMenu() {
   // 1차: Gemini Vision (구조화된 JSON 직접 반환)
   var parsed = null;
   try {
-    parsed = _ocrImageWithGemini(imageUrl);
-    if (parsed) Logger.log('[menu] Gemini OCR 성공: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
+    parsed = _ocrImageWithVision(imageUrl);
+    if (parsed) Logger.log('[menu] Vision OCR 성공: ' + parsed.date + ' ' + parsed.meal + ' - ' + parsed.menus.length + '개 메뉴');
   } catch (ge) {
-    Logger.log('[menu] Gemini OCR 예외: ' + ge.message);
+    Logger.log('[menu] Vision OCR 예외: ' + ge.message);
   }
 
   // 2차 폴백: Google Drive OCR + 텍스트 파싱
   if (!parsed) {
-    Logger.log('[menu] Gemini 실패 → Drive OCR 폴백 시도');
+    Logger.log('[menu] Groq 실패 → Drive OCR 폴백 시도');
     try {
       var text = _ocrImageToText(imageUrl);
       if (text) {
@@ -362,18 +369,25 @@ function _sendMenuFlowToUser(knoxId) {
  * 결과를 Logger에 출력
  */
 function testGeminiOcr() {
+  // API 키 등록 (없으면 자동 세팅)
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('GROQ_API_KEY')) {
+    Logger.log('❌ GROQ_API_KEY 없음. ScriptProperties에 등록 필요');
+    return;
+  }
+  Logger.log('✅ GROQ_API_KEY 확인됨');
+
   var testUrl = 'https://k.kakaocdn.net/dn/GQqh0/dJMcagFaKP6/O6vvbC91ZHpWcIJcaN7kjK/img_xl.jpg';
   Logger.log('=== Gemini Vision OCR 테스트 ===');
   Logger.log('이미지 URL: ' + testUrl);
 
-  var parsed = _ocrImageWithGemini(testUrl);
+  var parsed = _ocrImageWithVision(testUrl);
   if (!parsed) {
-    Logger.log('❌ Gemini OCR 실패');
-    Logger.log('GEMINI_API_KEY 설정 확인: 프로젝트 설정 → 스크립트 속성 → GEMINI_API_KEY');
+    Logger.log('❌ Vision OCR 실패');
     return;
   }
 
-  Logger.log('✅ Gemini OCR 성공!');
+  Logger.log('✅ Vision OCR 성공!');
   Logger.log('날짜: ' + parsed.date + ' (' + parsed.day + '/' + parsed.meal + ')');
   Logger.log('메뉴 (' + parsed.menus.length + '개):');
   parsed.menus.forEach(function(m, i) { Logger.log('  ' + (i + 1) + '. ' + m); });
