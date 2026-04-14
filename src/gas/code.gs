@@ -602,9 +602,9 @@ const doGet = (e) => {
             const loginPayload = '_JSON_=' + encodeURIComponent(JSON.stringify({ USER_ID: bizUserId, PWD: bizPwd, CAPTCHA_VALUE: '', LNK_ID: '', LNK_INTT: '', LOGIN_SAVE: 'N', USER_OS: 'win10.0', USER_BR: 'Chrome', USER_BR_VER: '145.0.0.0', TMPR_CD2: '', TMPR_CD3: '', LNGG_DSNC: 'DF', '_LODING_BAR_YN_': 'Y' }));
             const loginResp = UrlFetchApp.fetch('https://www.bizplay.co.kr/login_proc_01.jct', { method: 'post', contentType: 'application/x-www-form-urlencoded; charset=UTF-8', headers: { 'User-Agent': BROWSER_UA }, payload: loginPayload, followRedirects: false, muteHttpExceptions: true });
             const body = JSON.parse(loginResp.getContentText());
-            if (body.RSLT_CD === '0000') { const sessionData = { bizplayCookies: extractCookies(loginResp), userId: bizUserId, userName: body.USER_NM, useInttId: body.USE_INTT_ID || '', loginTime: new Date().toISOString() }; PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(sessionData)); bizplaySession = { userId: bizUserId, userName: body.USER_NM }; }
+            if (body.RSLT_CD === '0000') { const sessionData = { bizplayCookies: extractCookies(loginResp), userId: bizUserId, userName: body.USER_NM, useInttId: body.USE_INTT_ID || '', loginTime: new Date().toISOString() }; PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(sessionData)); bizplaySession = { userId: bizUserId, userName: body.USER_NM, deptCd: String(adminRow[ADMIN_COL.DEPT_CD] || '').trim(), deptNm: String(adminRow[ADMIN_COL.DEPT] || '').trim(), deptShort: String(adminRow[ADMIN_COL.DEPT] || '').trim().split(/[\s\/]/).pop() || '' }; }
           } catch (bizErr) { console.log('[auto-bizplay] 자동 로그인 실패: ' + bizErr.message); }
-        } else if (existing) { bizplaySession = { userId: existing.userId, userName: existing.userName }; }
+        } else if (existing) { bizplaySession = { userId: existing.userId, userName: existing.userName, deptCd: String(adminRow[ADMIN_COL.DEPT_CD] || '').trim(), deptNm: String(adminRow[ADMIN_COL.DEPT] || '').trim(), deptShort: String(adminRow[ADMIN_COL.DEPT] || '').trim().split(/[\s\/]/).pop() || '' }; }
       }
 
       var weatherAlert = null;
@@ -788,13 +788,13 @@ const doGet = (e) => {
               loginTime: new Date().toISOString()
             };
             PropertiesService.getScriptProperties().setProperty(propKey, JSON.stringify(sessionData));
-            bizplaySession = { userId: bizUserId, userName: body.USER_NM };
+            bizplaySession = { userId: bizUserId, userName: body.USER_NM, deptCd: String(adminRow[ADMIN_COL.DEPT_CD] || '').trim(), deptNm: String(adminRow[ADMIN_COL.DEPT] || '').trim(), deptShort: String(adminRow[ADMIN_COL.DEPT] || '').trim().split(/[\s\/]/).pop() || '' };
           }
         } catch (bizErr) {
           console.log('[auto-bizplay] 자동 로그인 실패: ' + bizErr.message);
         }
       } else if (existing) {
-        bizplaySession = { userId: existing.userId, userName: existing.userName };
+        bizplaySession = { userId: existing.userId, userName: existing.userName, deptCd: String(adminRow[ADMIN_COL.DEPT_CD] || '').trim(), deptNm: String(adminRow[ADMIN_COL.DEPT] || '').trim(), deptShort: String(adminRow[ADMIN_COL.DEPT] || '').trim().split(/[\s\/]/).pop() || '' };
       }
     }
 

@@ -94,9 +94,10 @@ function _retryApprovalSso(session, adminRow) {
 function _saveApprovalSession(propKey, session, sso) {
   session.approvalCookies = sso.approvalCookies;
   session.bizplayCookies = sso.bizplayCookies;
-  if (sso.deptCd) session.deptCd = sso.deptCd;
-  if (sso.deptNm) session.deptNm = sso.deptNm;
-  if (sso.deptShort) session.deptShort = sso.deptShort;
+  // 부서 정보: 항상 갱신 (이전 캐시에 잘못된 BSNN_NM 값이 남아있을 수 있음)
+  session.deptCd = sso.deptCd || session.deptCd || '';
+  session.deptNm = sso.deptNm || session.deptNm || '';
+  session.deptShort = sso.deptShort || session.deptShort || '';
   if (sso.useInttId) session.useInttId = sso.useInttId;
   if (sso.formFields) session.formFields = sso.formFields;
   session.approvalSsoTime = new Date().toISOString();
@@ -289,8 +290,9 @@ function _bizplayLoginCore(userId, password) {
         var ud = consData.USER_DATA;
         if (typeof ud === 'string') { try { ud = JSON.parse(ud); } catch(pe){} }
         debug.consumerUserDataKeys = (typeof ud === 'object') ? Object.keys(ud).join(',') : String(ud).substring(0, 300);
-        dvsnCd = (typeof ud === 'object') ? (ud.DVSN_CD || ud.DEPT_CD || ud.deptCd || '') : '';
-        dvsnNm = (typeof ud === 'object') ? (ud.DVSN_NM || ud.DEPT_NM || ud.deptNm || '') : '';
+        dvsnCd = (typeof ud === 'object') ? (ud.DEPT_CD || ud.DVSN_CD || ud.deptCd || '') : '';
+        // DEPT_NM(실제 부서) 우선, DVSN_NM(사업부/법인명)은 폴백
+        dvsnNm = (typeof ud === 'object') ? (ud.DEPT_NM || ud.deptNm || ud.DVSN_NM || '') : '';
         if (dvsnNm) { deptShort = dvsnNm.split(/[\s\/]/).pop() || dvsnNm; }
       }
     } catch (consErr) {
@@ -305,8 +307,8 @@ function _bizplayLoginCore(userId, password) {
         var apprHtml = apprPage.body;
         debug.apprPageLen = apprHtml.length;
         var allFields = _parseFormFields(apprHtml, '');
-        dvsnCd = allFields.DVSN_CD || allFields.DEPT_CD || '';
-        dvsnNm = dvsnNm || allFields.DVSN_NM || allFields.DEPT_NM || '';
+        dvsnCd = allFields.DEPT_CD || allFields.DVSN_CD || '';
+        dvsnNm = dvsnNm || allFields.DEPT_NM || allFields.DVSN_NM || '';
         if (dvsnNm && !deptShort) { deptShort = dvsnNm.split(/[\s\/]/).pop() || dvsnNm; }
       } catch (apprErr) {
         debug.apprPageError = apprErr.message;
@@ -382,9 +384,7 @@ function _bizplayLoginCore(userId, password) {
     dvsnCd = body.DVSN_CD;
     debug.deptSource = 'loginBody';
   }
-  if (!dvsnNm && body.BSNN_NM) {
-    dvsnNm = body.BSNN_NM;
-  }
+  // 주의: body.BSNN_NM은 사업자명("(주)엠로")이므로 부서명 폴백으로 사용하지 않음
   if (dvsnCd && !deptShort) {
     deptShort = dvsnNm ? dvsnNm.split(/[\s\/]/).pop() || dvsnNm : '';
   }
@@ -453,9 +453,11 @@ function handleBizplayLogin(adminRow, e) {
       JSON.stringify(sessionData)
     );
 
+    var sheetDeptNm = String(adminRow[ADMIN_COL.DEPT] || '').trim();
+    var sheetDeptCd = String(adminRow[ADMIN_COL.DEPT_CD] || '').trim();
     return createResponse({
       status: 'success', userName: body.USER_NM, message: body.RSLT_MSG, ssoComplete: true,
-      session: { userId: bizUserId, userName: body.USER_NM }
+      session: { userId: bizUserId, userName: body.USER_NM, deptCd: sheetDeptCd, deptNm: sheetDeptNm, deptShort: sheetDeptNm ? sheetDeptNm.split(/[\s\/]/).pop() : '' }
     });
   } catch (err) {
     return createResponse({ error: 'BIZPLAY_ERROR', message: err.message });
@@ -604,8 +606,9 @@ function _approvalSsoOnly(userId, password) {
       var iframeMatch = layoutPage.body.match(/iframe[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
       debug.iframeSrc = iframeMatch ? iframeMatch[1] : 'none';
 
-      dvsnCd = formFields.DVSN_CD || formFields.DEPT_CD || '';
-      dvsnNm = formFields.DVSN_NM || formFields.DEPT_NM || '';
+      dvsnCd = formFields.DEPT_CD || formFields.DVSN_CD || '';
+      // DEPT_NM(실제 부서) 우선, DVSN_NM(사업부/법인명)은 폴백
+      dvsnNm = formFields.DEPT_NM || formFields.DVSN_NM || '';
     } catch (apprErr) { debug.apprError = apprErr.message; }
   } else {
     debug.noRdmKey = true;
@@ -616,8 +619,8 @@ function _approvalSsoOnly(userId, password) {
     var ud = consumerUserData;
     if (typeof ud === 'string') { try { ud = JSON.parse(ud); } catch(pe){} }
     if (typeof ud === 'object' && ud) {
-      dvsnCd = ud.DVSN_CD || ud.DEPT_CD || ud.deptCd || '';
-      dvsnNm = dvsnNm || ud.DVSN_NM || ud.DEPT_NM || ud.deptNm || '';
+      dvsnCd = ud.DEPT_CD || ud.DVSN_CD || ud.deptCd || '';
+      dvsnNm = dvsnNm || ud.DEPT_NM || ud.deptNm || ud.DVSN_NM || '';
     }
   }
 
@@ -629,7 +632,7 @@ function _approvalSsoOnly(userId, password) {
     userName: body.USER_NM,
     useInttId: body.USE_INTT_ID,
     deptCd: dvsnCd,
-    deptNm: dvsnNm || body.BSNN_NM || '',
+    deptNm: dvsnNm,  // BSNN_NM(사업자명) 폴백 제거 — 부서명이 아님
     deptShort: deptShort,
     formFields: formFields,
     debug: debug
@@ -655,9 +658,16 @@ function handleBizplayEduInit(adminRow, e) {
 
   _saveApprovalSession(propKey, session, sso);
 
+  // 관리 시트 부서 우선, SSO 폴백
+  var sheetDeptCd = String(adminRow[ADMIN_COL.DEPT_CD] || '').trim();
+  var sheetDeptNm = String(adminRow[ADMIN_COL.DEPT] || '').trim();
+  var resolvedDeptCd = sheetDeptCd || sso.deptCd || '';
+  var resolvedDeptNm = sheetDeptNm || sso.deptNm || '';
+  var resolvedDeptShort = resolvedDeptNm ? resolvedDeptNm.split(/[\s\/]/).pop() : '';
+
   return createResponse({
     status: 'success', message: 'Approval SSO 완료',
-    deptCd: sso.deptCd, deptNm: sso.deptNm,
+    deptCd: resolvedDeptCd, deptNm: resolvedDeptNm, deptShort: resolvedDeptShort,
     debug: sso.debug
   });
 }
@@ -685,11 +695,15 @@ function handleBizplayDraft(adminRow, e) {
 
   _saveApprovalSession(propKey, session, sso);
 
-  // ── 폼 필드에서 값 가져오기 (밥카의 eaprForm 패턴) ──
+  // ── 부서 정보: 관리 시트(E열) 우선, SSO/폼필드는 폴백 ──
+  // SSO의 DVSN_NM은 사업부명("(주)엠로")이 올 수 있으므로 관리 시트를 신뢰
   var ff = sso.formFields || {};
-  var deptCd = sso.deptCd || ff.DVSN_CD || ff.DEPT_CD || '';
-  var deptNm = sso.deptNm || ff.DVSN_NM || ff.DEPT_NM || '';
-  var deptShort = sso.deptShort || (deptNm ? deptNm.split(/[\s\/]/).pop() : '');
+  var sheetDeptCd = String(adminRow[ADMIN_COL.DEPT_CD] || '').trim();
+  var sheetDeptNm = String(adminRow[ADMIN_COL.DEPT] || '').trim();
+  var deptCd = sheetDeptCd || sso.deptCd || ff.DVSN_CD || ff.DEPT_CD || '';
+  var deptNm = sheetDeptNm || sso.deptNm || ff.DVSN_NM || ff.DEPT_NM || '';
+  debug.deptSource = sheetDeptNm ? 'adminSheet' : (sso.deptNm ? 'sso' : 'formFields');
+  var deptShort = deptNm ? deptNm.split(/[\s\/]/).pop() : '';
   var userName = ff.USER_NM || session.userName || sso.userName || '';
   var useInttId = ff.USE_INTT_ID || session.useInttId || sso.useInttId || '';
   debug.resolvedDeptCd = deptCd;

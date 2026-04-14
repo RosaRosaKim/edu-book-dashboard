@@ -224,7 +224,22 @@ async function refreshEduSession() {
     const data = await gasFetch(`${API_URL}?${params.toString()}`);
     if (data.debug) console.log('[eduInit] debug:', JSON.stringify(data.debug, null, 2));
     if (data.status === 'success') {
-      console.log('[eduInit] Approval SSO 완료', data.deptCd ? `(부서: ${data.deptCd})` : '');
+      console.log('[eduInit] Approval SSO 완료', data.deptNm ? `(부서: ${data.deptNm})` : '');
+      // 부서 정보를 세션에 반영
+      if (data.deptNm || data.deptCd) {
+        const raw = localStorage.getItem('bizplay_session');
+        if (raw) {
+          try {
+            const s = JSON.parse(raw);
+            if (data.deptCd) s.deptCd = data.deptCd;
+            if (data.deptNm) s.deptNm = data.deptNm;
+            if (data.deptShort) s.deptShort = data.deptShort;
+            localStorage.setItem('bizplay_session', JSON.stringify(s));
+            bizSession = s;
+            showDraftForm();
+          } catch (pe) {}
+        }
+      }
     } else {
       console.warn('[eduInit]', data.message || data.error);
     }

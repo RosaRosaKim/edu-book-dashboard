@@ -73,7 +73,7 @@ function _isFirstBizDayOfMonth(date) {
 function _isFirstBizDayFrom14(date) {
   var y = date.getFullYear(), m = date.getMonth();
   var holidays = _loadHolidays(y);
-  for (var d = 14; d <= 31; d++) {
+  for (var d = 15; d <= 31; d++) {
     var check = new Date(y, m, d);
     if (check.getMonth() !== m) break;
     var dow = check.getDay();
