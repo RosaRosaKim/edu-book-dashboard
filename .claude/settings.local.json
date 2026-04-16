@@ -62,7 +62,8 @@
       "Bash(for file:*)",
       "Bash(grep -c \"onclick=\\\\|<script>\\\\|<style>\" /c/project/workspace/emroEduDashboard/src/html/*.html | sort -t: -k2 -rn)",
       "Bash(grep -c \"try {\" /c/project/workspace/emroEduDashboard/src/gas/*.gs | sort -t: -k2 -rn | head -10)",
-      "Bash(find \"C:\\\\project\\\\workspace\\\\emroEduDashboard/src/gas\" -name \"*.gs\" -type f -exec wc -l {} + | sort -rn)"
+      "Bash(find \"C:\\\\project\\\\workspace\\\\emroEduDashboard/src/gas\" -name \"*.gs\" -type f -exec wc -l {} + | sort -rn)",
+      "WebFetch(domain:k.kakaocdn.net)"
     ]
   }
 }

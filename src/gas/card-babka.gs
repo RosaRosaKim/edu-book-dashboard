@@ -709,10 +709,11 @@ function _callR007ForCardCheck(sso, bizUserId, stDate, enDate) {
   for (var i = 0; i < recs.length; i++) {
     var markDocNm = recs[i].MARK_DOC_NM || '';
     var stsNm = recs[i].APPR_STS_NM || recs[i].PROC_NM || '';
-    var apprDate = (recs[i].APPR_DATE || '').replace(/[^0-9]/g, '').slice(0, 8);
-    debugInfo.docs.push({ markDocNm: markDocNm, sts: stsNm, apprDate: apprDate, date: recs[i].DRAFT_DTTM || '' });
+    // 기안일시(DRAFT_DTTM) 기준으로 필터 — APPR_DATE는 결재완료 건에만 값이 있어 진행중 기안을 놓침
+    var draftDate = (recs[i].DRAFT_DTTM || recs[i].DRAFT_DATE || '').replace(/[^0-9]/g, '').slice(0, 8);
+    debugInfo.docs.push({ markDocNm: markDocNm, sts: stsNm, draftDate: draftDate, apprDate: (recs[i].APPR_DATE || '') });
     if (markDocNm === CARD_DOC_NM
-        && apprDate >= stDate && apprDate <= enDate
+        && draftDate >= stDate && draftDate <= enDate
         && (stsNm.indexOf('진행') >= 0 || stsNm.indexOf('완료') >= 0)
         && stsNm.indexOf('반송') < 0) {
       return { found: true, debug: debugInfo };
