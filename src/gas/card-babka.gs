@@ -28,7 +28,7 @@ var CARD_AUTO_MODE_COL = 10; // 1-based: J열  값: off, alarm, draft, submit
 /** 교통비 업종명 */
 var TRANSPORT_CATEGORY = '대중교통';
 /** 교통비 제외 키워드 (가맹점명 포함 여부) */
-var TRANSPORT_KEYWORDS = ['티머니', '시내버스', '시외버스', '대중교통'];
+var TRANSPORT_KEYWORDS = ['티머니', '버스', '지하철'];
 
 function isTransportRecord(r) {
   var cat = r.category || r.CARD_TPBZ_NM || '';
