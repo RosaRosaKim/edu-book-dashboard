@@ -137,9 +137,6 @@ function _getDday() {
   var payDiff = Math.round((pd - today) / 86400000);
 
   var msgs = [];
-  if (payDiff === 0) msgs.push('💰 오늘 월급날!');
-  else if (payDiff === 1) msgs.push('💰 내일 월급날!');
-  else msgs.push('💰 월급날까지 D-' + payDiff);
 
   if (nextH) {
     if (nextH.diff === 1) msgs.push('🎉 내일 ' + nextH.name + '!');
