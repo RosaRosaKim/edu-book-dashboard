@@ -1,0 +1,267 @@
+/**
+ * 바나프레소 메뉴 자동 동기화
+ * - order.banapresso.com API에서 메뉴/옵션 데이터를 가져와 캐싱
+ * - 당산SK점(12600) 기준
+ * - 트리거: 주 1회 (월요일 오전 7시 권장)
+ */
+
+var BANA_API_URL = 'https://order.banapresso.com/query';
+var BANA_MENU_QUERY = '91D8843AB9D3C73B28F1043252C574AF';
+var BANA_OPT_QUERY  = '7426BEAF86B272A76AEE27580B296CF3';
+var BANA_F_CODE     = 200000;
+var BANA_F_CODE_SUB = 12600; // 당산SK점
+var BANA_PROP_MENU  = 'BANA_MENU';
+var BANA_PROP_OPT   = 'BANA_OPT';
+
+/* ── API 호출 ── */
+function _fetchBanaAPI(queryHash) {
+  var resp = UrlFetchApp.fetch(BANA_API_URL, {
+    method: 'post',
+    contentType: 'text/plain;charset=UTF-8',
+    payload: JSON.stringify({
+      query: queryHash,
+      params: { f_code: BANA_F_CODE, f_code_sub: BANA_F_CODE_SUB }
+    }),
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() !== 200) throw new Error('바나프레소 API 오류: ' + resp.getResponseCode());
+  return JSON.parse(resp.getContentText());
+}
+
+/* ── 메뉴 row → 객체 변환 ── */
+// API 컬럼 (58개):
+// [0]nItem [1]sItemDivision [2]sItemDivisionOrigin [3]sItemDivisionRecipe
+// [4]sItem [5]sEItem [6]nIceItemType [7]filter_keyword
+// [8]sDefaultOption [9]sUserOption [10]sImageUrl [11]sImageUrlSub
+// [12]takeout_menu [13]sMenuExplanation [14]sSetItem [15]sKakaoGiftUrl
+// [16]sCountryOfOrigin [17]bDelete [18]nCharge ...
+// [27]bSoldOut [44]bStopSell [46]bNewMenu [47]nBest
+function _parseMenuRow(r) {
+  return {
+    id: r[0],
+    name: r[4],
+    category: r[1],
+    price: r[18] || 0,
+    img: r[10] || '',
+    optionIds: r[9] || '',
+    soldOut: r[27] === 1 || r[27] === '1',
+    stopSell: r[44] === 1 || r[44] === '1'
+  };
+}
+
+/* ── nOptionType → 옵션 목록 맵 구축 ── */
+// sUserOption 필드의 숫자는 nOptionType(카테고리ID)을 가리킴
+function _buildOptionTypeMap(rows) {
+  var map = {};  // key: nOptionType
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var typeId = r[1]; // nOptionType
+    if (!map[typeId]) {
+      map[typeId] = {
+        typeId: typeId,
+        typeName: r[2],  // sOptionTypeName
+        options: [],
+        required: false
+      };
+    }
+    map[typeId].options.push({
+      name: r[3],       // sOptionName
+      price: r[4] || 0  // nAddOptionCharge
+    });
+    if (r[11] === '1' || r[11] === 1) map[typeId].required = true;
+  }
+  return map;
+}
+
+/* ── 옵션 타입 추정 (radio/checkbox) ── */
+function _guessOptionType(catName) {
+  var multi = ['샷', '시럽', '추가', '토핑'];
+  for (var i = 0; i < multi.length; i++) {
+    if (catName.indexOf(multi[i]) !== -1) return 'checkbox';
+  }
+  return 'radio';
+}
+
+// 이쏜미에서 불필요한 옵션 타입 제외
+var BANA_SKIP_TYPES = ['매장에서 먹을게요', '젤라또', '쿠키', '아크릴키링', '텀블러', '아이스크림'];
+
+/* ── 메뉴별 refined options 생성 ── */
+function _buildRefinedOptions(menus, typeMap) {
+  var result = {};
+  for (var mi = 0; mi < menus.length; mi++) {
+    var m = menus[mi];
+    if (!m.optionIds) continue;
+
+    // optionIds: "6,10,18,39,;10,18,39,;" (ICE타입;HOT타입;...)
+    // 숫자는 nOptionType을 가리킴
+    var groups = m.optionIds.split(';');
+    var parsedGroups = [];
+    var seen = {};
+    var allTypeIds = [];
+    for (var gi = 0; gi < groups.length; gi++) {
+      var ids = groups[gi].split(',');
+      var groupIds = [];
+      for (var ii = 0; ii < ids.length; ii++) {
+        var n = parseInt(ids[ii], 10);
+        if (!isNaN(n)) {
+          groupIds.push(n);
+          if (!seen[n]) { seen[n] = true; allTypeIds.push(n); }
+        }
+      }
+      if (groupIds.length) parsedGroups.push(groupIds);
+    }
+
+    var cats = [];
+    // 2개 이상 비어있지 않은 그룹 → ICE/HOT 선택 가능 → 온도 옵션 추가
+    if (parsedGroups.length >= 2) {
+      cats.push({
+        id: '온도', name: '온도', required: true, type: 'radio',
+        options: [
+          { name: 'ICE', price: 0, isDefault: true },
+          { name: 'HOT', price: 0 }
+        ]
+      });
+    }
+    for (var ai = 0; ai < allTypeIds.length; ai++) {
+      var typeInfo = typeMap[allTypeIds[ai]];
+      if (!typeInfo) continue;
+
+      // 불필요한 타입 제외
+      var skip = false;
+      for (var si = 0; si < BANA_SKIP_TYPES.length; si++) {
+        if (typeInfo.typeName.indexOf(BANA_SKIP_TYPES[si]) !== -1) { skip = true; break; }
+      }
+      if (skip) continue;
+      // 합성 온도 카테고리와 중복 방지
+      if (parsedGroups.length >= 2 && typeInfo.typeName === '온도') continue;
+
+      var cat = {
+        id: typeInfo.typeName,
+        name: typeInfo.typeName,
+        required: typeInfo.required,
+        type: _guessOptionType(typeInfo.typeName),
+        options: []
+      };
+      for (var oi = 0; oi < typeInfo.options.length; oi++) {
+        var o = typeInfo.options[oi];
+        var entry = { name: o.name, price: o.price };
+        if (o.price === 0 && o.name.indexOf('기본') !== -1) entry.isDefault = true;
+        cat.options.push(entry);
+      }
+      cats.push(cat);
+    }
+
+    // 온도 카테고리를 맨 앞으로
+    cats.sort(function(a, b) {
+      if (a.name === '온도') return -1;
+      if (b.name === '온도') return 1;
+      if (a.required && !b.required) return -1;
+      if (!a.required && b.required) return 1;
+      return 0;
+    });
+
+    if (cats.length) result[m.id] = cats;
+  }
+  return result;
+}
+
+/**
+ * 바나프레소 메뉴 동기화 (트리거용)
+ * - 메뉴/옵션 API 호출 → 변환 → ScriptProperties 저장
+ */
+// 이쏜미용 음료 카테고리 (디저트/세트/상품 제외)
+var BANA_DRINK_CATS = ['커피','저당 & 제로슈가','디카페인 커피','논커피 라떼','주스 & 드링크','바나치노 & 스무디','티 & 에이드'];
+
+function syncBanapressoMenu() {
+  var menuRaw = _fetchBanaAPI(BANA_MENU_QUERY);
+
+  var menus = [];
+  for (var i = 0; i < menuRaw.rows.length; i++) {
+    var item = _parseMenuRow(menuRaw.rows[i]);
+    // 삭제/판매중지/품절 제외
+    if (item.stopSell || item.soldOut || String(menuRaw.rows[i][17]) === '1') continue;
+    // 음료 카테고리만
+    if (BANA_DRINK_CATS.indexOf(item.category) === -1) continue;
+    menus.push(item);
+  }
+
+  // 옵션: 별도 쿼리가 있으면 API에서, 없으면 기존 캐시 유지
+  var refined = {};
+  if (BANA_OPT_QUERY) {
+    var optRaw = _fetchBanaAPI(BANA_OPT_QUERY);
+    var typeMap = _buildOptionTypeMap(optRaw.rows);
+    refined = _buildRefinedOptions(menus, typeMap);
+  } else {
+    // 기존 옵션 캐시가 있으면 유지
+    var props = PropertiesService.getScriptProperties();
+    var existing = _getPropChunked(props, BANA_PROP_OPT);
+    if (existing) refined = JSON.parse(existing);
+  }
+
+  // ScriptProperties 저장 (9KB 제한 → 분할)
+  var menuJson = JSON.stringify(menus);
+  var optJson  = JSON.stringify(refined);
+  var props = PropertiesService.getScriptProperties();
+  _setPropChunked(props, BANA_PROP_MENU, menuJson);
+  _setPropChunked(props, BANA_PROP_OPT, optJson);
+  props.setProperty('BANA_SYNC_AT', new Date().toISOString());
+
+  Logger.log('바나프레소 동기화 완료: 메뉴 ' + menus.length + '개, 옵션 ' + Object.keys(refined).length + '개');
+  return { menuCount: menus.length, optionCount: Object.keys(refined).length };
+}
+
+/* ── ScriptProperties 분할 저장/읽기 (9KB 제한 우회) ── */
+function _setPropChunked(props, key, value) {
+  // 기존 청크 삭제
+  for (var i = 0; i < 20; i++) {
+    var ck = key + '_' + i;
+    if (props.getProperty(ck) === null) break;
+    props.deleteProperty(ck);
+  }
+  var CHUNK = 8000;
+  var chunks = Math.ceil(value.length / CHUNK);
+  props.setProperty(key + '_N', String(chunks));
+  for (var c = 0; c < chunks; c++) {
+    props.setProperty(key + '_' + c, value.substr(c * CHUNK, CHUNK));
+  }
+}
+
+function _getPropChunked(props, key) {
+  var n = parseInt(props.getProperty(key + '_N'), 10);
+  if (isNaN(n) || n <= 0) return null;
+  var parts = [];
+  for (var i = 0; i < n; i++) {
+    var chunk = props.getProperty(key + '_' + i);
+    if (chunk === null) return null;
+    parts.push(chunk);
+  }
+  return parts.join('');
+}
+
+/**
+ * GAS action: getBanapressoMenu
+ * - 캐시된 데이터 반환, 없으면 동기화 후 반환
+ */
+function handleGetBanapressoMenu(adminRow, e) {
+  var props = PropertiesService.getScriptProperties();
+  var menuJson = _getPropChunked(props, BANA_PROP_MENU);
+  var optJson  = _getPropChunked(props, BANA_PROP_OPT);
+
+  if (!menuJson) {
+    try {
+      syncBanapressoMenu();
+      menuJson = _getPropChunked(props, BANA_PROP_MENU);
+      optJson  = _getPropChunked(props, BANA_PROP_OPT);
+    } catch (ex) {
+      // 동기화 실패 시 빈 데이터 → 프론트에서 정적 JSON 폴백
+      return createResponse({ ok: false, error: '메뉴 동기화 실패: ' + ex.message });
+    }
+  }
+
+  return createResponse({
+    ok: true,
+    menu: JSON.parse(menuJson),
+    options: JSON.parse(optJson),
+    syncedAt: props.getProperty('BANA_SYNC_AT') || ''
+  });
+}

@@ -1,0 +1,414 @@
+<div class="fade-in">
+  <!-- 글쓰기 -->
+  <div class="bg-surface border border-border rounded-2xl p-3 mb-4">
+    <textarea id="boardInput" class="board-textarea" maxlength="200" placeholder="건의사항이나 에러제보, 불편한 점을 써줘"></textarea>
+    <div class="flex items-center justify-between mt-2">
+      <span id="boardCharCount" class="text-xs text-[#aab5b2]">0/200</span>
+      <button id="boardSubmitBtn" onclick="writePost()"
+        class="px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-accent hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed" disabled>올리기</button>
+    </div>
+  </div>
+
+  <!-- 공지사항 -->
+  <div id="boardPinned" class="hidden mb-4 space-y-2"></div>
+
+  <!-- 정렬 토글 -->
+  <div class="flex items-center gap-2 mb-3">
+    <button class="board-sort-btn active" id="sortLatest" onclick="changeBoardSort('latest')">최신순</button>
+    <button class="board-sort-btn" id="sortPopular" onclick="changeBoardSort('popular')">인기순</button>
+  </div>
+
+  <!-- 목록 -->
+  <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div id="boardPosts" class="p-3 space-y-3"></div>
+    <div id="boardLoading" class="hidden p-3 space-y-3">
+      <div class="board-card space-y-2"><div class="skeleton h-4 w-4/5 rounded mb-1"></div><div class="skeleton h-4 w-2/3 rounded"></div><div class="flex gap-2"><div class="skeleton h-3 w-12 rounded"></div></div><div class="flex items-center gap-2"><div class="skeleton h-6 w-20 rounded-full"></div><div class="skeleton h-6 w-20 rounded-full"></div></div></div>
+      <div class="board-card space-y-2"><div class="skeleton h-4 w-3/5 rounded"></div><div class="flex gap-2"><div class="skeleton h-3 w-16 rounded"></div></div><div class="flex items-center gap-2"><div class="skeleton h-6 w-20 rounded-full"></div><div class="skeleton h-6 w-20 rounded-full"></div></div></div>
+      <div class="board-card space-y-2"><div class="skeleton h-4 w-2/3 rounded mb-1"></div><div class="skeleton h-4 w-1/2 rounded"></div><div class="flex gap-2"><div class="skeleton h-3 w-14 rounded"></div></div><div class="flex items-center gap-2"><div class="skeleton h-6 w-20 rounded-full"></div><div class="skeleton h-6 w-20 rounded-full"></div></div></div>
+    </div>
+    <div id="boardEmpty" class="hidden text-center py-10 text-[#6e7f7b] text-sm">
+      아직 글이 없어.
+    </div>
+  </div>
+
+  <!-- 더보기 -->
+  <div id="boardMoreWrap" class="hidden mt-3 text-center">
+    <button id="boardMoreBtn" onclick="loadMorePosts()" class="px-5 py-2 rounded-xl text-sm border border-border bg-surface hover:bg-[rgb(var(--c-surface2))] transition-colors">더보기</button>
+  </div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+const $ = window.$;
+const API_URL = window.API_URL;
+const TOKEN_KEY = window.TOKEN_KEY;
+
+const PAGE_SIZE = 10;
+let _allPosts = [];
+let _sortMode = 'latest';
+let _displayedCount = 0;
+
+const input = document.getElementById('boardInput');
+const charCount = document.getElementById('boardCharCount');
+const submitBtn = document.getElementById('boardSubmitBtn');
+
+input.addEventListener('input', function() {
+  let val = this.value;
+  val = val.replace(/[<>"']/g, '');
+  if (val !== this.value) this.value = val;
+  const len = val.length;
+  charCount.textContent = len + '/200';
+  submitBtn.disabled = len < 1 || len > 200;
+});
+
+function sanitize(str) {
+  return String(str).replace(/[<>"']/g, '').trim();
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  if (diff < 60000) return '방금';
+  if (diff < 3600000) return Math.floor(diff / 60000) + '분 전';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + '시간 전';
+  if (diff < 604800000) return Math.floor(diff / 86400000) + '일 전';
+  return d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function _sortPosts(posts) {
+  var normal = posts.filter(function(p) { return !p.pinned; });
+  if (_sortMode === 'popular') {
+    return normal.slice().sort((a, b) => {
+      const scoreA = a.likes - a.dislikes;
+      const scoreB = b.likes - b.dislikes;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return Number(b.id) - Number(a.id);
+    });
+  }
+  return normal.slice().sort((a, b) => Number(b.id) - Number(a.id));
+}
+
+function _renderPinned() {
+  var pinnedEl = $('boardPinned');
+  if (!pinnedEl) return;
+  var pinned = _allPosts.filter(function(p) { return p.pinned; });
+  pinned.sort((a, b) => Number(b.id) - Number(a.id));
+  if (pinned.length === 0) {
+    pinnedEl.classList.add('hidden');
+    pinnedEl.innerHTML = '';
+    return;
+  }
+  pinnedEl.classList.remove('hidden');
+  pinnedEl.innerHTML = pinned.map(function(p) { return _pinnedCardHtml(p); }).join('');
+}
+
+function _sortAndRender() {
+  _renderPinned();
+  const sorted = _sortPosts(_allPosts);
+  _displayedCount = Math.min(PAGE_SIZE, sorted.length);
+  renderPosts(sorted.slice(0, _displayedCount), sorted.length);
+}
+
+function _pinnedCardHtml(p) {
+  const isAdmin = window._isAdmin || false;
+  let html = '<div class="board-card border-accent/30 bg-accent/5" data-post-id="' + p.id + '">' +
+    '<div class="flex items-center gap-1.5 mb-1.5">' +
+      '<span class="text-[10px] font-bold text-white bg-accent px-1.5 py-0.5 rounded">📌 공지</span>' +
+      '<span class="text-[10px] text-[#aab5b2]">' + formatDate(p.date) + '</span>' +
+    '</div>' +
+    '<div class="text-sm leading-relaxed whitespace-pre-wrap break-words">' + escapeHtml(p.content) + '</div>';
+  if (isAdmin) {
+    html += '<div class="flex justify-end mt-2">' +
+      '<button id="unpinBtn-' + p.id + '" onclick="togglePin(\'' + p.id + '\',false)" class="px-2.5 py-0.5 rounded text-[10px] font-medium text-[#6e7f7b] border border-border hover:bg-surface-2 transition-colors">고정 해제</button>' +
+    '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function _postCardHtml(p) {
+  const likeActive = p.myReaction === 'like' ? ' active-like' : '';
+  const dislikeActive = p.myReaction === 'dislike' ? ' active-dislike' : '';
+  const isAdmin = window._isAdmin || false;
+
+  let html = '<div class="board-card" data-post-id="' + p.id + '">' +
+    '<div class="text-sm leading-relaxed mb-2 whitespace-pre-wrap break-words">' + escapeHtml(p.content) + '</div>' +
+    '<div class="text-xs text-[#aab5b2] mb-2">' + formatDate(p.date) + '</div>' +
+    '<div class="flex items-center gap-2">' +
+      '<button id="likeBtn-' + p.id + '" class="board-react-btn' + likeActive + '" onclick="reactPost(\'' + p.id + '\',\'like\',this)">' +
+        '<span style="font-size:14px">👍</span> 좋아요 <span>' + p.likes + '</span></button>' +
+      '<button id="dislikeBtn-' + p.id + '" class="board-react-btn' + dislikeActive + '" onclick="reactPost(\'' + p.id + '\',\'dislike\',this)">' +
+        '<span style="font-size:14px">👎</span> 싫어요 <span>' + p.dislikes + '</span></button>' +
+    '</div>';
+
+  // 답변 표시 (관리자는 textarea로 표시하므로 생략)
+  if (p.reply && !isAdmin) {
+    html += '<div class="board-reply">' +
+      '<div class="board-reply-label">관리자 답변</div>' +
+      '<div class="board-reply-text">' + escapeHtml(p.reply) + '</div>' +
+    '</div>';
+  }
+
+  // 관리자: 답변 입력
+  if (isAdmin) {
+    html += '<div class="mt-2">' +
+      '<textarea id="replyInput-' + p.id + '" class="board-reply-input" maxlength="200" placeholder="관리자 답변 작성...">' + (p.reply ? escapeHtml(p.reply) : '') + '</textarea>' +
+      '<div class="flex justify-end gap-1.5 mt-1">' +
+        '<button id="pinBtn-' + p.id + '" onclick="togglePin(\'' + p.id + '\',true)" class="px-3 py-1 rounded-lg text-xs font-medium text-[#6e7f7b] border border-border hover:bg-surface-2 transition-colors">📌 고정</button>' +
+        (p.reply ? '<button id="replyDelBtn-' + p.id + '" onclick="deleteReply(\'' + p.id + '\')" class="px-3 py-1 rounded-lg text-xs font-medium text-danger border border-danger/30 hover:bg-danger/10 transition-colors">답변 삭제</button>' : '') +
+        '<button id="replyBtn-' + p.id + '" onclick="replyPost(\'' + p.id + '\')" class="px-3 py-1 rounded-lg text-xs font-medium text-white bg-accent hover:opacity-90 transition-opacity">' + (p.reply ? '답변 수정' : '답변 달기') + '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderPosts(posts, total) {
+  const postsEl = $('boardPosts');
+  const empty = $('boardEmpty');
+  const moreWrap = $('boardMoreWrap');
+  if (!posts || posts.length === 0) {
+    if (postsEl) postsEl.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    if (moreWrap) moreWrap.classList.add('hidden');
+    return;
+  }
+  if (empty) empty.classList.add('hidden');
+  postsEl.innerHTML = posts.map(p => _postCardHtml(p)).join('');
+  if (moreWrap) moreWrap.classList.toggle('hidden', _displayedCount >= total);
+}
+
+function appendPosts(posts) {
+  const postsEl = $('boardPosts');
+  const moreWrap = $('boardMoreWrap');
+  const sorted = _sortPosts(_allPosts);
+  if (postsEl) postsEl.insertAdjacentHTML('beforeend', posts.map(p => _postCardHtml(p)).join(''));
+  if (moreWrap) moreWrap.classList.toggle('hidden', _displayedCount >= sorted.length);
+}
+
+function changeBoardSort(mode) {
+  if (mode === _sortMode) return;
+  _sortMode = mode;
+  $('sortLatest').classList.toggle('active', mode === 'latest');
+  $('sortPopular').classList.toggle('active', mode === 'popular');
+  $('boardPosts').classList.add('hidden');
+  $('boardLoading').classList.remove('hidden');
+  setTimeout(function() {
+    _sortAndRender();
+    $('boardLoading').classList.add('hidden');
+    $('boardPosts').classList.remove('hidden');
+  }, 300);
+}
+
+function loadMorePosts() {
+  const sorted = _sortPosts(_allPosts);
+  const nextBatch = sorted.slice(_displayedCount, _displayedCount + PAGE_SIZE);
+  _displayedCount += nextBatch.length;
+  appendPosts(nextBatch);
+}
+
+async function loadBoard() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+
+  const postsEl = $('boardPosts');
+  const loading = $('boardLoading');
+  const empty = $('boardEmpty');
+  const moreWrap = $('boardMoreWrap');
+
+  if (postsEl) postsEl.innerHTML = '';
+  if (loading) loading.classList.remove('hidden');
+  if (empty) empty.classList.add('hidden');
+  if (moreWrap) moreWrap.classList.add('hidden');
+
+  try {
+    const params = new URLSearchParams({ action: 'boardList', token });
+    const data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      _allPosts = data.posts || [];
+      _sortAndRender();
+    } else {
+      window.showToast(data.message || '게시판 조회 실패', 'angry', postsEl);
+    }
+  } catch (err) {
+    window.showToast('게시판 조회 실패: ' + err.message, 'angry', postsEl);
+  } finally {
+    if (loading) loading.classList.add('hidden');
+    if (window.hideToast) window.hideToast();
+  }
+}
+
+async function writePost() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  const content = sanitize(input.value);
+  if (!content || content.length < 1 || content.length > 200) {
+    window.showToast('1~200자 내용을 입력해줘.', 'angry', submitBtn);
+    return;
+  }
+  submitBtn.disabled = true;
+  if (window.setBtnLoading) window.setBtnLoading(submitBtn, true, '올리는 중...');
+  try {
+    const params = new URLSearchParams({ action: 'boardWrite', token, content });
+    const data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      input.value = '';
+      charCount.textContent = '0/200';
+      window.showToast('글이 올라갔어!', 'happy', submitBtn);
+      await loadBoard();
+    } else {
+      window.showToast(data.message || '글쓰기 실패', 'angry', submitBtn);
+    }
+  } catch (err) {
+    window.showToast('글쓰기 실패: ' + err.message, 'angry', submitBtn);
+  } finally {
+    if (window.setBtnLoading) window.setBtnLoading(submitBtn, false, '올리기');
+    submitBtn.disabled = input.value.trim().length < 1;
+  }
+}
+
+async function reactPost(id, type, btnEl) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.dataset.origHtml = btnEl.innerHTML;
+    var SPIN = '<svg class="w-3.5 h-3.5 spinner inline-block" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+    btnEl.innerHTML = SPIN;
+  }
+  try {
+    const params = new URLSearchParams({ action: 'boardReact', token, postId: id, type });
+    const data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      // 로컬 _allPosts 업데이트
+      const post = _allPosts.find(p => p.id === String(id));
+      if (post) {
+        post.likes = data.likes;
+        post.dislikes = data.dislikes;
+        post.myReaction = data.myReaction;
+      }
+      var likeBtn = document.getElementById('likeBtn-' + id);
+      var dislikeBtn = document.getElementById('dislikeBtn-' + id);
+      if (likeBtn) {
+        likeBtn.className = 'board-react-btn' + (data.myReaction === 'like' ? ' active-like' : '');
+        likeBtn.innerHTML = '<span style="font-size:14px">👍</span> 좋아요 <span>' + data.likes + '</span>';
+        likeBtn.disabled = false;
+      }
+      if (dislikeBtn) {
+        dislikeBtn.className = 'board-react-btn' + (data.myReaction === 'dislike' ? ' active-dislike' : '');
+        dislikeBtn.innerHTML = '<span style="font-size:14px">👎</span> 싫어요 <span>' + data.dislikes + '</span>';
+        dislikeBtn.disabled = false;
+      }
+    } else {
+      window.showToast(data.message || '반응 실패', 'angry', btnEl);
+      if (btnEl) { btnEl.innerHTML = btnEl.dataset.origHtml; btnEl.disabled = false; }
+    }
+  } catch (err) {
+    window.showToast('반응 실패: ' + err.message, 'angry', btnEl);
+    if (btnEl) { btnEl.innerHTML = btnEl.dataset.origHtml; btnEl.disabled = false; }
+  }
+}
+
+async function replyPost(id) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  const textarea = document.getElementById('replyInput-' + id);
+  if (!textarea) return;
+  const reply = sanitize(textarea.value);
+  if (!reply || reply.length < 1 || reply.length > 200) {
+    window.showToast('1~200자 답변을 입력해줘.', 'angry', textarea);
+    return;
+  }
+  const btn = document.getElementById('replyBtn-' + id);
+  const btnLabel = btn ? btn.textContent : '답변 달기';
+  if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, '등록 중...'); }
+  try {
+    const params = new URLSearchParams({ action: 'boardReply', token, postId: id, reply });
+    const data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      // 로컬 _allPosts 업데이트 후 재렌더
+      const post = _allPosts.find(p => p.id === String(id));
+      if (post) post.reply = data.reply;
+      _sortAndRender();
+      window.showToast('답변이 등록됐어!', 'happy', textarea);
+    } else {
+      window.showToast(data.message || '답변 실패', 'angry', textarea);
+    }
+  } catch (err) {
+    window.showToast('답변 실패: ' + err.message, 'angry', textarea);
+  } finally {
+    if (btn) { btn.disabled = false; if (window.setBtnLoading) window.setBtnLoading(btn, false, btnLabel); }
+  }
+}
+
+async function deleteReply(id) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  if (!await window.showConfirm('답변을 삭제할까?')) return;
+  const btn = document.getElementById('replyDelBtn-' + id);
+  if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, '삭제 중...'); }
+  try {
+    const params = new URLSearchParams({ action: 'boardReplyDelete', token, postId: id });
+    const data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      const post = _allPosts.find(p => p.id === String(id));
+      if (post) post.reply = null;
+      _sortAndRender();
+      window.showToast('답변이 삭제됐어.', 'happy', btn);
+    } else {
+      window.showToast(data.message || '삭제 실패', 'angry', btn);
+    }
+  } catch (err) {
+    window.showToast('삭제 실패: ' + err.message, 'angry', btn);
+  } finally {
+    if (btn) { btn.disabled = false; if (window.setBtnLoading) window.setBtnLoading(btn, false, '답변 삭제'); }
+  }
+}
+
+async function togglePin(id, pin) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  var btnId = pin ? 'pinBtn-' + id : 'unpinBtn-' + id;
+  var btn = document.getElementById(btnId);
+  var label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; if (window.setBtnLoading) window.setBtnLoading(btn, true, pin ? '고정 중...' : '해제 중...'); }
+  try {
+    var params = new URLSearchParams({ action: 'boardPin', token: token, postId: id, pin: pin ? 'Y' : 'N' });
+    var data = await window.gasFetch(API_URL + '?' + params);
+    if (data.status === 'success') {
+      var post = _allPosts.find(function(p) { return p.id === String(id); });
+      if (post) post.pinned = data.pinned;
+      _sortAndRender();
+      window.showToast(pin ? '공지로 고정했어!' : '고정 해제했어.', 'happy', btn);
+    } else {
+      window.showToast(data.message || '실패', 'angry', btn);
+    }
+  } catch (err) {
+    window.showToast('실패: ' + err.message, 'angry', btn);
+  } finally {
+    if (btn) { btn.disabled = false; if (window.setBtnLoading) window.setBtnLoading(btn, false, label); }
+  }
+}
+
+window.loadBoard = loadBoard;
+window.writePost = writePost;
+window.reactPost = reactPost;
+window.replyPost = replyPost;
+window.deleteReply = deleteReply;
+window.togglePin = togglePin;
+window.changeBoardSort = changeBoardSort;
+window.loadMorePosts = loadMorePosts;
+
+})();
+</script>

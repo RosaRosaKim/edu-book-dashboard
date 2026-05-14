@@ -1,0 +1,2271 @@
+<style>
+@keyframes lifeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes lifeFade { from { opacity: 0; } to { opacity: 1; } }
+#sectionMenuAlarm button:active, #sectionItsOnMe button:active, #sectionVote button:active, #sectionMiniGame button:active { transform: scale(0.96); }
+body.betting-mode #mgHome { display: none !important; }
+</style>
+<script>
+window._lifeAnimate = function(id, type) {
+  var el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!el || el.classList.contains('hidden')) return;
+  var a = type === 'fade' ? 'lifeFade .2s ease-out' : 'lifeIn .25s ease-out';
+  el.style.animation = 'none';
+  void el.offsetHeight;
+  el.style.animation = a;
+};
+</script>
+<!-- ═══════════════ 엠로생활 모듈 ═══════════════ -->
+<section id="sectionMenuAlarm" class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <!-- 당산SKV1 푸드스토리 메뉴 알람 -->
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">당산SKV1 푸드스토리 메뉴 알람</div>
+        <div class="text-[11px] text-[#6e7f7b]">평일 오늘의 식단 알림 - 이미지를 읽어와서 오타가 있을 수 있어</div>
+      </div>
+    </div>
+    <div id="menuAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative overflow-hidden">
+      <button onclick="setMenuAlarmValue(true)" id="menuAlarmBtnOn"
+        class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+        좋아
+      </button>
+      <button onclick="setMenuAlarmValue(false)" id="menuAlarmBtnOff"
+        class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 5.714 0m-5.714 0a3 3 0 1 1 5.714 0M3.688 15.772A8.966 8.966 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75c0 2.344.9 4.476 2.312 6.022"/></svg>
+        싫어
+      </button>
+    </div>
+    <!-- 키워드 영역 (알람 ON일 때만 표시) -->
+    <div id="menuKeywordArea" class="mt-4 hidden">
+      <div class="text-[11px] font-semibold text-accent mb-1.5">😋 좋아하는 메뉴 <span class="font-normal text-[#6e7f7b]">- 등록하면 이 메뉴가 나올 때만 알려줄게</span></div>
+      <div id="menuLikeTags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
+      <div class="flex gap-1.5">
+        <input id="menuLikeInput" type="text" maxlength="20" placeholder="메뉴 입력 후 추가"
+          class="flex-1 text-[12px] px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 outline-none focus:border-accent">
+        <button onclick="addMenuKeyword()"
+          class="text-[11px] px-3 py-1.5 rounded-lg bg-accent text-white font-semibold shrink-0">추가</button>
+      </div>
+      <div class="text-[11px] font-semibold text-red-400 mt-3 mb-1.5">🙅 싫어하는 메뉴 <span class="font-normal text-[#6e7f7b]">- 등록하면 이 메뉴가 나오면 알림을 안 보낼게</span></div>
+      <div id="menuDislikeTags" class="flex flex-wrap gap-1.5 mb-1.5"></div>
+      <div class="flex gap-1.5">
+        <input id="menuDislikeInput" type="text" maxlength="20" placeholder="메뉴 입력 후 추가"
+          class="flex-1 text-[12px] px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 outline-none focus:border-accent">
+        <button onclick="addMenuDislike()"
+          class="text-[11px] px-3 py-1.5 rounded-lg bg-red-400 text-white font-semibold shrink-0">추가</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var _menuAlarmLoading = false;
+  var _menuAlarmBtnOnIcon = '';
+  var _menuAlarmBtnOffIcon = '';
+
+  function _moveSlider(container, sliderId, activeBtn) {
+    if (!container || !activeBtn) return;
+    if (activeBtn.offsetWidth === 0) {
+      requestAnimationFrame(function() { _moveSlider(container, sliderId, activeBtn); });
+      return;
+    }
+    var slider = document.getElementById(sliderId);
+    if (!slider) {
+      slider = document.createElement('div');
+      slider.id = sliderId;
+      slider.className = 'absolute rounded-lg bg-accent shadow-sm';
+      slider.style.cssText = 'top:4px;bottom:4px;pointer-events:none;z-index:0;transition:left .25s cubic-bezier(.4,0,.2,1),width .25s cubic-bezier(.4,0,.2,1)';
+      container.insertBefore(slider, container.firstChild);
+    }
+    slider.style.left = activeBtn.offsetLeft + 'px';
+    slider.style.width = activeBtn.offsetWidth + 'px';
+  }
+
+  function setMenuAlarmBtnState(on) {
+    var btnOn = $('menuAlarmBtnOn');
+    var btnOff = $('menuAlarmBtnOff');
+    if (!btnOn || !btnOff) return;
+    var el = $('menuAlarmToggle');
+    el.dataset.on = on ? '1' : '0';
+
+    if (!_menuAlarmBtnOnIcon) _menuAlarmBtnOnIcon = btnOn.querySelector('svg')?.outerHTML || '';
+    if (!_menuAlarmBtnOffIcon) _menuAlarmBtnOffIcon = btnOff.querySelector('svg')?.outerHTML || '';
+
+    var activeClass = 'text-white';
+    var inactiveClass = 'text-[#6e7f7b]';
+    var disabledClass = ' opacity-35 cursor-not-allowed';
+    var spinnerSvg = '<svg class="animate-spin h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
+
+    var base = 'flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold ';
+    btnOn.className = base + (on ? activeClass : inactiveClass) + (_menuAlarmLoading ? disabledClass : '');
+    btnOff.className = base + (!on ? activeClass : inactiveClass) + (_menuAlarmLoading ? disabledClass : '');
+
+    var onIconEl = btnOn.querySelector('svg');
+    var offIconEl = btnOff.querySelector('svg');
+    if (_menuAlarmLoading) {
+      if (on && onIconEl) onIconEl.outerHTML = spinnerSvg;
+      if (!on && offIconEl) offIconEl.outerHTML = spinnerSvg;
+      btnOn.disabled = true;
+      btnOff.disabled = true;
+    } else {
+      if (onIconEl) onIconEl.outerHTML = _menuAlarmBtnOnIcon;
+      if (offIconEl) offIconEl.outerHTML = _menuAlarmBtnOffIcon;
+      btnOn.disabled = false;
+      btnOff.disabled = false;
+    }
+
+    requestAnimationFrame(function() {
+      _moveSlider(el, 'menuAlarmSlider', on ? btnOn : btnOff);
+    });
+  }
+
+  window.setMenuAlarmValue = async function(newVal) {
+    var el = $('menuAlarmToggle');
+    var isOn = el.dataset.on === '1';
+    if (_menuAlarmLoading || newVal === isOn) return;
+
+    _menuAlarmLoading = true;
+    setMenuAlarmBtnState(newVal);
+    var token = localStorage.getItem('token');
+
+    try {
+      var data = await window.gasFetch(window.API_URL + '?action=updateMenuAlarm&token=' + encodeURIComponent(token) + '&isAgreed=' + newVal);
+      if (data.status === 'success') {
+        window._menuAlarmOn = newVal;
+        _toggleKeywordArea();
+        window.showToast(newVal ? '식단 알람 보내줄게!' : '식단 알람 안 보낼게.', 'smail');
+      } else {
+        setMenuAlarmBtnState(isOn);
+        window.showToast('알람 설정 변경에 실패했어.', 'sad');
+      }
+    } catch (e) {
+      setMenuAlarmBtnState(isOn);
+      window.showToast('서버 연결에 실패했어.', 'sad');
+    } finally {
+      _menuAlarmLoading = false;
+      setMenuAlarmBtnState(el.dataset.on === '1');
+    }
+  };
+
+  // ── 좋아하는/싫어하는 메뉴 키워드 관리 ──
+  var _menuLike = [];
+  var _menuDislike = [];
+  var _keywordSaving = false;
+
+  function _renderLikeTags() {
+    var container = $('menuLikeTags');
+    if (!container) return;
+    container.innerHTML = _menuLike.map(function(tag, idx) {
+      return '<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-accent/15 text-accent">'
+        + tag + '<button onclick="removeMenuKeyword(' + idx + ')" class="ml-0.5 opacity-60 hover:opacity-100">&times;</button></span>';
+    }).join('');
+  }
+
+  function _renderDislikeTags() {
+    var container = $('menuDislikeTags');
+    if (!container) return;
+    container.innerHTML = _menuDislike.map(function(tag, idx) {
+      return '<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-red-400/15 text-red-400">'
+        + tag + '<button onclick="removeMenuDislike(' + idx + ')" class="ml-0.5 opacity-60 hover:opacity-100">&times;</button></span>';
+    }).join('');
+  }
+
+  function _toggleKeywordArea() {
+    var area = $('menuKeywordArea');
+    if (area) area.classList.toggle('hidden', !window._menuAlarmOn);
+  }
+
+  window.addMenuKeyword = function() {
+    var input = $('menuLikeInput');
+    var val = (input.value || '').trim();
+    if (!val) return;
+    if (_menuLike.indexOf(val) >= 0) { input.value = ''; return; }
+    _menuLike.push(val);
+    input.value = '';
+    _renderLikeTags();
+    _saveKeywords();
+  };
+
+  window.removeMenuKeyword = function(idx) {
+    _menuLike.splice(idx, 1);
+    _renderLikeTags();
+    _saveKeywords();
+  };
+
+  window.addMenuDislike = function() {
+    var input = $('menuDislikeInput');
+    var val = (input.value || '').trim();
+    if (!val) return;
+    if (_menuDislike.indexOf(val) >= 0) { input.value = ''; return; }
+    _menuDislike.push(val);
+    input.value = '';
+    _renderDislikeTags();
+    _saveKeywords();
+  };
+
+  window.removeMenuDislike = function(idx) {
+    _menuDislike.splice(idx, 1);
+    _renderDislikeTags();
+    _saveKeywords();
+  };
+
+  function _saveKeywords() {
+    if (_keywordSaving) return;
+    _keywordSaving = true;
+    var token = localStorage.getItem('token');
+    window.gasFetch(window.API_URL + '?action=updateMenuKeywords&token=' + encodeURIComponent(token)
+      + '&like=' + encodeURIComponent(_menuLike.join(','))
+      + '&dislike=' + encodeURIComponent(_menuDislike.join(','))
+    ).then(function() {
+      _keywordSaving = false;
+    }).catch(function() {
+      _keywordSaving = false;
+    });
+  }
+
+  window._initMenuKeywords = function(likeStr, dislikeStr) {
+    _menuLike = likeStr ? likeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+    _menuDislike = dislikeStr ? dislikeStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+    _renderLikeTags();
+    _renderDislikeTags();
+    _toggleKeywordArea();
+  };
+
+  // Enter 키 지원
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.id === 'menuLikeInput') { e.preventDefault(); window.addMenuKeyword(); }
+    if (e.key === 'Enter' && e.target.id === 'menuDislikeInput') { e.preventDefault(); window.addMenuDislike(); }
+  });
+
+  function _showOnlySection(sectionId, extraIds) {
+    var show = {};
+    show[sectionId] = true;
+    if (extraIds) extraIds.forEach(function(id) { show[id] = true; });
+    ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame','findRoomContainer'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = show[id] ? '' : 'none';
+    });
+    window._lifeAnimate(sectionId);
+  }
+  window._restoreAllSections = function() {
+    ['sectionMenuAlarm','sectionItsOnMe','sectionVote','sectionMiniGame','findRoomContainer'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.style.display = ''; window._lifeAnimate(el); }
+    });
+    // 내기모드 해제 + mgHome 복원
+    document.body.classList.remove('betting-mode');
+    var mgHome = document.getElementById('mgHome');
+    if (mgHome) { mgHome.classList.remove('hidden'); mgHome.style.display = ''; }
+  };
+
+  window.initLife = function() {
+    var on = !!(window._menuAlarmOn);
+    setMenuAlarmBtnState(on);
+    var ui = window._userInfoData || {};
+    window._initMenuKeywords(ui.menuLike || '', ui.menuDislike || '');
+    // 회의실 찾기 모듈 로드
+    if (window._loadModule) window._loadModule('find-room.html', 'findRoomContainer');
+    // 미니게임 모듈 로드
+    if (window._loadModule) window._loadModule('mini-game.html', 'miniGameContainer');
+    // 딥링크 체크
+    var pendingSid = sessionStorage.getItem('itsOnMe');
+    var pendingVote = sessionStorage.getItem('vote');
+    var isDeepLink = !!(pendingSid || pendingVote);
+    if (pendingSid) {
+      sessionStorage.removeItem('itsOnMe');
+      _showOnlySection('sectionItsOnMe');
+      window.openItsOnMeOrder(pendingSid);
+    }
+    if (pendingVote) {
+      sessionStorage.removeItem('vote');
+      _showOnlySection('sectionVote');
+      window.openVoteView(pendingVote);
+    }
+    // 딥링크 아닐 때만 미니게임 시작버튼 표시 (모듈 로드 후)
+    if (!isDeepLink) {
+      window._showMgHome = true;
+    }
+  };
+})();
+</script>
+
+<!-- ═══════════════ 이쏜미 ═══════════════ -->
+<section id="sectionItsOnMe" class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">이쏜미</div>
+        <div class="text-[11px] text-[#6e7f7b]">Flow를 연동해서 편리하게 사줄 수 있어</div>
+      </div>
+    </div>
+
+    <!-- 메인 화면: 가게 선택 -->
+    <div id="iomHome">
+      <!-- 진행중인 주문 복귀 버튼 -->
+      <div id="iomResumeBar" class="hidden mb-2">
+        <button onclick="iomResumeOrder()" class="w-full flex items-center justify-between bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 hover:bg-accent/15 transition">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">📋</span>
+            <div class="text-left">
+              <div class="text-[13px] font-semibold text-accent">진행중인 주문이 있어</div>
+              <div class="text-[11px] text-[#6e7f7b]" id="iomResumeStore"></div>
+            </div>
+          </div>
+          <span class="text-accent text-sm font-semibold">돌아가기 →</span>
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="iomSelectStore('당산SKV1 바나프레소')" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+          <span class="text-2xl">☕</span>
+          <span class="text-[12px] font-semibold text-[#47635f]">당산SKV1 바나프레소</span>
+        </button>
+        <button onclick="iomOpenCustom()" class="flex flex-col items-center gap-2 bg-surface-2 rounded-xl py-4 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+          <span class="text-2xl">✏️</span>
+          <span class="text-[12px] font-semibold text-[#47635f]">수동입력</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 수동입력: 가게+메뉴 설정 -->
+    <div id="iomCustom" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold">수동입력</div>
+      </div>
+
+      <!-- 저장된 템플릿 -->
+      <div id="iomTplArea" class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">저장된 가게</div>
+        <div id="iomTplList" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+      </div>
+
+      <!-- 상호명 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">상호명</div>
+        <input id="iomCustomStore" type="text" placeholder="예: 스타벅스 당산역점"
+          class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+      </div>
+
+      <!-- 메뉴 추가 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">메뉴 목록</div>
+        <div class="flex gap-2 mb-2">
+          <input id="iomCustomMenuName" type="text" placeholder="메뉴명"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          <div class="relative w-40">
+            <input id="iomCustomMenuPrice" type="text" placeholder="가격" inputmode="numeric"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'');if(this.value)this.value=Number(this.value).toLocaleString()"
+              class="w-full bg-surface-2 border border-border rounded-lg px-2 pr-7 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60 text-right">
+            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-[#9ab0ab] pointer-events-none">원</span>
+          </div>
+          <button onclick="iomAddCustomMenu()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold flex items-center justify-center hover:brightness-110 transition">추가</button>
+        </div>
+        <div id="iomCustomMenuList" class="space-y-1.5"></div>
+      </div>
+
+      <button onclick="iomCustomNext()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition">
+        다음
+      </button>
+    </div>
+
+    <!-- Step 1: 사용자 선택 + 마감시간 -->
+    <!-- 로딩 화면 -->
+    <div id="iomLoading" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold" id="iomLoadingStore"></div>
+      </div>
+      <div class="flex flex-col items-center justify-center py-12 gap-3 text-[#9ab0ab]">
+        <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        <div class="text-[13px]">조금만 기다려줘. 기능을 로드할게</div>
+      </div>
+    </div>
+
+    <div id="iomSetup" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold" id="iomStoreName"></div>
+      </div>
+
+      <!-- 사용자 검색 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">함께할 멤버</div>
+        <!-- 이전 멤버 목록 -->
+        <div id="iomPrevMemberList" class="hidden space-y-1.5 mb-2 max-h-36 overflow-y-auto"></div>
+        <div class="relative">
+          <input id="iomUserSearch" type="text" placeholder="이름 또는 ID로 검색" oninput="iomSearchUsers()"
+            class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+        </div>
+        <div id="iomSearchResults" class="mt-1 max-h-32 overflow-y-auto"></div>
+        <!-- 선택된 멤버 태그 -->
+        <div id="iomSelectedMembers" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <!-- 마감시간 -->
+      <div class="mb-4">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">마감시간</div>
+        <div class="flex items-center gap-3">
+          <input id="iomMinutes" type="range" min="10" max="60" step="5" value="20" oninput="$('iomMinLabel').textContent=this.value+'분 후'"
+            class="flex-1 accent-[#2d8a7e]">
+          <span id="iomMinLabel" class="text-sm font-mono font-semibold text-[#47635f] w-16 text-right">20분 후</span>
+        </div>
+      </div>
+
+      <!-- 내기 모드 -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between bg-surface-2 rounded-xl px-4 py-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎲</span>
+            <div>
+              <div class="text-[13px] font-semibold text-[#47635f]">내기 모드</div>
+              <div class="text-[11px] text-[#6e7f7b]">퇴근러너 꼴찌가 쏜다!</div>
+            </div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="iomBettingToggle" class="sr-only peer">
+            <div class="w-9 h-5 bg-[#c8d6d3] rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 발송 버튼 -->
+      <button id="iomSendBtn" onclick="iomCreate()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        보내기
+      </button>
+    </div>
+
+    <!-- Step 2: 메뉴 선택 (수신자용) -->
+    <div id="iomOrder" class="hidden">
+      <div class="flex items-center gap-2 mb-2">
+        <button onclick="iomBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold" id="iomOrderStore"></div>
+          <div class="text-[11px] text-[#6e7f7b]" id="iomOrderDeadline"></div>
+        </div>
+      </div>
+      <!-- 현황 바 (n/m명 선택완료 + 액션 버튼) -->
+      <div id="iomStatusBar" class="hidden flex items-center justify-between mb-3 px-3 py-2 rounded-lg bg-surface-2 border border-border">
+        <span id="iomStatusText" class="text-[12px] text-[#47635f] font-medium"></span>
+        <div class="flex gap-1.5">
+          <button onclick="iomShowAddMember()" class="text-[11px] text-accent hover:underline">+멤버</button>
+          <button onclick="iomExtendTime()" class="text-[11px] text-accent hover:underline">+10분</button>
+        </div>
+      </div>
+      <!-- 내기 모드 영역 -->
+      <div id="iomBettingArea" class="hidden mb-3">
+        <div class="text-center bg-accent/5 rounded-xl py-4 px-3 mb-3">
+          <div class="text-2xl mb-1">🎲</div>
+          <div class="text-sm font-semibold text-[#47635f]">내기 모드</div>
+          <div class="text-[11px] text-[#6e7f7b] mt-1">퇴근러너 꼴찌가 커피를 쏜다!</div>
+          <div id="iomBettingMyScore" class="hidden mt-2">
+            <span class="text-lg font-bold text-accent" id="iomBettingScoreVal">-</span>
+            <div class="text-[11px] text-[#6e7f7b] mt-0.5">내 점수 (확정)</div>
+          </div>
+        </div>
+        <div id="iomBettingBoard" class="space-y-1 mb-3"></div>
+        <div class="flex gap-2">
+          <button id="iomBettingPlayBtn" onclick="iomStartBettingGame()"
+            class="flex-1 py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition">
+            🏃 게임 시작
+          </button>
+          <button id="iomBettingMenuBtn" onclick="iomShowBettingMenu()"
+            class="flex-1 py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition hidden">
+            ☕ 메뉴 선택
+          </button>
+        </div>
+      </div>
+      <!-- 먹던대로 -->
+      <div id="iomLastOrder" class="hidden mb-3">
+        <button id="iomLastOrderBtn" onclick="iomUseLastOrder()" class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition text-left">
+          <span class="text-lg">🔄</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">먹던대로</div>
+            <div class="text-[12px] text-[#47635f] dark:text-[#9ab0ab] truncate" id="iomLastOrderLabel"></div>
+          </div>
+        </button>
+      </div>
+      <!-- 멤버 추가 패널 -->
+      <div id="iomAddMemberPanel" class="hidden mb-3 rounded-lg border border-border bg-surface-2 p-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">멤버 추가</div>
+        <input id="iomAddMemberSearch" type="text" placeholder="이름 검색" oninput="iomAddMemberSearchFn()"
+          class="w-full bg-surface border border-border rounded-lg px-3 py-2 text-[12px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#9ab0ab] mb-1">
+        <div id="iomAddMemberResults" class="max-h-28 overflow-y-auto"></div>
+      </div>
+      <!-- 메뉴 검색 -->
+      <div id="iomMenuSearchWrap" class="hidden mb-2">
+        <div class="relative">
+          <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#9ab0ab]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+          <input id="iomMenuSearch" type="text" placeholder="메뉴 검색" oninput="iomSearchMenu()"
+            class="w-full bg-surface-2 border border-border rounded-lg pl-8 pr-3 py-2 text-[12px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#9ab0ab]">
+        </div>
+      </div>
+      <!-- 카테고리 필터 + 즐겨찾기 -->
+      <div id="iomFilterBar" class="hidden mb-2">
+        <div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide" id="iomCatTabs"></div>
+      </div>
+      <div id="iomMenuList" class="space-y-2 mb-3 max-h-[420px] overflow-y-auto"></div>
+      <div id="iomOptionArea" class="hidden mb-3"></div>
+      <button id="iomSubmitBtn" onclick="iomSubmitMenu()" class="hidden w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+        선택 완료
+      </button>
+      <div id="iomOrderDone" class="hidden text-center py-4 text-[13px] text-accent font-semibold"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var _store = '';
+  var _members = []; // [{knoxId, name, dept}]
+  var _searchTimer = null;
+  var _menuData = null;
+  var _optionsData = null;
+  var _selectedMenu = null;
+  var _selectedOptions = {};
+  var _currentSessionId = null;
+  var _currentCat = ''; // 현재 필터 카테고리 ('' = 전체, '★' = 즐겨찾기)
+  var _favorites = {}; // { menuId: true }
+  var _menuSearchWord = ''; // 메뉴 검색어
+  var _lastOrder = null; // { menu, options, price }
+  var _orderSession = null; // 현재 주문 세션 정보
+  var _orderResponses = []; // 현재 주문 응답 목록
+  var _customMenus = []; // 수동입력 메뉴 [{name, price}]
+  var _templates = []; // 저장된 템플릿
+  var _tplFavorites = {}; // 템플릿 즐겨찾기 { "store_name": true }
+  var _userCache = null; // 사용자 목록 로컬 캐시
+  var _myDept = ''; // 내 부서
+  var _myKnox = ''; // 내 knoxId
+  var _prevSessions = []; // 이전 세션 목록 [{sid, store, created, members:[knoxId]}]
+  var _pendingSessionId = null; // 뒤로가기로 나온 진행중 세션
+  var _pendingStore = '';
+
+  /* ─── 사용자 목록 프리로드 (인코딩 전송 → 디코드) ─── */
+  function _preloadUsers() {
+    if (_userCache) { _onUsersReady(); return; }
+    var token = localStorage.getItem('token');
+    if (!token) { _onUsersReady(); return; }
+    window.gasFetch(window.API_URL + '?action=getBizFlowUserList&token=' + encodeURIComponent(token)).then(function(res) {
+      if (!res || !res.ok || !res.d) { _onUsersReady(); return; }
+      try {
+        var b64 = res.d.split('').reverse().join('');
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        var arr = JSON.parse(new TextDecoder().decode(bytes));
+        _userCache = arr.map(function(u) { return { knoxId: u[0], name: u[1], dept: u[2] }; });
+        _myDept = res.dept || '';
+        _myKnox = (res.m || '').toLowerCase();
+        // 이전 세션 목록: knoxId → 유저 정보 매핑
+        _prevSessions = [];
+        if (res.p && res.p.length) {
+          var cacheMap = {};
+          _userCache.forEach(function(u) { cacheMap[u.knoxId.toLowerCase()] = u; });
+          res.p.forEach(function(s) {
+            var resolved = [];
+            (s.members || []).forEach(function(k) {
+              var u = cacheMap[k.toLowerCase()];
+              if (u) resolved.push(u);
+            });
+            if (resolved.length) _prevSessions.push({ store: s.store, created: s.created, members: resolved });
+          });
+        }
+      } catch (_) {}
+      _onUsersReady();
+    }).catch(function() { _onUsersReady(); });
+  }
+
+  function _onUsersReady() {
+    // 주문 화면이 열려있으면 setup 패널 건드리지 않음
+    if (!$('iomOrder').classList.contains('hidden')) return;
+    $('iomLoading').classList.add('hidden');
+    $('iomSetup').classList.remove('hidden');
+    window._lifeAnimate('iomSetup');
+    _showPrevMemberList();
+    _showDeptMembers();
+  }
+
+  /* ─── 부서원 기본 표시 ─── */
+  function _showDeptMembers() {
+    if (!_userCache || !_myDept || $('iomUserSearch').value.trim()) return;
+    var selectedIds = {};
+    _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+    var deptUsers = _userCache.filter(function(u) {
+      if (_myKnox && u.knoxId.toLowerCase() === _myKnox) return false;
+      return u.dept === _myDept && !selectedIds[u.knoxId.toLowerCase()];
+    });
+    if (deptUsers.length) _renderSearchResults(deptUsers);
+  }
+
+  /* ─── 가게 선택 ─── */
+  window.iomSelectStore = function(store) {
+    _store = store;
+    _members = [];
+    $('iomStoreName').textContent = store;
+    $('iomLoadingStore').textContent = store;
+    $('iomSelectedMembers').innerHTML = '';
+    $('iomUserSearch').value = '';
+    $('iomSearchResults').innerHTML = '';
+
+    // 캐시 있으면 바로 설정 화면, 없으면 로딩 표시 후 프리로드
+    $('iomHome').classList.add('hidden');
+    if (_userCache) {
+      $('iomSetup').classList.remove('hidden');
+      window._lifeAnimate('iomSetup');
+      _showPrevMemberList();
+      _showDeptMembers();
+    } else {
+      $('iomLoading').classList.remove('hidden');
+      window._lifeAnimate('iomLoading');
+      _preloadUsers();
+    }
+  };
+
+  /* ─── 이전 멤버 목록 표시 ─── */
+  function _showPrevMemberList() {
+    var area = $('iomPrevMemberList');
+    if (!area) return;
+    if (!_prevSessions.length) { area.innerHTML = ''; area.classList.add('hidden'); return; }
+    var html = _prevSessions.map(function(s, i) {
+      var names = s.members.map(function(m) { return m.name; }).join(', ');
+      return '<button onclick="iomSelectPrevMembers(' + i + ')" class="w-full text-left px-3 py-2.5 rounded-lg bg-surface-2 hover:bg-accent/10 transition">' +
+        '<div class="flex items-center justify-between">' +
+          '<span class="text-[11px] text-[#9ab0ab]">' + s.created + ' · ' + s.store + '</span>' +
+        '</div>' +
+        '<div class="text-[12px] text-[#47635f] mt-0.5 truncate">' + names + ' <span class="text-[#9ab0ab]">(' + s.members.length + '명)</span></div>' +
+      '</button>';
+    }).join('');
+    area.innerHTML = html;
+    area.classList.remove('hidden');
+  }
+
+  window.iomSelectPrevMembers = function(idx) {
+    var s = _prevSessions[idx];
+    if (!s) return;
+    _members = s.members.map(function(u) { return { knoxId: u.knoxId, name: u.name, dept: u.dept }; });
+    _renderSelectedMembers();
+    $('iomPrevMemberList').classList.add('hidden');
+    _showDeptMembers();
+  };
+
+  window.iomBack = function(target) {
+    // 주문 화면에서 뒤로갈 때 진행중인 세션 보존
+    if (target === 'home' && _currentSessionId && _orderSession && _orderSession.status !== 'closed') {
+      _pendingSessionId = _currentSessionId;
+      _pendingStore = _orderSession.store || '';
+      $('iomResumeStore').textContent = _pendingStore;
+      $('iomResumeBar').classList.remove('hidden');
+    }
+    $('iomHome').classList.toggle('hidden', target !== 'home');
+    $('iomLoading').classList.add('hidden');
+    $('iomSetup').classList.add('hidden');
+    $('iomOrder').classList.add('hidden');
+    $('iomCustom').classList.add('hidden');
+    if (target === 'home') {
+      _store = ''; _members = []; _selectedMenu = null; _currentSessionId = null; _customMenus = [];
+      window._restoreAllSections();
+      window._lifeAnimate('iomHome');
+    }
+  };
+
+  window.iomResumeOrder = function() {
+    if (!_pendingSessionId) return;
+    $('iomResumeBar').classList.add('hidden');
+    window.openItsOnMeOrder(_pendingSessionId);
+    _pendingSessionId = null;
+    _pendingStore = '';
+  };
+
+  /* ─── 수동입력 ─── */
+  window.iomOpenCustom = async function() {
+    _customMenus = [];
+    $('iomHome').classList.add('hidden');
+    $('iomCustom').classList.remove('hidden');
+    window._lifeAnimate('iomCustom');
+    $('iomCustomStore').value = '';
+    $('iomCustomMenuName').value = '';
+    $('iomCustomMenuPrice').value = '';
+    $('iomCustomMenuList').innerHTML = '';
+    // 템플릿 로드
+    $('iomTplList').innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-1">불러오는 중...</div>';
+    try {
+      var token = localStorage.getItem('token');
+      var res = await window.gasFetch(window.API_URL + '?action=getItsOnMeTemplates&token=' + encodeURIComponent(token));
+      _templates = (res && res.templates) || [];
+    } catch (_) { _templates = []; }
+    _renderTemplates();
+  };
+
+  function _renderTemplates() {
+    if (!_templates.length) {
+      $('iomTplArea').classList.add('hidden');
+      return;
+    }
+    $('iomTplArea').classList.remove('hidden');
+    // 즐겨찾기 로드
+    try { _tplFavorites = JSON.parse(localStorage.getItem('iomTplFav') || '{}'); } catch(_) { _tplFavorites = {}; }
+    // 정렬: 즐겨찾기 → 내 것 → 나머지
+    var sorted = _templates.map(function(t, i) { return { t: t, i: i }; });
+    sorted.sort(function(a, b) {
+      var af = _tplFavorites[a.t.store] ? 0 : 1, bf = _tplFavorites[b.t.store] ? 0 : 1;
+      if (af !== bf) return af - bf;
+      var am = a.t.isMine ? 0 : 1, bm = b.t.isMine ? 0 : 1;
+      return am - bm;
+    });
+    $('iomTplList').innerHTML = sorted.map(function(s) {
+      var t = s.t, i = s.i;
+      var menus = [];
+      try { menus = JSON.parse(t.menus); } catch(_) {}
+      var preview = menus.map(function(m) { return m.name; }).slice(0, 3).join(', ');
+      if (menus.length > 3) preview += ' 외 ' + (menus.length - 3) + '개';
+      var isFav = !!_tplFavorites[t.store];
+      var favBtn = '<button onclick="iomToggleTplFav(' + i + ',event)" class="shrink-0 w-7 h-7 rounded-full transition flex items-center justify-center ' +
+        (isFav ? 'text-yellow-500 bg-yellow-50' : 'text-[#c5d5d2] hover:text-yellow-400 hover:bg-yellow-50/50') + '">' +
+        '<svg class="w-4 h-4" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="' + (isFav ? 'currentColor' : 'none') + '">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/></svg></button>';
+      var delBtn = t.isMine ? '<button onclick="iomDeleteTemplate(' + i + ')" class="shrink-0 w-7 h-7 rounded-full text-[#c5d5d2] hover:text-red-400 hover:bg-red-50 transition flex items-center justify-center">' +
+          '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>' +
+        '</button>' : '';
+      var ownerTag = !t.isMine ? '<span class="text-[9px] text-[#9ab0ab] ml-1">by ' + (t.ownerName || '다른사람') + '</span>' : '';
+      return '<div class="flex items-center gap-1">' + favBtn +
+        '<button onclick="iomLoadTemplate(' + i + ')" class="flex-1 text-left px-3 py-2 rounded-lg bg-surface-2 hover:bg-accent/10 transition border border-transparent hover:border-accent/20 min-w-0">' +
+          '<div class="text-[12px] font-medium text-[#47635f] truncate">' + t.store + ownerTag + '</div>' +
+          '<div class="text-[10px] text-[#9ab0ab] truncate">' + preview + '</div>' +
+        '</button>' + delBtn + '</div>';
+    }).join('');
+  }
+
+  window.iomToggleTplFav = function(idx, ev) {
+    ev.stopPropagation();
+    var t = _templates[idx];
+    if (!t) return;
+    if (_tplFavorites[t.store]) delete _tplFavorites[t.store];
+    else _tplFavorites[t.store] = true;
+    localStorage.setItem('iomTplFav', JSON.stringify(_tplFavorites));
+    _renderTemplates();
+  };
+
+  window.iomLoadTemplate = function(idx) {
+    var t = _templates[idx];
+    if (!t) return;
+    $('iomCustomStore').value = t.store;
+    try { _customMenus = JSON.parse(t.menus); } catch(_) { _customMenus = []; }
+    _renderCustomMenus();
+  };
+
+  window.iomDeleteTemplate = async function(idx) {
+    var t = _templates[idx];
+    if (!t || !await window.showConfirm(t.store + ' 템플릿을 삭제할까?')) return;
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=deleteItsOnMeTemplate&token=' + encodeURIComponent(token) + '&store=' + encodeURIComponent(t.store));
+      _templates.splice(idx, 1);
+      _renderTemplates();
+      window.showToast('삭제했어', 'smail');
+    } catch (_) { window.showToast('삭제 실패', 'sad'); }
+  };
+
+  window.iomAddCustomMenu = function() {
+    var name = ($('iomCustomMenuName').value || '').trim();
+    var price = parseInt(($('iomCustomMenuPrice').value || '').replace(/,/g, '')) || 0;
+    if (!name) { window.showToast('메뉴명을 입력해줘', 'sad'); return; }
+    _customMenus.push({ name: name, price: price });
+    $('iomCustomMenuName').value = '';
+    $('iomCustomMenuPrice').value = '';
+    $('iomCustomMenuName').focus();
+    _renderCustomMenus();
+  };
+
+  function _renderCustomMenus() {
+    $('iomCustomMenuList').innerHTML = _customMenus.map(function(m, i) {
+      return '<div class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-2">' +
+        '<div><span class="text-[13px] font-medium text-[#47635f]">' + m.name + '</span>' +
+        (m.price ? ' <span class="text-[11px] text-[#9ab0ab]">' + m.price.toLocaleString() + '원</span>' : '') + '</div>' +
+        '<button onclick="iomRemoveCustomMenu(' + i + ')" class="text-[#c5d5d2] hover:text-red-400 text-sm">&times;</button></div>';
+    }).join('');
+  }
+
+  window.iomRemoveCustomMenu = function(idx) {
+    _customMenus.splice(idx, 1);
+    _renderCustomMenus();
+  };
+
+  window.iomSaveTemplate = async function() {
+    var store = ($('iomCustomStore').value || '').trim();
+    if (!store) { window.showToast('상호명을 입력해줘', 'sad'); return; }
+    if (!_customMenus.length) { window.showToast('메뉴를 추가해줘', 'sad'); return; }
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=saveItsOnMeTemplate&token=' + encodeURIComponent(token) +
+        '&store=' + encodeURIComponent(store) + '&menus=' + encodeURIComponent(JSON.stringify(_customMenus)));
+      window.showToast('저장했어!', 'smail');
+      // 템플릿 목록 갱신
+      var existing = _templates.find(function(t) { return t.store === store; });
+      if (existing) { existing.menus = JSON.stringify(_customMenus); }
+      else { _templates.push({ store: store, menus: JSON.stringify(_customMenus), updated: '' }); }
+      _renderTemplates();
+    } catch (_) { window.showToast('저장 실패', 'sad'); }
+  };
+
+  window.iomCustomNext = async function() {
+    var store = ($('iomCustomStore').value || '').trim();
+    if (!store) { window.showToast('상호명을 입력해줘', 'sad'); return; }
+    if (!_customMenus.length) { window.showToast('메뉴를 추가해줘', 'sad'); return; }
+    // 자동 저장
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=saveItsOnMeTemplate&token=' + encodeURIComponent(token) +
+        '&store=' + encodeURIComponent(store) + '&menus=' + encodeURIComponent(JSON.stringify(_customMenus)));
+    } catch (_) {}
+    _store = store;
+    _members = [];
+    $('iomStoreName').textContent = store;
+    $('iomLoadingStore').textContent = store;
+    $('iomSelectedMembers').innerHTML = '';
+    $('iomUserSearch').value = '';
+    $('iomSearchResults').innerHTML = '';
+    $('iomCustom').classList.add('hidden');
+    if (_userCache) {
+      $('iomSetup').classList.remove('hidden');
+      window._lifeAnimate('iomSetup');
+      _showPrevMemberList();
+      _showDeptMembers();
+    } else {
+      $('iomLoading').classList.remove('hidden');
+      window._lifeAnimate('iomLoading');
+      _preloadUsers();
+    }
+  };
+
+  /* ─── 사용자 검색 (로컬 캐시 우선 → API 폴백) ─── */
+  window.iomSearchUsers = function() {
+    clearTimeout(_searchTimer);
+    var word = $('iomUserSearch').value.trim().toLowerCase();
+    if (word.length < 1) { _showDeptMembers(); return; }
+
+    // 캐시 있으면 즉시 로컬 검색
+    if (_userCache) {
+      var selectedIds = {};
+      _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+      var results = [];
+      for (var i = 0; i < _userCache.length; i++) {
+        var u = _userCache[i];
+        if (_myKnox && u.knoxId.toLowerCase() === _myKnox) continue;
+        if (selectedIds[u.knoxId.toLowerCase()]) continue;
+        if (u.name.toLowerCase().indexOf(word) !== -1 || u.knoxId.toLowerCase().indexOf(word) !== -1) {
+          results.push(u);
+        }
+        if (results.length >= 20) break;
+      }
+      _renderSearchResults(results);
+      return;
+    }
+
+    // 캐시 없으면 API 폴백 (debounce)
+    _searchTimer = setTimeout(async function() {
+      $('iomSearchResults').innerHTML = '<div class="flex items-center justify-center py-3 gap-2 text-[12px] text-[#9ab0ab]"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>검색 중...</div>';
+      try {
+        var token = localStorage.getItem('token');
+        var data = await window.gasFetch(window.API_URL + '?action=searchBizFlowUsers&token=' + encodeURIComponent(token) + '&searchWord=' + encodeURIComponent(word));
+        if (!data || !data.users) { $('iomSearchResults').innerHTML = ''; return; }
+        var selectedIds = {};
+        _members.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+        var filtered = data.users.filter(function(u) { return !selectedIds[u.knoxId.toLowerCase()]; });
+        _renderSearchResults(filtered);
+      } catch (_) { $('iomSearchResults').innerHTML = ''; }
+    }, 400);
+  };
+
+  function _renderSearchResults(users) {
+    var container = $('iomSearchResults');
+    if (!users.length) { container.innerHTML = '<div class="text-[11px] text-[#9ab0ab] px-1 py-2">검색 결과가 없어.</div>'; return; }
+    container.innerHTML = users.map(function(u) {
+      return '<button onclick=\'iomAddMember(' + JSON.stringify(u).replace(/'/g, "\\'") + ')\' class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-accent/10 transition text-left">' +
+        '<div><span class="text-[13px] font-medium text-[#47635f]">' + u.name + '</span> <span class="text-[11px] text-[#9ab0ab]">' + u.dept + '</span></div>' +
+        '<span class="text-accent text-lg leading-none">+</span></button>';
+    }).join('');
+  }
+
+  window.iomAddMember = function(user) {
+    if (_members.some(function(m) { return m.knoxId.toLowerCase() === user.knoxId.toLowerCase(); })) return;
+    _members.push(user);
+    _renderSelectedMembers();
+    // 검색 결과 유지 (선택된 사람만 업데이트)
+    var word = $('iomUserSearch').value.trim().toLowerCase();
+    if (word) { iomSearchUsers(); } else { _showDeptMembers(); }
+  };
+
+  function _renderSelectedMembers() {
+    $('iomSelectedMembers').innerHTML = _members.map(function(m, i) {
+      return '<span class="inline-flex items-center gap-1 bg-accent/10 text-accent text-[12px] font-medium px-2.5 py-1 rounded-full">' +
+        m.name + '<button onclick="iomRemoveMember(' + i + ')" class="ml-0.5 text-accent/60 hover:text-accent text-sm leading-none">&times;</button></span>';
+    }).join('');
+  }
+
+  window.iomRemoveMember = function(idx) {
+    _members.splice(idx, 1);
+    _renderSelectedMembers();
+    var word = $('iomUserSearch').value.trim().toLowerCase();
+    if (word) { iomSearchUsers(); } else { _showDeptMembers(); }
+  };
+
+  /* ─── 세션 생성 ─── */
+  window.iomCreate = async function() {
+    if (!_members.length) { window.showToast('멤버를 선택해줘!', 'sad'); return; }
+    var btn = $('iomSendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-1.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>발송 중...';
+    try {
+      var token = localStorage.getItem('token');
+      var minutes = $('iomMinutes').value;
+      var betting = $('iomBettingToggle') && $('iomBettingToggle').checked ? 'Y' : '';
+      var url = window.API_URL + '?action=createItsOnMe&token=' + encodeURIComponent(token) +
+        '&store=' + encodeURIComponent(_store) + '&minutes=' + minutes +
+        '&members=' + encodeURIComponent(JSON.stringify(_members));
+      if (betting) url += '&betting=Y';
+      if (_customMenus.length) url += '&customMenus=' + encodeURIComponent(JSON.stringify(_customMenus));
+      var data = await window.gasFetch(url);
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      // 본인도 주문 화면으로
+      _currentSessionId = data.sessionId;
+      _pendingSessionId = null; _pendingStore = '';
+      $('iomResumeBar').classList.add('hidden');
+      _showOrderView(data.sessionId);
+      if (betting) {
+        setTimeout(function() { window.showToast('내기 시작! 게임부터 해봐 🎲', 'smail'); }, 1000);
+      } else {
+        setTimeout(function() { window.showToast('너도 주문해야지? 메뉴판을 보여줄게', 'smail'); }, 1000);
+      }
+    } catch (err) {
+      window.showToast('발송 실패: ' + err.message, 'sad');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '보내기';
+    }
+  };
+
+  /* ─── 메뉴 선택 화면 (딥링크 / 생성 후) ─── */
+  /* ─── 내기 모드: 스코어보드 렌더링 ─── */
+  function _renderBettingScoreboard(responses) {
+    var board = $('iomBettingBoard');
+    if (!board) return;
+    var played = responses.filter(function(r) { return r.gameScore !== null; })
+      .sort(function(a, b) { return b.gameScore - a.gameScore; });
+    var waiting = responses.filter(function(r) { return r.gameScore === null; });
+    if (!played.length && !waiting.length) { board.innerHTML = ''; return; }
+    var html = '<div class="text-[11px] text-[#6e7f7b] mb-1 font-semibold">🏆 현황</div>';
+    var medals = ['🥇','🥈','🥉'];
+    played.forEach(function(r, i) {
+      var prefix = i < 3 ? medals[i] : (i + 1) + '위';
+      html += '<div class="flex justify-between bg-surface-2 rounded-lg px-3 py-1.5 text-[12px]">' +
+        '<span>' + prefix + ' <span class="font-medium text-[#47635f]">' + _esc(r.name) + '</span></span>' +
+        '<span class="font-semibold text-accent">' + r.gameScore + '점</span></div>';
+    });
+    if (waiting.length) {
+      html += '<div class="text-[11px] text-[#9ab0ab] mt-1.5 px-1">⏳ 대기: ' + waiting.map(function(r) { return r.name; }).join(', ') + '</div>';
+    }
+    board.innerHTML = html;
+  }
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  /* ─── 내기 모드: 게임 시작 ─── */
+  window.iomStartBettingGame = function() {
+    if (!_currentSessionId) return;
+    // 글로벌 변수로 미니게임에 내기 모드 전달
+    window._mgBettingSessionId = _currentSessionId;
+    window._mgBettingCallback = async function(score) {
+      window._mgBettingSessionId = null;
+      window._mgBettingCallback = null;
+      // 미니게임 숨기고 이쏜미로 스크롤
+      var mgEl = document.getElementById('sectionMiniGame');
+      if (mgEl) mgEl.style.display = 'none';
+      var iomSection = document.getElementById('sectionItsOnMe');
+      if (iomSection) iomSection.scrollIntoView({ behavior: 'smooth' });
+      // 내기 영역에 즉시 점수 + 저장 중 표시
+      $('iomBettingArea').classList.remove('hidden');
+      $('iomBettingMyScore').classList.remove('hidden');
+      $('iomBettingScoreVal').textContent = score + '점';
+      $('iomBettingPlayBtn').classList.add('hidden');
+      $('iomBettingMenuBtn').classList.add('hidden');
+      $('iomBettingBoard').innerHTML = '<div class="flex items-center justify-center gap-2 py-3"><svg class="w-4 h-4 text-accent animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span class="text-[13px] text-[#9ab0ab]">점수 저장 중</span></div>';
+      try {
+        var token = localStorage.getItem('token');
+        var res = await window.gasFetch(window.API_URL + '?action=submitItsOnMeGameScore&token=' + encodeURIComponent(token) +
+          '&sessionId=' + encodeURIComponent(_currentSessionId) + '&gameScore=' + score);
+        if (res.error) { window.showToast(res.error, 'sad'); _showOrderView(_currentSessionId); return; }
+        window.showToast(score + '점 확정! 다른 사람 결과를 기다려봐', 'smail');
+      } catch (err) {
+        window.showToast('점수 저장 실패', 'sad');
+      }
+      // 주문 화면 갱신 → 점수 확정 + 메뉴 선택 버튼 표시
+      _showOrderView(_currentSessionId);
+    };
+    // 미니게임 섹션으로 스크롤 후 시작
+    var mgSection = document.getElementById('sectionMiniGame');
+    if (mgSection) {
+      mgSection.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(function() { if (window.mgStartGame) window.mgStartGame(); }, 400);
+    }
+  };
+
+  /* ─── 내기 모드: 메뉴 선택으로 전환 ─── */
+  window.iomShowBettingMenu = function() {
+    $('iomBettingArea').classList.add('hidden');
+    // 미니게임 섹션 숨김
+    var mgEl = document.getElementById('sectionMiniGame');
+    if (mgEl) mgEl.style.display = 'none';
+    // 일반 메뉴 로드 흐름 재사용
+    _loadBettingMenu();
+  };
+
+  async function _loadBettingMenu() {
+    var session = _orderSession;
+    if (!session) return;
+    $('iomMenuList').innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">메뉴 불러오는 중...</div>';
+
+    // 먹던대로
+    if (_lastOrder) {
+      var loLabel = _lastOrder.menu + (_lastOrder.options ? ' (' + _lastOrder.options + ')' : '');
+      $('iomLastOrderLabel').textContent = loLabel;
+      $('iomLastOrder').classList.remove('hidden');
+    }
+
+    if (session.customMenus) {
+      try {
+        var cm = JSON.parse(session.customMenus);
+        _menuData = cm.map(function(m, i) { return { id: i, name: m.name, price: m.price || 0, category: '메뉴', img: '' }; });
+        _optionsData = {};
+        _renderCustomOrderMenu();
+      } catch (_) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 파싱 오류</div>'; }
+    } else if (session.store === '당산SKV1 바나프레소') {
+      await _loadMenuData(session.store);
+    } else {
+      $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 정보가 없어. 발송자에게 문의해줘.</div>';
+    }
+  }
+
+  window.openItsOnMeOrder = function(sessionId) {
+    _currentSessionId = sessionId;
+    _showOrderView(sessionId);
+  };
+
+  async function _showOrderView(sessionId) {
+    // 세션마다 메뉴 데이터 초기화 (이전 세션의 바나프레소/커스텀 데이터 혼입 방지)
+    _menuData = null;
+    _optionsData = null;
+    // 멤버 추가용 사용자 목록 백그라운드 로드
+    if (!_userCache) _preloadUsers();
+    $('iomHome').classList.add('hidden');
+    $('iomSetup').classList.add('hidden');
+    $('iomOrder').classList.remove('hidden');
+    window._lifeAnimate('iomOrder');
+    $('iomMenuList').innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">불러오는 중...</div>';
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.add('hidden');
+    $('iomOrderDone').classList.add('hidden');
+    $('iomStatusBar').classList.add('hidden');
+    $('iomLastOrder').classList.add('hidden');
+    $('iomAddMemberPanel').classList.add('hidden');
+    $('iomBettingArea').classList.add('hidden');
+
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=getItsOnMe&token=' + encodeURIComponent(token) + '&sessionId=' + encodeURIComponent(sessionId));
+      if (data.error) { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">' + data.error + '</div>'; return; }
+
+      var session = data.session;
+      console.log('[이쏜미] store:', session.store, 'customMenus:', session.customMenus ? session.customMenus.substring(0, 80) : '(empty)');
+      _orderSession = session;
+      _orderResponses = data.responses || [];
+      $('iomOrderStore').textContent = session.store;
+      var dl = new Date(session.deadline);
+      var dlStr = dl.getHours().toString().padStart(2,'0') + ':' + dl.getMinutes().toString().padStart(2,'0');
+      $('iomOrderDeadline').textContent = session.status === 'closed' ? '마감됨' : dlStr + ' 마감';
+
+      // 현황 바
+      if (session.status !== 'closed') {
+        $('iomStatusBar').classList.remove('hidden');
+        $('iomStatusText').textContent = (data.doneCount || 0) + '/' + session.total + '명 선택완료';
+      }
+
+      if (session.status === 'closed') {
+        var myMenu = data.myResponse.menu || '미선택';
+        var myOpts = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
+        $('iomMenuList').innerHTML = '';
+        $('iomOrderDone').classList.remove('hidden');
+        if (session.betting === 'Y') {
+          // 내기 모드 마감: 결과 표시
+          var closedHtml = '마감된 내기야. 내 선택: ' + myMenu + myOpts;
+          var myScore = data.myResponse.gameScore;
+          if (myScore !== null) closedHtml += '<br><span class="text-accent font-semibold">내 점수: ' + myScore + '점</span>';
+          $('iomOrderDone').innerHTML = closedHtml;
+        } else {
+          $('iomOrderDone').textContent = '마감된 주문이야. 내 선택: ' + myMenu + myOpts;
+        }
+        return;
+      }
+
+      // 먹던대로 데이터 미리 저장 (내기 모드에서도 사용)
+      _lastOrder = data.lastOrder || null;
+
+      // 내기 모드: 게임 먼저, 메뉴는 나중에
+      if (session.betting === 'Y') {
+        // 미니게임 섹션도 표시 (딥링크로 이쏜미만 보일 때 대비)
+        var mgEl = document.getElementById('sectionMiniGame');
+        if (mgEl) mgEl.style.display = '';
+        // 미니게임 시작버튼은 _showMgHome 플래그 없으면 자동으로 숨김 유지
+        document.body.classList.add('betting-mode');
+        window._showMgHome = false;
+        $('iomMenuList').innerHTML = '';
+        $('iomBettingArea').classList.remove('hidden');
+        window._lifeAnimate('iomBettingArea');
+        var myGameScore = data.myResponse ? data.myResponse.gameScore : null;
+        var hasPlayed = myGameScore !== null;
+        var hasMenu = data.myResponse && data.myResponse.menu;
+
+        // 내 점수 표시
+        if (hasPlayed) {
+          // 게임 완료 후에는 미니게임 섹션 숨김
+          if (mgEl) mgEl.style.display = 'none';
+          $('iomBettingMyScore').classList.remove('hidden');
+          $('iomBettingScoreVal').textContent = myGameScore + '점';
+          $('iomBettingPlayBtn').classList.add('hidden');
+          if (!hasMenu) {
+            $('iomBettingMenuBtn').classList.remove('hidden');
+          } else {
+            $('iomBettingMenuBtn').classList.add('hidden');
+            $('iomOrderDone').classList.remove('hidden');
+            var optStr2 = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
+            $('iomOrderDone').innerHTML = '선택 완료: <strong>' + data.myResponse.menu + optStr2 + '</strong>';
+          }
+        } else {
+          $('iomBettingMyScore').classList.add('hidden');
+          $('iomBettingPlayBtn').classList.remove('hidden');
+          $('iomBettingMenuBtn').classList.add('hidden');
+        }
+
+        // 스코어보드
+        _renderBettingScoreboard(data.responses || []);
+        return;
+      }
+
+      // 이미 선택한 메뉴가 있으면 표시
+      if (data.myResponse && data.myResponse.menu) {
+        $('iomOrderDone').classList.remove('hidden');
+        var optStr = data.myResponse.options ? ' (' + data.myResponse.options + ')' : '';
+        $('iomOrderDone').innerHTML = '선택 완료: <strong>' + data.myResponse.menu + optStr + '</strong><br><button onclick="iomChangeMenu()" class="text-[11px] text-accent mt-1 underline">변경하기</button>';
+        $('iomMenuList').innerHTML = '';
+        return;
+      }
+
+      // 먹던대로
+      if (_lastOrder) {
+        var loLabel = _lastOrder.menu + (_lastOrder.options ? ' (' + _lastOrder.options + ')' : '');
+        $('iomLastOrderLabel').textContent = loLabel;
+        $('iomLastOrder').classList.remove('hidden');
+      }
+
+      // 메뉴 로드: 커스텀 메뉴가 있으면 사용, 바나프레소면 API 로드
+      if (session.customMenus) {
+        try {
+          var cm = JSON.parse(session.customMenus);
+          _menuData = cm.map(function(m, i) { return { id: i, name: m.name, price: m.price || 0, category: '메뉴', img: '' }; });
+          _optionsData = {};
+          _renderCustomOrderMenu();
+        } catch(_) {
+          if (session.store === '당산SKV1 바나프레소') { await _loadMenuData(session.store); }
+          else { $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">커스텀 메뉴 로드 실패</div>'; }
+        }
+      } else if (session.store === '당산SKV1 바나프레소') {
+        await _loadMenuData(session.store);
+      } else {
+        $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">메뉴 정보가 없어. 발송자에게 문의해줘.</div>';
+      }
+    } catch (err) {
+      $('iomMenuList').innerHTML = '<div class="text-center py-4 text-danger text-[13px]">로드 실패</div>';
+    }
+  }
+
+  window.iomChangeMenu = function() {
+    $('iomOrderDone').classList.add('hidden');
+    if (_orderSession && _orderSession.customMenus) {
+      _renderCustomOrderMenu();
+    } else {
+      _renderMenuList();
+    }
+  };
+
+  /* ─── 메뉴 데이터 로드 (GAS API → 정적 JSON 폴백) ─── */
+  async function _loadMenuData(store) {
+    if (!_menuData || !_optionsData) {
+      try {
+        var token = localStorage.getItem('token') || '';
+        var res = await window.gasFetch(window.API_URL + '?action=getBanapressoMenu&token=' + encodeURIComponent(token));
+        if (res && res.ok && res.menu) {
+          _menuData = res.menu;
+          _optionsData = res.options || {};
+        }
+      } catch (_) {}
+      // 폴백: 정적 JSON
+      if (!_menuData) {
+        try { var r1 = await fetch('../data/menu.json'); _menuData = await r1.json(); } catch (_) { _menuData = []; }
+      }
+      if (!_optionsData) {
+        try { var r2 = await fetch('../data/refined_options.json'); _optionsData = await r2.json(); } catch (_) { _optionsData = {}; }
+      }
+    }
+    _renderMenuList();
+  }
+
+  /* ─── 수동입력 메뉴 렌더 (수신자용) ─── */
+  function _renderCustomOrderMenu() {
+    var container = $('iomMenuList');
+    $('iomFilterBar').classList.add('hidden');
+    $('iomMenuSearchWrap').classList.add('hidden');
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.add('hidden');
+
+    if (!_menuData || !_menuData.length) {
+      container.innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">메뉴가 없어.</div>';
+      return;
+    }
+    var html = _menuData.map(function(item) {
+      return '<button onclick=\'iomPickMenu(' + JSON.stringify({id:item.id,name:item.name,price:item.price}).replace(/'/g,"\\'") + ')\' class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-2 hover:bg-accent/10 transition text-left border border-transparent hover:border-accent/20">' +
+        '<div class="text-[13px] font-medium text-[#47635f]">' + item.name + '</div>' +
+        (item.price ? '<div class="text-[11px] text-[#9ab0ab]">' + item.price.toLocaleString() + '원</div>' : '') +
+      '</button>';
+    }).join('');
+    // 직접 입력 버튼
+    html += '<div class="mt-2 pt-2 border-t border-border">' +
+      '<div class="flex gap-2">' +
+        '<input id="iomFreeMenuInput" type="text" placeholder="메뉴판에 없으면 직접 입력" class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[12px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#9ab0ab]">' +
+        '<button onclick="iomPickFreeMenu()" class="shrink-0 px-3 py-2 rounded-lg bg-accent text-white text-[12px] font-semibold hover:brightness-110 transition">선택</button>' +
+      '</div></div>';
+    container.innerHTML = html;
+    window._lifeAnimate(container, 'fade');
+  }
+
+  window.iomPickFreeMenu = function() {
+    var name = ($('iomFreeMenuInput').value || '').trim();
+    if (!name) { window.showToast('메뉴명을 입력해줘', 'sad'); return; }
+    _selectedMenu = { id: -1, name: name, price: 0 };
+    _selectedOptions = {};
+    _hideMenuFilters();
+    $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent flex items-center justify-between">' +
+      name + ' <button onclick="iomChangeMenu()" class="text-[11px] text-accent/60 underline">다른 메뉴</button></div>';
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.remove('hidden');
+  };
+
+  /* ─── 즐겨찾기 로드/저장 (localStorage) ─── */
+  function _loadFavorites() {
+    try { _favorites = JSON.parse(localStorage.getItem('iom_fav') || '{}'); } catch(_) { _favorites = {}; }
+  }
+  function _saveFavorites() {
+    localStorage.setItem('iom_fav', JSON.stringify(_favorites));
+  }
+  window.iomToggleFav = function(menuId, ev) {
+    ev.stopPropagation();
+    if (_favorites[menuId]) delete _favorites[menuId]; else _favorites[menuId] = true;
+    _saveFavorites();
+    _renderCatTabs();
+    _renderMenuItems();
+  };
+
+  /* ─── 메뉴 검색 ─── */
+  window.iomSearchMenu = function() {
+    _menuSearchWord = ($('iomMenuSearch').value || '').trim().toLowerCase();
+    _renderMenuItems();
+  };
+
+  /* ─── 카테고리 필터 탭 ─── */
+  function _renderCatTabs() {
+    if (!_menuData || !_menuData.length) return;
+    var cats = [];
+    var seen = {};
+    _menuData.forEach(function(m) {
+      if (!seen[m.category]) { seen[m.category] = true; cats.push(m.category); }
+    });
+    var favCount = _menuData.filter(function(m) { return _favorites[m.id]; }).length;
+    var tabs = [{ key: '', label: '전체' }];
+    if (favCount) tabs.push({ key: '★', label: '♥ ' + favCount });
+    cats.forEach(function(c) { tabs.push({ key: c, label: c }); });
+
+    $('iomCatTabs').innerHTML = tabs.map(function(t) {
+      var active = _currentCat === t.key;
+      return '<button onclick="iomFilterCat(\'' + t.key.replace(/'/g,"\\'") + '\')" class="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition ' +
+        (active ? 'bg-accent text-white' : 'bg-surface-2 text-[#6e7f7b] hover:bg-accent/10') + '">' + t.label + '</button>';
+    }).join('');
+    $('iomFilterBar').classList.remove('hidden');
+  }
+  window.iomFilterCat = function(cat) {
+    _currentCat = cat;
+    _renderCatTabs();
+    _renderMenuItems();
+  };
+
+  /* ─── 메뉴 목록 렌더 ─── */
+  function _renderMenuList() {
+    _loadFavorites();
+    _menuSearchWord = '';
+    var favCount = _menuData ? _menuData.filter(function(m) { return _favorites[m.id]; }).length : 0;
+    _currentCat = favCount ? '★' : '';
+    var container = $('iomMenuList');
+    if (!_menuData || !_menuData.length) {
+      container.innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">메뉴를 불러올 수 없어.</div>';
+      $('iomFilterBar').classList.add('hidden');
+      $('iomMenuSearchWrap').classList.add('hidden');
+      return;
+    }
+    $('iomMenuSearch').value = '';
+    $('iomMenuSearchWrap').classList.remove('hidden');
+    _renderCatTabs();
+    _renderMenuItems();
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.add('hidden');
+  }
+
+  function _renderMenuItems() {
+    var container = $('iomMenuList');
+    var filtered = _menuData;
+    if (_currentCat === '★') {
+      filtered = _menuData.filter(function(m) { return _favorites[m.id]; });
+    } else if (_currentCat) {
+      filtered = _menuData.filter(function(m) { return m.category === _currentCat; });
+    }
+    // 텍스트 검색 적용
+    if (_menuSearchWord) {
+      filtered = filtered.filter(function(m) { return m.name.toLowerCase().indexOf(_menuSearchWord) !== -1; });
+    }
+    if (!filtered.length) {
+      var msg = _menuSearchWord ? '검색 결과가 없어.' : (_currentCat === '★' ? '즐겨찾기한 메뉴가 없어.' : '해당 카테고리에 메뉴가 없어.');
+      container.innerHTML = '<div class="text-center py-4 text-[#9ab0ab] text-[13px]">' + msg + '</div>';
+      return;
+    }
+    container.innerHTML = filtered.map(function(item) {
+      var isFav = !!_favorites[item.id];
+      var imgHtml = item.img ? '<img src="' + item.img + '" alt="" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '';
+      return '<button onclick=\'iomPickMenu(' + JSON.stringify({id:item.id,name:item.name,price:item.price}).replace(/'/g,"\\'") + ')\' class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-surface-2 hover:bg-accent/10 transition text-left border border-transparent hover:border-accent/20">' +
+        imgHtml +
+        '<div class="flex-1 min-w-0"><div class="text-[13px] font-medium text-[#47635f]">' + item.name + '</div>' +
+        '<div class="text-[11px] text-[#9ab0ab]">' + (item.price ? item.price.toLocaleString() + '원' : '') + '</div></div>' +
+        '<span onclick="iomToggleFav(' + item.id + ',event)" class="shrink-0 ml-1 w-8 h-8 flex items-center justify-center rounded-full transition ' +
+        (isFav ? 'text-red-500 bg-red-50' : 'text-[#c5d5d2] hover:text-red-400 hover:bg-red-50/50') + '">' +
+        '<svg class="w-5 h-5" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="' + (isFav ? 'currentColor' : 'none') + '">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>' +
+        '</span></button>';
+    }).join('');
+    window._lifeAnimate(container, 'fade');
+  }
+
+  /* ─── 메뉴 선택 → 옵션 표시 ─── */
+  function _hideMenuFilters() {
+    $('iomFilterBar').classList.add('hidden');
+    $('iomMenuSearchWrap').classList.add('hidden');
+    $('iomLastOrder').classList.add('hidden');
+  }
+  window.iomPickMenu = function(item) {
+    _selectedMenu = item;
+    _selectedOptions = {};
+    _hideMenuFilters();
+    var opts = _optionsData && _optionsData[String(item.id)];
+    if (!opts || !opts.length) {
+      // 옵션 없음 → 바로 제출 가능
+      $('iomOptionArea').classList.add('hidden');
+      $('iomSubmitBtn').classList.remove('hidden');
+      $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent">' + item.name + '</div>';
+      return;
+    }
+    // 옵션 렌더링
+    $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent flex items-center justify-between">' + item.name +
+      ' <button onclick="iomChangeMenu()" class="text-[11px] text-accent/60 underline">다른 메뉴</button></div>';
+    var html = '';
+    opts.forEach(function(cat) {
+      html += '<div class="mb-3"><div class="text-[11px] font-semibold text-[#6e7f7b] mb-1.5">' + cat.name + (cat.required ? ' *' : '') + '</div>';
+      html += '<div class="flex flex-wrap gap-1.5">';
+      cat.options.forEach(function(opt) {
+        var priceStr = opt.price ? (opt.price > 0 ? '+' + opt.price.toLocaleString() : opt.price.toLocaleString()) + '원' : '';
+        html += '<button onclick=\'iomPickOption("' + cat.id + '","' + opt.name + '","' + cat.type + '")\' id="iomOpt_' + cat.id + '_' + opt.name.replace(/\s/g,'_') + '"' +
+          ' class="px-2.5 py-1.5 rounded-lg text-[12px] border transition ' +
+          (opt.isDefault ? 'bg-accent text-white border-accent' : 'bg-surface-2 text-[#47635f] border-border hover:border-accent/40') + '">' +
+          opt.name + (priceStr ? ' <span class="text-[10px] opacity-70">' + priceStr + '</span>' : '') + '</button>';
+        if (opt.isDefault) _selectedOptions[cat.id] = opt.name;
+      });
+      html += '</div></div>';
+    });
+    $('iomOptionArea').innerHTML = html;
+    $('iomOptionArea').classList.remove('hidden');
+    window._lifeAnimate('iomOptionArea');
+    $('iomSubmitBtn').classList.remove('hidden');
+  };
+
+  window.iomPickOption = function(catId, optName, type) {
+    _selectedOptions[catId] = optName;
+    // UI 업데이트: 해당 카테고리의 모든 버튼 리셋 후 선택 표시
+    var prefix = 'iomOpt_' + catId + '_';
+    var allBtns = $('iomOptionArea').querySelectorAll('[id^="' + prefix + '"]');
+    allBtns.forEach(function(btn) {
+      var isActive = btn.id === prefix + optName.replace(/\s/g,'_');
+      btn.className = 'px-2.5 py-1.5 rounded-lg text-[12px] border transition ' +
+        (isActive ? 'bg-accent text-white border-accent' : 'bg-surface-2 text-[#47635f] border-border hover:border-accent/40');
+    });
+  };
+
+  /* ─── 메뉴 제출 ─── */
+  window.iomSubmitMenu = async function() {
+    if (!_selectedMenu || !_currentSessionId) return;
+    var btn = $('iomSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin h-4 w-4 inline mr-1.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>저장 중...';
+    try {
+      var token = localStorage.getItem('token');
+      var optStr = Object.values(_selectedOptions).filter(Boolean).join(', ');
+      var data = await window.gasFetch(window.API_URL + '?action=submitItsOnMeMenu&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_currentSessionId) +
+        '&menu=' + encodeURIComponent(_selectedMenu.name) +
+        '&options=' + encodeURIComponent(optStr) +
+        '&price=' + (_selectedMenu.price || 0));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      var doneText = '선택 완료: <strong>' + _selectedMenu.name + (optStr ? ' (' + optStr + ')' : '') + '</strong>';
+      if (data.allDone) doneText += '<br><span class="text-[11px] text-[#9ab0ab]">전원 선택 완료! 취합 결과가 발송됐어.</span>';
+      else doneText += '<br><button onclick="iomChangeMenu()" class="text-[11px] text-accent mt-1 underline">변경하기</button>';
+      $('iomOrderDone').innerHTML = doneText;
+      $('iomOrderDone').classList.remove('hidden');
+      window._lifeAnimate('iomOrderDone');
+      $('iomMenuList').innerHTML = '';
+      $('iomOptionArea').classList.add('hidden');
+      $('iomSubmitBtn').classList.add('hidden');
+      window.showToast('메뉴 선택 완료!', 'smail');
+      _pendingSessionId = null; _pendingStore = '';
+      $('iomResumeBar').classList.add('hidden');
+    } catch (err) {
+      window.showToast('저장 실패', 'sad');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '선택 완료';
+    }
+  };
+
+  /* ─── 먹던대로 ─── */
+  window.iomUseLastOrder = function() {
+    if (!_lastOrder || !_lastOrder.menu) return;
+    // 메뉴 데이터에서 매칭
+    var found = _menuData && _menuData.find(function(m) { return m.name === _lastOrder.menu; });
+    _selectedMenu = found ? { id: found.id, name: found.name, price: found.price } : { id: 0, name: _lastOrder.menu, price: _lastOrder.price || 0 };
+    _selectedOptions = {};
+    if (_lastOrder.options) {
+      _lastOrder.options.split(',').forEach(function(o, i) { _selectedOptions['last_' + i] = o.trim(); });
+    }
+    $('iomLastOrder').classList.add('hidden');
+    _hideMenuFilters();
+    $('iomMenuList').innerHTML = '<div class="bg-accent/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-accent flex items-center justify-between">' +
+      _selectedMenu.name + (_lastOrder.options ? ' <span class="text-[11px] text-accent/60">(' + _lastOrder.options + ')</span>' : '') +
+      ' <button onclick="iomChangeMenu()" class="text-[11px] text-accent/60 underline">다른 메뉴</button></div>';
+    $('iomOptionArea').classList.add('hidden');
+    $('iomSubmitBtn').classList.remove('hidden');
+  };
+
+  /* ─── 시간 연장 (+10분) ─── */
+  window.iomExtendTime = async function() {
+    if (!_currentSessionId) return;
+    if (!await window.showConfirm('마감시간을 10분 연장할까?')) return;
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=extendItsOnMe&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_currentSessionId) + '&minutes=10');
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      $('iomOrderDeadline').textContent = data.deadlineStr + ' 마감';
+      window.showToast(data.deadlineStr + '까지 연장했어!', 'smail');
+    } catch (_) { window.showToast('연장 실패', 'sad'); }
+  };
+
+  /* ─── 멤버 추가 (참여자도 가능) ─── */
+  window.iomShowAddMember = function() {
+    var panel = $('iomAddMemberPanel');
+    if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+    $('iomAddMemberSearch').value = '';
+    $('iomAddMemberResults').innerHTML = '';
+    panel.classList.remove('hidden');
+    window._lifeAnimate(panel);
+    $('iomAddMemberSearch').focus();
+  };
+
+  window.iomAddMemberSearchFn = function() {
+    var word = ($('iomAddMemberSearch').value || '').trim().toLowerCase();
+    if (word.length < 1) { $('iomAddMemberResults').innerHTML = ''; return; }
+    if (!_userCache) { $('iomAddMemberResults').innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-1">사용자 목록 로드 중...</div>'; return; }
+    // 기존 멤버 제외
+    var existingKnox = {};
+    _orderResponses.forEach(function(r) { existingKnox[r.knoxId.toLowerCase()] = true; });
+    var results = _userCache.filter(function(u) {
+      if (existingKnox[u.knoxId.toLowerCase()]) return false;
+      return u.name.toLowerCase().indexOf(word) !== -1 || u.knoxId.toLowerCase().indexOf(word) !== -1;
+    }).slice(0, 10);
+    if (!results.length) { $('iomAddMemberResults').innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-1">결과 없음</div>'; return; }
+    $('iomAddMemberResults').innerHTML = results.map(function(u) {
+      return '<button onclick=\'iomAddNewMember(' + JSON.stringify(u).replace(/'/g, "\\'") + ')\' class="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-accent/10 transition text-left">' +
+        '<span class="text-[12px] text-[#47635f]">' + u.name + ' <span class="text-[10px] text-[#9ab0ab]">' + u.dept + '</span></span>' +
+        '<span class="text-accent text-sm">+</span></button>';
+    }).join('');
+  };
+
+  window.iomAddNewMember = async function(user) {
+    if (!_currentSessionId) return;
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=addItsOnMeMembers&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_currentSessionId) +
+        '&members=' + encodeURIComponent(JSON.stringify([user])));
+      if (data.error) { window.showToast(data.error, 'sad'); return; }
+      if (data.addedCount > 0) {
+        _orderResponses.push({ knoxId: user.knoxId, name: user.name, menu: '', options: '' });
+        var newTotal = (_orderSession ? _orderSession.total : 0) + data.addedCount;
+        if (_orderSession) _orderSession.total = newTotal;
+        var doneCount = _orderResponses.filter(function(r) { return r.menu; }).length;
+        $('iomStatusText').textContent = doneCount + '/' + newTotal + '명 선택완료';
+        window.showToast(user.name + ' 추가 완료!', 'smail');
+        $('iomAddMemberSearch').value = '';
+        $('iomAddMemberResults').innerHTML = '';
+      } else {
+        window.showToast('이미 참여 중인 멤버야.', 'smail');
+      }
+    } catch (_) { window.showToast('추가 실패', 'sad'); }
+  };
+})();
+</script>
+
+<!-- ═══════════════ 투표 ═══════════════ -->
+<section id="sectionVote" class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">투표</div>
+        <div class="text-[11px] text-[#6e7f7b]">Flow로 투표요청</div>
+      </div>
+    </div>
+
+    <!-- 투표 홈 -->
+    <div id="voteHome">
+      <button onclick="voteOpenSetup()" class="w-full flex items-center justify-center gap-2 bg-surface-2 rounded-xl py-2.5 px-3 hover:bg-accent/10 transition border border-transparent hover:border-accent/20">
+        <span class="text-lg">+</span>
+        <span class="text-[12px] font-semibold text-[#47635f]">새 투표 만들기</span>
+      </button>
+    </div>
+
+    <!-- 투표 설정 -->
+    <div id="voteSetup" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="voteBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold">새 투표</div>
+      </div>
+
+      <!-- 저장된 템플릿 -->
+      <div id="voteTplArea" class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">저장된 투표</div>
+        <div id="voteTplList" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+      </div>
+
+      <!-- 제목 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">제목</div>
+        <input id="voteTitle" type="text" placeholder="예: 회식장소 투표"
+          class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+      </div>
+
+      <!-- 항목 추가 -->
+      <div class="mb-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">항목</div>
+        <div class="flex gap-2 mb-2">
+          <input id="voteNewItem" type="text" placeholder="GPT에게 물어본다" onkeydown="if(event.key==='Enter'){voteAddItem();event.preventDefault();}"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          <button onclick="voteAddItem()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold flex items-center justify-center hover:brightness-110 transition">추가</button>
+        </div>
+        <div id="voteItemList" class="space-y-1.5"></div>
+      </div>
+
+      <!-- 옵션 토글 -->
+      <div class="mb-3 space-y-2">
+        <div class="text-[11px] text-[#6e7f7b] mb-1">옵션</div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="voteOptMulti" class="accent-[#2d8a7e] w-4 h-4">
+          <span class="text-[12px] text-[#47635f]">복수 선택 허용</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="voteOptAnon" class="accent-[#2d8a7e] w-4 h-4">
+          <span class="text-[12px] text-[#47635f]">익명 투표</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="voteOptAddable" checked class="accent-[#2d8a7e] w-4 h-4">
+          <span class="text-[12px] text-[#47635f]">항목 추가 허용</span>
+        </label>
+      </div>
+
+      <!-- 마감시간 -->
+      <div class="mb-4">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">마감시간</div>
+        <div class="flex items-center gap-3">
+          <input id="voteMinutes" type="range" min="10" max="120" step="5" value="30" oninput="document.getElementById('voteMinLabel').textContent=this.value+'분 후'"
+            class="flex-1 accent-[#2d8a7e]">
+          <span id="voteMinLabel" class="text-sm font-mono font-semibold text-[#47635f] w-16 text-right">30분 후</span>
+        </div>
+      </div>
+
+      <button onclick="voteNext()" class="w-full py-2.5 rounded-lg bg-[#47635f] text-white font-semibold text-sm hover:brightness-110 transition">
+        다음
+      </button>
+    </div>
+
+    <!-- 멤버 선택 -->
+    <div id="voteMemberSelect" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="voteBack('setup')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold">멤버 선택</div>
+      </div>
+
+      <!-- 멤버 로딩 중 -->
+      <div id="voteMemberLoading" class="flex flex-col items-center justify-center py-8 gap-3 text-[#9ab0ab]">
+        <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        <div class="text-[13px]">멤버 목록을 불러오는 중...</div>
+      </div>
+
+      <!-- 멤버 검색/선택 (로드 후 표시) -->
+      <div id="voteMemberBody" class="hidden">
+        <div class="mb-3">
+          <div class="relative">
+            <input id="voteUserSearch" type="text" placeholder="이름 또는 ID로 검색" oninput="voteSearchUsers()"
+              class="w-full bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          </div>
+          <div id="voteSearchResults" class="mt-1 max-h-32 overflow-y-auto"></div>
+          <div id="voteSelectedMembers" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+
+        <button onclick="voteCreate()" id="voteCreateBtn" class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          투표 시작
+        </button>
+      </div>
+    </div>
+
+    <!-- 투표 화면 (참여 / 결과) -->
+    <div id="voteView" class="hidden">
+      <div class="flex items-center gap-2 mb-3">
+        <button onclick="voteBack('home')" class="w-7 h-7 rounded-full bg-surface-2 flex items-center justify-center text-[#6e7f7b] hover:text-accent transition shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+        </button>
+        <div class="text-sm font-semibold" id="voteViewTitle"></div>
+      </div>
+
+      <!-- 상태 바 -->
+      <div class="flex items-center justify-between mb-3">
+        <span id="voteStatusText" class="text-[11px] text-[#6e7f7b]"></span>
+        <span id="voteDeadlineText" class="text-[11px] text-accent font-mono"></span>
+      </div>
+
+      <!-- 투표 폼 -->
+      <div id="voteFormArea">
+        <div id="voteChoices" class="space-y-2 mb-3"></div>
+        <button onclick="voteSubmit()" id="voteSubmitBtn" class="w-full py-2.5 rounded-lg bg-accent text-white font-semibold text-sm hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          투표하기
+        </button>
+      </div>
+
+      <!-- 항목 추가 (허용 시) -->
+      <div id="voteAddArea" class="hidden mt-3">
+        <div class="flex gap-2">
+          <input id="voteAddItemInput" type="text" placeholder="새 항목 추가" onkeydown="if(event.key==='Enter'){voteAddNewItem();event.preventDefault();}"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+          <button onclick="voteAddNewItem()" class="shrink-0 px-3 h-9 rounded-lg bg-accent text-white text-[12px] font-semibold hover:brightness-110 transition">추가</button>
+        </div>
+      </div>
+
+      <!-- 결과 영역 -->
+      <div id="voteResultArea" class="mt-4"></div>
+
+      <!-- 마감 버튼 (생성자만) -->
+      <div id="voteCloseArea" class="hidden mt-3">
+        <button onclick="voteClose()" class="w-full py-2 rounded-lg bg-red-500/10 text-red-500 font-semibold text-[12px] hover:bg-red-500/20 transition">
+          투표 마감
+        </button>
+      </div>
+
+      <!-- 멤버 추가 (생성자만, 진행중) -->
+      <div id="voteAddMemberArea" class="hidden mt-3 border-t border-border pt-3">
+        <div class="text-[11px] text-[#6e7f7b] mb-1.5">멤버 추가</div>
+        <div class="flex gap-2">
+          <input id="voteAddMemberSearch" type="text" placeholder="이름 검색" oninput="voteSearchAddMember()"
+            class="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[13px] text-[#47635f] outline-none focus:border-accent transition placeholder:text-[#6e7f7b]/60">
+        </div>
+        <div id="voteAddMemberResults" class="mt-1 max-h-24 overflow-y-auto"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function() {
+  var $ = function(id) { return document.getElementById(id); };
+  var _voteItems = [];
+  var _voteMembers = [];
+  var _voteSession = null;
+  var _voteMyResponse = null;
+  var _voteIsCreator = false;
+  var _voteTplFavorites = JSON.parse(localStorage.getItem('voteTplFav') || '[]');
+  var _voteTimer = null;
+  var _voteUserCache = null; // [{knoxId, name, dept}]
+  var _voteMyDept = '';
+  var _voteMyKnox = '';
+
+  /* ═══════════════ 네비게이션 ═══════════════ */
+
+  function _voteShowOnly(id) {
+    ['voteHome','voteSetup','voteMemberSelect','voteView'].forEach(function(s) {
+      $(s).classList.toggle('hidden', s !== id);
+    });
+    window._lifeAnimate(id);
+  }
+
+  window.voteBack = function(target) {
+    if (_voteTimer) { clearInterval(_voteTimer); _voteTimer = null; }
+    if (target === 'home') {
+      _voteShowOnly('voteHome');
+      _voteItems = [];
+      _voteMembers = [];
+      _voteSession = null;
+      window._restoreAllSections();
+    } else if (target === 'setup') {
+      _voteShowOnly('voteSetup');
+    }
+    // 멤버 선택 화면 초기화 (다음 진입 시 로딩부터 표시)
+    $('voteMemberLoading').classList.remove('hidden');
+    $('voteMemberBody').classList.add('hidden');
+  };
+
+  window.voteOpenSetup = function() {
+    _voteItems = [];
+    $('voteTitle').value = '';
+    $('voteNewItem').value = '';
+    $('voteItemList').innerHTML = '';
+    $('voteOptMulti').checked = false;
+    $('voteOptAnon').checked = false;
+    $('voteOptAddable').checked = true;
+    $('voteMinutes').value = 30;
+    $('voteMinLabel').textContent = '30분 후';
+    _voteShowOnly('voteSetup');
+    _loadVoteTemplates();
+  };
+
+  /* ═══════════════ 항목 관리 ═══════════════ */
+
+  window.voteAddItem = function() {
+    var input = $('voteNewItem');
+    var val = input.value.trim();
+    if (!val) return;
+    if (_voteItems.indexOf(val) !== -1) { window.showToast('이미 있는 항목이야.', 'sad'); return; }
+    _voteItems.push(val);
+    input.value = '';
+    input.focus();
+    _renderVoteItems();
+  };
+
+  function _renderVoteItems() {
+    var list = $('voteItemList');
+    list.innerHTML = _voteItems.map(function(item, i) {
+      return '<div class="flex items-center gap-2 bg-surface-2 rounded-lg px-3 py-2">' +
+        '<span class="flex-1 text-[13px] text-[#47635f]">' + _esc(item) + '</span>' +
+        '<button onclick="voteRemoveItem(' + i + ')" class="text-[#6e7f7b] hover:text-red-400 transition text-[16px] leading-none">&times;</button>' +
+        '</div>';
+    }).join('');
+    window._lifeAnimate(list, 'fade');
+  }
+
+  window.voteRemoveItem = function(i) {
+    _voteItems.splice(i, 1);
+    _renderVoteItems();
+  };
+
+  /* ═══════════════ 템플릿 ═══════════════ */
+
+  async function _loadVoteTemplates() {
+    var area = $('voteTplArea');
+    var list = $('voteTplList');
+    list.innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-2 text-center">불러오는 중...</div>';
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=getVoteTemplates&token=' + encodeURIComponent(token));
+      if (!data.templates || !data.templates.length) {
+        list.innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-2 text-center">저장된 투표가 없어</div>';
+        return;
+      }
+      var tpls = data.templates.slice();
+      tpls.sort(function(a, b) {
+        var af = _voteTplFavorites.indexOf(a.title) !== -1 ? 0 : 1;
+        var bf = _voteTplFavorites.indexOf(b.title) !== -1 ? 0 : 1;
+        if (af !== bf) return af - bf;
+        if (a.isMine !== b.isMine) return a.isMine ? -1 : 1;
+        return 0;
+      });
+      list.innerHTML = tpls.map(function(t) {
+        var isFav = _voteTplFavorites.indexOf(t.title) !== -1;
+        var items = [];
+        try { items = JSON.parse(t.items); } catch(_) {}
+        var ownerTag = t.isMine ? '' : ' <span class="text-[10px] text-[#9ab0ab]">by ' + _esc(t.ownerName) + '</span>';
+        var deleteBtn = t.isMine ? '<button onclick="event.stopPropagation();voteDeleteTpl(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[#6e7f7b] hover:text-red-400 transition text-[14px] leading-none shrink-0">&times;</button>' : '';
+        return '<div class="flex items-center gap-2 bg-surface-2 rounded-lg px-3 py-2 cursor-pointer hover:bg-accent/10 transition" onclick="voteLoadTpl(this)" data-title="' + _esc(t.title) + '" data-items=\'' + _esc(t.items) + '\' data-options=\'' + _esc(t.options || '{}') + '\'>' +
+          '<button onclick="event.stopPropagation();voteToggleTplFav(\'' + _esc(t.title).replace(/'/g, "\\'") + '\')" class="text-[14px] shrink-0 ' + (isFav ? 'text-red-500' : 'text-[#ccc]') + '">' + (isFav ? '♥' : '♡') + '</button>' +
+          '<div class="flex-1 min-w-0"><div class="text-[12px] font-semibold text-[#47635f] truncate">' + _esc(t.title) + ownerTag + '</div>' +
+          '<div class="text-[10px] text-[#9ab0ab] truncate">' + items.join(', ') + '</div></div>' +
+          deleteBtn + '</div>';
+      }).join('');
+    } catch (_) {
+      list.innerHTML = '<div class="text-[11px] text-[#9ab0ab] py-2 text-center">템플릿 로드 실패</div>';
+    }
+  }
+
+  window.voteLoadTpl = function(el) {
+    var title = el.dataset.title;
+    var items = [];
+    try { items = JSON.parse(el.dataset.items); } catch(_) {}
+    var opts = {};
+    try { opts = JSON.parse(el.dataset.options); } catch(_) {}
+    $('voteTitle').value = title;
+    _voteItems = items.slice();
+    _renderVoteItems();
+    $('voteOptMulti').checked = !!opts.multi;
+    $('voteOptAnon').checked = !!opts.anon;
+    $('voteOptAddable').checked = opts.addable !== false;
+  };
+
+  window.voteToggleTplFav = function(title) {
+    var idx = _voteTplFavorites.indexOf(title);
+    if (idx === -1) _voteTplFavorites.push(title);
+    else _voteTplFavorites.splice(idx, 1);
+    localStorage.setItem('voteTplFav', JSON.stringify(_voteTplFavorites));
+    _loadVoteTemplates();
+  };
+
+  window.voteDeleteTpl = async function(title) {
+    if (!(await window.showConfirm('"' + title + '" 템플릿을 삭제할까?'))) return;
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=deleteVoteTemplate&token=' + encodeURIComponent(token) + '&title=' + encodeURIComponent(title));
+      window.showToast('삭제 완료', 'smail');
+      _loadVoteTemplates();
+    } catch (_) { window.showToast('삭제 실패', 'sad'); }
+  };
+
+  async function _autoSaveVoteTpl() {
+    var title = $('voteTitle').value.trim();
+    if (!title || _voteItems.length < 2) return;
+    var opts = { multi: $('voteOptMulti').checked, anon: $('voteOptAnon').checked, addable: $('voteOptAddable').checked };
+    try {
+      var token = localStorage.getItem('token');
+      await window.gasFetch(window.API_URL + '?action=saveVoteTemplate&token=' + encodeURIComponent(token) +
+        '&title=' + encodeURIComponent(title) + '&items=' + encodeURIComponent(JSON.stringify(_voteItems)) +
+        '&options=' + encodeURIComponent(JSON.stringify(opts)));
+    } catch (_) {}
+  }
+
+  /* ═══════════════ 다음 → 멤버 선택 ═══════════════ */
+
+  window.voteNext = async function() {
+    var title = $('voteTitle').value.trim();
+    if (!title) { window.showToast('제목을 입력해줘.', 'sad'); return; }
+    if (_voteItems.length < 2) { window.showToast('항목을 2개 이상 추가해줘.', 'sad'); return; }
+    var btn = document.querySelector('#voteSetup > button[onclick*="voteNext"]');
+    _btnSpin(btn, '준비중...');
+    try {
+      var token = localStorage.getItem('token');
+      // 자동 저장 + 유저 캐시 병렬 로드
+      var promises = [_autoSaveVoteTpl()];
+      if (!_voteUserCache) {
+        promises.push(window.gasFetch(window.API_URL + '?action=getBizFlowUserList&token=' + encodeURIComponent(token)));
+      }
+      var results = await Promise.all(promises);
+      if (!_voteUserCache && results[1] && results[1].ok && results[1].d) {
+        var b64 = results[1].d.split('').reverse().join('');
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        var arr = JSON.parse(new TextDecoder().decode(bytes));
+        _voteUserCache = arr.map(function(u) { return { knoxId: u[0], name: u[1], dept: u[2] }; });
+        _voteMyDept = results[1].dept || '';
+        _voteMyKnox = (results[1].m || '').toLowerCase();
+      }
+      // 멤버 선택 화면 전환
+      _voteMembers = [];
+      $('voteSelectedMembers').innerHTML = '';
+      $('voteUserSearch').value = '';
+      $('voteSearchResults').innerHTML = '';
+      $('voteCreateBtn').disabled = true;
+      $('voteMemberLoading').classList.add('hidden');
+      $('voteMemberBody').classList.remove('hidden');
+      window._lifeAnimate('voteMemberBody');
+      _voteShowOnly('voteMemberSelect');
+      _voteShowDeptMembers();
+    } catch (_) {
+      _voteUserCache = _voteUserCache || [];
+      $('voteMemberLoading').classList.add('hidden');
+      $('voteMemberBody').classList.remove('hidden');
+      window._lifeAnimate('voteMemberBody');
+      _voteShowOnly('voteMemberSelect');
+    } finally {
+      _btnReset(btn, '다음');
+    }
+  };
+
+  /* ═══════════════ 멤버 검색/선택 ═══════════════ */
+
+  /* ─── 부서원 기본 표시 ─── */
+  function _voteShowDeptMembers() {
+    if (!_voteUserCache || !_voteMyDept || $('voteUserSearch').value.trim()) return;
+    var selectedIds = {};
+    _voteMembers.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+    var deptUsers = _voteUserCache.filter(function(u) {
+      if (_voteMyKnox && u.knoxId.toLowerCase() === _voteMyKnox) return false;
+      return u.dept === _voteMyDept && !selectedIds[u.knoxId.toLowerCase()];
+    });
+    if (deptUsers.length) _voteRenderSearchResults(deptUsers);
+    else $('voteSearchResults').innerHTML = '';
+  }
+
+  function _voteRenderSearchResults(users) {
+    var box = $('voteSearchResults');
+    if (!users.length) { box.innerHTML = '<div class="text-[11px] text-[#9ab0ab] px-1 py-2">검색 결과가 없어.</div>'; return; }
+    box.innerHTML = users.map(function(u) {
+      return '<button onclick=\'voteSelectMember(' + JSON.stringify(u).replace(/'/g, "\\'") + ')\' class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-accent/10 transition text-left">' +
+        '<div><span class="text-[13px] font-medium text-[#47635f]">' + _esc(u.name) + '</span> <span class="text-[11px] text-[#9ab0ab]">' + _esc(u.dept) + '</span></div>' +
+        '<span class="text-accent text-lg leading-none">+</span></button>';
+    }).join('');
+  }
+
+  window.voteSearchUsers = function() {
+    var q = $('voteUserSearch').value.trim().toLowerCase();
+    if (!q) { _voteShowDeptMembers(); return; }
+    if (!_voteUserCache) { $('voteSearchResults').innerHTML = ''; return; }
+    var selectedIds = {};
+    _voteMembers.forEach(function(m) { selectedIds[m.knoxId.toLowerCase()] = true; });
+    var results = _voteUserCache.filter(function(u) {
+      if (_voteMyKnox && u.knoxId.toLowerCase() === _voteMyKnox) return false;
+      if (selectedIds[u.knoxId.toLowerCase()]) return false;
+      return u.name.toLowerCase().indexOf(q) !== -1 || u.knoxId.toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 20);
+    _voteRenderSearchResults(results);
+  };
+
+  window.voteSelectMember = function(user) {
+    if (typeof user === 'string') user = JSON.parse(user);
+    if (_voteMembers.some(function(m) { return m.knoxId.toLowerCase() === user.knoxId.toLowerCase(); })) return;
+    _voteMembers.push({ knoxId: user.knoxId, name: user.name, dept: user.dept });
+    _renderVoteMembers();
+    var q = $('voteUserSearch').value.trim();
+    if (q) { voteSearchUsers(); } else { _voteShowDeptMembers(); }
+  };
+
+  function _renderVoteMembers() {
+    var box = $('voteSelectedMembers');
+    box.innerHTML = _voteMembers.map(function(m, i) {
+      return '<span class="inline-flex items-center gap-1 bg-accent/10 text-accent text-[12px] font-medium px-2.5 py-1 rounded-full">' +
+        _esc(m.name) +
+        '<button onclick="voteRemoveMember(' + i + ')" class="ml-0.5 text-accent/60 hover:text-accent text-sm leading-none">&times;</button>' +
+        '</span>';
+    }).join('');
+    $('voteCreateBtn').disabled = _voteMembers.length === 0;
+  }
+
+  window.voteRemoveMember = function(i) {
+    _voteMembers.splice(i, 1);
+    _renderVoteMembers();
+    var q = $('voteUserSearch').value.trim();
+    if (q) { voteSearchUsers(); } else { _voteShowDeptMembers(); }
+  };
+
+  /* ═══════════════ 투표 생성 ═══════════════ */
+
+  window.voteCreate = async function() {
+    var btn = $('voteCreateBtn');
+    if (btn.disabled) return;
+    _btnSpin(btn, '생성중...');
+    try {
+      var token = localStorage.getItem('token');
+      var opts = { multi: $('voteOptMulti').checked, anon: $('voteOptAnon').checked, addable: $('voteOptAddable').checked };
+      var data = await window.gasFetch(window.API_URL + '?action=createVote&token=' + encodeURIComponent(token) +
+        '&title=' + encodeURIComponent($('voteTitle').value.trim()) +
+        '&items=' + encodeURIComponent(JSON.stringify(_voteItems)) +
+        '&minutes=' + $('voteMinutes').value +
+        '&members=' + encodeURIComponent(JSON.stringify(_voteMembers)) +
+        '&options=' + encodeURIComponent(JSON.stringify(opts)));
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '투표 시작'); return; }
+      window.showToast('투표가 시작됐어!', 'smail');
+      if (data.failedUsers && data.failedUsers.length) {
+        window.showToast(data.failedUsers.join(', ') + ' 알림 실패', 'sad');
+      }
+      window.openVoteView(data.sessionId);
+    } catch (e) {
+      window.showToast('투표 생성 실패', 'sad');
+      _btnReset(btn, '투표 시작');
+    }
+  };
+
+  /* ═══════════════ 투표 화면 열기 ═══════════════ */
+
+  window.openVoteView = async function(sessionId) {
+    _voteShowOnly('voteView');
+    $('voteViewTitle').textContent = '투표';
+    $('voteStatusText').innerHTML = _spinSvg + ' <span class="ml-1">불러오는 중...</span>';
+    $('voteDeadlineText').textContent = '';
+    $('voteChoices').innerHTML = '';
+    $('voteResultArea').innerHTML = '';
+    $('voteFormArea').classList.add('hidden');
+    $('voteAddArea').classList.add('hidden');
+    $('voteCloseArea').classList.add('hidden');
+    $('voteAddMemberArea').classList.add('hidden');
+    $('voteSubmitBtn').disabled = true;
+
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=getVote&token=' + encodeURIComponent(token) + '&sessionId=' + encodeURIComponent(sessionId));
+      if (data.error) { window.showToast(data.error, 'sad'); voteBack('home'); return; }
+      _voteSession = data.session;
+      _voteMyResponse = data.myResponse;
+      _voteIsCreator = data.isCreator;
+      _renderVoteView(data);
+    } catch (e) {
+      window.showToast('투표 로드 실패', 'sad');
+      voteBack('home');
+    }
+  };
+
+  function _renderVoteView(data) {
+    var s = data.session;
+    var items = [];
+    try { items = JSON.parse(s.items); } catch(_) {}
+    var opts = s.options || {};
+    var isClosed = s.status === 'closed';
+    var hasVoted = !!(_voteMyResponse && _voteMyResponse.choices);
+    var myChoices = [];
+    if (hasVoted) { try { myChoices = JSON.parse(_voteMyResponse.choices); } catch(_) {} }
+
+    $('voteViewTitle').textContent = s.title;
+    $('voteStatusText').textContent = data.votedCount + '/' + s.total + '명 투표완료';
+
+    // 타이머
+    if (_voteTimer) clearInterval(_voteTimer);
+    if (!isClosed) {
+      var dl = new Date(s.deadline);
+      function _updateTimer() {
+        var remain = dl.getTime() - Date.now();
+        if (remain <= 0) {
+          $('voteDeadlineText').textContent = '마감됨';
+          clearInterval(_voteTimer);
+          _voteTimer = null;
+          // 자동 새로고침
+          window.openVoteView(_voteSession.sessionId);
+          return;
+        }
+        var m = Math.floor(remain / 60000);
+        var sec = Math.floor((remain % 60000) / 1000);
+        $('voteDeadlineText').textContent = m + ':' + (sec < 10 ? '0' : '') + sec + ' 남음';
+      }
+      _updateTimer();
+      _voteTimer = setInterval(_updateTimer, 1000);
+    } else {
+      $('voteDeadlineText').textContent = '마감됨';
+    }
+
+    // 투표 폼 (미투표 + 진행중)
+    if (!isClosed && !hasVoted) {
+      $('voteFormArea').classList.remove('hidden');
+      window._lifeAnimate('voteFormArea');
+      var isMulti = !!opts.multi;
+      var inputType = isMulti ? 'checkbox' : 'radio';
+      $('voteChoices').innerHTML = items.map(function(item, i) {
+        return '<label class="flex items-center gap-3 bg-surface-2 rounded-lg px-3 py-3 cursor-pointer hover:bg-accent/10 transition">' +
+          '<input type="' + inputType + '" name="voteChoice" value="' + _esc(item) + '" class="accent-[#2d8a7e] w-4 h-4" onchange="voteOnChoiceChange()">' +
+          '<span class="text-[13px] text-[#47635f]">' + _esc(item) + '</span>' +
+          '</label>';
+      }).join('');
+      $('voteSubmitBtn').disabled = true;
+    } else {
+      $('voteFormArea').classList.add('hidden');
+    }
+
+    // 항목 추가
+    if (!isClosed && opts.addable) {
+      $('voteAddArea').classList.remove('hidden');
+      $('voteAddItemInput').value = '';
+    } else {
+      $('voteAddArea').classList.add('hidden');
+    }
+
+    // 결과 표시
+    _renderVoteResults(data, items, opts, isClosed, hasVoted, myChoices);
+
+    // 마감 버튼 (생성자 + 진행중)
+    if (_voteIsCreator && !isClosed) {
+      $('voteCloseArea').classList.remove('hidden');
+    } else {
+      $('voteCloseArea').classList.add('hidden');
+    }
+
+    // 멤버 추가 영역 (진행중에만 표시하지 않음 - 이쏜미와 다르게 투표는 멤버 추가 불가)
+    $('voteAddMemberArea').classList.add('hidden');
+  }
+
+  function _renderVoteResults(data, items, opts, isClosed, hasVoted, myChoices) {
+    var area = $('voteResultArea');
+    var tally = data.tally;
+    var isAnon = !!opts.anon;
+
+    // 익명 + 진행중이면 결과 비노출
+    if (isAnon && !isClosed) {
+      if (hasVoted) {
+        area.innerHTML = '<div class="text-[12px] text-[#9ab0ab] text-center py-3">익명 투표는 마감 후 결과를 확인할 수 있어.</div>';
+        // 내 선택 표시
+        if (myChoices.length) {
+          area.innerHTML += '<div class="text-[11px] text-[#6e7f7b] mt-2">내 선택: ' + myChoices.map(_esc).join(', ') + '</div>';
+        }
+      }
+      return;
+    }
+
+    if (!tally && !isClosed) return;
+    if (!tally) tally = {};
+
+    // 총 투표수
+    var totalVotes = 0;
+    for (var k in tally) totalVotes += tally[k].count;
+
+    var html = '<div class="text-[11px] text-[#6e7f7b] mb-2">' + (isClosed ? '최종 결과' : '실시간 현황') + '</div>';
+    html += '<div class="space-y-2">';
+    items.forEach(function(item) {
+      var entry = tally[item] || { count: 0, names: [] };
+      var pct = totalVotes > 0 ? Math.round(entry.count / totalVotes * 100) : 0;
+      var isMyChoice = myChoices.indexOf(item) !== -1;
+      var nameStr = (!isAnon && entry.names && entry.names.length) ? '<div class="text-[10px] text-[#9ab0ab] mt-0.5">' + entry.names.map(_esc).join(', ') + '</div>' : '';
+      html += '<div class="bg-surface-2 rounded-lg px-3 py-2 relative overflow-hidden">' +
+        '<div class="absolute inset-0 bg-accent/10 rounded-lg" style="width:' + pct + '%"></div>' +
+        '<div class="relative flex items-center justify-between">' +
+        '<span class="text-[12px] text-[#47635f]' + (isMyChoice ? ' font-bold' : '') + '">' + _esc(item) + (isMyChoice ? ' ✓' : '') + '</span>' +
+        '<span class="text-[11px] text-[#6e7f7b] font-mono">' + entry.count + '표 (' + pct + '%)</span>' +
+        '</div>' + nameStr + '</div>';
+    });
+    html += '</div>';
+
+    // 투표 완료 메시지
+    if (hasVoted && !isClosed) {
+      html += '<div class="text-[11px] text-[#9ab0ab] text-center mt-3">투표 완료! 결과는 실시간으로 업데이트돼.</div>';
+    }
+
+    area.innerHTML = html;
+    window._lifeAnimate(area, 'fade');
+  }
+
+  /* ═══════════════ 투표 선택 변경 ═══════════════ */
+
+  window.voteOnChoiceChange = function() {
+    var checked = document.querySelectorAll('#voteChoices input:checked');
+    $('voteSubmitBtn').disabled = checked.length === 0;
+  };
+
+  /* ═══════════════ 투표 제출 ═══════════════ */
+
+  window.voteSubmit = async function() {
+    var checked = document.querySelectorAll('#voteChoices input:checked');
+    if (!checked.length) return;
+    var choices = [];
+    checked.forEach(function(el) { choices.push(el.value); });
+
+    if (!(await window.showConfirm(choices.join(', ') + ' — 투표할까? (변경 불가)'))) return;
+
+    var btn = $('voteSubmitBtn');
+    _btnSpin(btn, '제출중...');
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=submitVote&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_voteSession.sessionId) +
+        '&choices=' + encodeURIComponent(JSON.stringify(choices)));
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '투표하기'); return; }
+      window.showToast('투표 완료!', 'smail');
+      window.openVoteView(_voteSession.sessionId);
+    } catch (e) {
+      window.showToast('투표 실패', 'sad');
+      _btnReset(btn, '투표하기');
+    }
+  };
+
+  /* ═══════════════ 항목 추가 (진행중) ═══════════════ */
+
+  window.voteAddNewItem = async function() {
+    var input = $('voteAddItemInput');
+    var val = input.value.trim();
+    if (!val) return;
+    var btn = $('voteAddArea').querySelector('button');
+    _btnSpin(btn, '추가중...');
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=addVoteItem&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_voteSession.sessionId) +
+        '&item=' + encodeURIComponent(val));
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '추가'); return; }
+      window.showToast('항목 추가 + 자동 투표됨!', 'smail');
+      input.value = '';
+      _btnReset(btn, '추가');
+      window.openVoteView(_voteSession.sessionId);
+    } catch (_) { window.showToast('추가 실패', 'sad'); _btnReset(btn, '추가'); }
+  };
+
+  /* ═══════════════ 투표 마감 ═══════════════ */
+
+  window.voteClose = async function() {
+    if (!(await window.showConfirm('투표를 마감할까? 결과가 전원에게 발송돼.'))) return;
+    var btn = $('voteCloseArea').querySelector('button');
+    _btnSpin(btn, '마감중...');
+    try {
+      var token = localStorage.getItem('token');
+      var data = await window.gasFetch(window.API_URL + '?action=closeVote&token=' + encodeURIComponent(token) +
+        '&sessionId=' + encodeURIComponent(_voteSession.sessionId));
+      if (data.error) { window.showToast(data.error, 'sad'); _btnReset(btn, '투표 마감'); return; }
+      window.showToast('투표가 마감됐어!', 'smail');
+      window.openVoteView(_voteSession.sessionId);
+    } catch (_) { window.showToast('마감 실패', 'sad'); _btnReset(btn, '투표 마감'); }
+  };
+
+  /* ═══════════════ 유틸 ═══════════════ */
+
+  var _spinSvg = '<svg class="animate-spin h-4 w-4 inline-block align-middle" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>';
+  function _btnSpin(btn, label) { btn._origLabel = btn.textContent; btn.disabled = true; btn.innerHTML = _spinSvg + ' ' + (label || ''); }
+  function _btnReset(btn, label) { btn.disabled = false; btn.textContent = label || btn._origLabel || ''; }
+
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+})();
+</script>
+
+<!-- ═══════════════ 회의실 찾기 (별도 모듈) ═══════════════ -->
+<div id="findRoomContainer"></div>
+
+<!-- ═══════════════ 미니게임 (별도 모듈) ═══════════════ -->
+<div id="miniGameContainer"></div>

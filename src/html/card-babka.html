@@ -1,0 +1,1937 @@
+<style>
+@keyframes like-pop { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+.rate-like, .rate-dislike { display:inline-flex; align-items:center; gap:3px; padding:3px 10px; border-radius:9999px; cursor:pointer; font-size:10px; font-weight:700; letter-spacing:.2px; border:none; transition:all .15s; }
+.rate-like { background:rgba(5,150,105,.13); color:#059669; }
+.rate-like:hover { background:rgba(5,150,105,.22); }
+.rate-like.rate-active-like { background:#059669; color:#fff; box-shadow:0 1px 4px rgba(5,150,105,.3); }
+.rate-dislike { background:rgba(220,38,38,.10); color:#dc2626; }
+.rate-dislike:hover { background:rgba(220,38,38,.20); }
+.rate-dislike.rate-active-dislike { background:#dc2626; color:#fff; box-shadow:0 1px 4px rgba(220,38,38,.3); }
+.rate-like span, .rate-dislike span { font-size:11px; line-height:1; }
+.naver-map-link {
+  display:inline-flex; align-items:center; gap:3px;
+  padding:2px 8px 2px 6px; border-radius:9999px;
+  font-size:10px; font-weight:600; line-height:1;
+  color:#1ec800; background:#1ec80010; border:1px solid #1ec80025;
+  text-decoration:none; white-space:nowrap; flex-shrink:0;
+  transition:all .15s ease;
+}
+.naver-map-link:hover { background:#1ec80020; transform:translateY(-1px); box-shadow:0 2px 6px #1ec80015; }
+.naver-map-link svg { color:#1ec800; }
+</style>
+
+<!-- 밥카 스켈레톤 로딩 -->
+<div id="cardSkeleton">
+  <div class="mb-6">
+    <div class="bg-surface border border-border rounded-2xl p-5">
+      <div class="flex justify-between items-end mb-4">
+        <div>
+          <div class="skeleton w-14 h-2.5 mb-2"></div>
+          <div class="skeleton w-36 h-8 mb-2"></div>
+          <div class="skeleton w-28 h-3"></div>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+          <div class="skeleton w-14 h-2.5"></div>
+          <div class="skeleton w-24 h-5"></div>
+          <div class="skeleton w-28 h-3"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="skeleton w-3.5 h-3.5 rounded"></div>
+        <div class="skeleton w-36 h-3"></div>
+        <div class="skeleton w-20 h-2.5"></div>
+      </div>
+      <div class="skeleton w-full h-3 rounded-full mb-3"></div>
+      <div class="flex gap-4">
+        <div class="skeleton w-14 h-3"></div>
+        <div class="skeleton w-14 h-3"></div>
+      </div>
+    </div>
+  </div>
+  <div class="mb-6">
+    <div class="bg-surface border border-border rounded-2xl p-5">
+      <!-- Flow 알람 수신 -->
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="skeleton w-8 h-8 rounded-lg shrink-0"></div>
+        <div><div class="skeleton w-24 h-4 mb-1.5"></div><div class="skeleton w-48 h-2.5"></div></div>
+      </div>
+      <div class="flex rounded-xl bg-surface-2 p-1 gap-0.5">
+        <div class="skeleton flex-1 h-9 rounded-lg"></div>
+        <div class="skeleton flex-1 h-9 rounded-lg"></div>
+      </div>
+      <!-- 식단 알람 수신 -->
+      <div class="mt-4 flex items-center gap-2.5 mb-3">
+        <div class="skeleton w-8 h-8 rounded-lg shrink-0"></div>
+        <div><div class="skeleton w-36 h-4 mb-1.5"></div><div class="skeleton w-44 h-2.5"></div></div>
+      </div>
+      <div class="flex rounded-xl bg-surface-2 p-1 gap-0.5">
+        <div class="skeleton flex-1 h-9 rounded-lg"></div>
+        <div class="skeleton flex-1 h-9 rounded-lg"></div>
+      </div>
+      <!-- 구분선 -->
+      <div class="border-t border-border/40 my-4"></div>
+      <!-- 자동결재 모드 -->
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="skeleton w-8 h-8 rounded-lg shrink-0"></div>
+        <div><div class="skeleton w-24 h-4 mb-1.5"></div><div class="skeleton w-40 h-2.5"></div></div>
+      </div>
+      <div class="flex rounded-xl bg-surface-2 p-1 gap-0.5">
+        <div class="skeleton flex-1 h-12 rounded-lg"></div>
+        <div class="skeleton flex-1 h-12 rounded-lg"></div>
+        <div class="skeleton flex-1 h-12 rounded-lg"></div>
+        <div class="skeleton flex-1 h-12 rounded-lg"></div>
+      </div>
+      <!-- 구분선 -->
+      <div class="border-t border-border/40 my-4"></div>
+      <!-- 밥카 결재 -->
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="skeleton w-8 h-8 rounded-lg shrink-0"></div>
+        <div><div class="skeleton w-20 h-4 mb-1.5"></div><div class="skeleton w-44 h-2.5"></div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="skeleton h-9 rounded-xl"></div>
+        <div class="skeleton h-9 rounded-xl"></div>
+      </div>
+    </div>
+  </div>
+  <!-- 뷰 탭 + 월 태그 스켈레톤 -->
+  <div class="flex gap-2 flex-wrap mb-3">
+    <div class="skeleton h-8 w-20 rounded-full"></div>
+    <div class="skeleton h-8 w-24 rounded-full"></div>
+    <div class="skeleton h-8 w-24 rounded-full"></div>
+  </div>
+  <div>
+    <div class="bg-surface border border-border rounded-2xl overflow-hidden">
+      <!-- 데스크탑: 헤더 + 행 -->
+      <div class="hidden sm:block">
+        <div class="bg-surface-2 border-b border-border px-4 py-3 flex gap-3">
+          <div class="skeleton w-7 h-2.5 rounded"></div><div class="skeleton w-12 h-2.5 rounded"></div><div class="skeleton flex-1 h-2.5 rounded"></div><div class="skeleton w-12 h-2.5 rounded"></div>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+          <div class="flex gap-3 items-center"><div class="skeleton w-7 h-4"></div><div class="skeleton w-20 h-4"></div><div class="skeleton flex-1 h-4"></div><div class="skeleton w-16 h-4"></div></div>
+        </div>
+      </div>
+      <!-- 모바일: 카드 -->
+      <div class="sm:hidden p-3 space-y-3">
+        <div class="bg-surface-2 border border-border/60 rounded-xl p-4 space-y-2"><div class="flex items-center justify-between"><div class="skeleton h-4 flex-1 rounded mr-2"></div><div class="skeleton h-3 w-8 rounded"></div></div><div class="flex items-center gap-0.5 mb-1"><div class="skeleton h-5 w-8 rounded-full"></div><div class="skeleton h-5 w-8 rounded-full"></div></div><div class="flex items-center justify-between"><div class="skeleton h-3 w-20 rounded"></div><div class="skeleton h-3 w-16 rounded"></div></div></div>
+        <div class="bg-surface-2 border border-border/60 rounded-xl p-4 space-y-2"><div class="flex items-center justify-between"><div class="skeleton h-4 w-3/4 rounded mr-2"></div><div class="skeleton h-3 w-8 rounded"></div></div><div class="flex items-center gap-0.5 mb-1"><div class="skeleton h-5 w-8 rounded-full"></div><div class="skeleton h-5 w-8 rounded-full"></div></div><div class="flex items-center justify-between"><div class="skeleton h-3 w-24 rounded"></div><div class="skeleton h-3 w-16 rounded"></div></div></div>
+        <div class="bg-surface-2 border border-border/60 rounded-xl p-4 space-y-2"><div class="flex items-center justify-between"><div class="skeleton h-4 w-2/3 rounded mr-2"></div><div class="skeleton h-3 w-8 rounded"></div></div><div class="flex items-center gap-0.5 mb-1"><div class="skeleton h-5 w-8 rounded-full"></div><div class="skeleton h-5 w-8 rounded-full"></div></div><div class="flex items-center justify-between"><div class="skeleton h-3 w-16 rounded"></div><div class="skeleton h-3 w-16 rounded"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 밥카 실제 컨텐츠 (로딩 완료 후 표시) -->
+<div id="cardContent" class="hidden">
+
+<!-- 카드 선택기 (2개 이상 시 표시) -->
+<div id="cardSelector" class="mb-4 hidden relative">
+  <div class="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
+    <svg class="w-4 h-4 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+    <!-- 커스텀 드롭다운 -->
+    <div id="cardDropdownWrap" class="flex-1 relative cursor-pointer" onclick="window._toggleCardList()">
+      <div id="cardDropdownLabel" class="flex items-center gap-1.5 text-sm font-semibold text-[#47635f] select-none"></div>
+    </div>
+    <svg class="w-3 h-3 text-[#6e7f7b] shrink-0 pointer-events-none -ml-1 transition-transform duration-200" id="cardChevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+    <button onclick="window._editCardSettings(this)" title="카드 설정" class="p-1 text-[#6e7f7b] hover:text-accent transition cursor-pointer">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button onclick="window._refreshCards()" title="카드 목록 새로고침" class="p-1 text-[#6e7f7b] hover:text-accent transition cursor-pointer">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </button>
+  </div>
+  <!-- 드롭다운 옵션 목록 -->
+  <div id="cardDropdownList" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-border shadow-lg overflow-hidden bg-surface">
+  </div>
+</div>
+
+<!-- 밥카 잔액 요약 -->
+<section class="mb-6">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+    <div class="flex justify-between items-end flex-wrap gap-3 mb-4">
+      <div>
+        <div class="text-[10px] text-[#6e7f7b] mb-1" id="cardRemainLabel">남은 잔액</div>
+        <div class="font-mono text-3xl font-semibold text-[#47635f]" id="cardRemainAmount">0원</div>
+        <div class="text-xs text-[#6e7f7b] mt-0.5" id="cardBudgetLabel">다음 초기화까지 <span class="font-mono" id="cardResetDays">-</span>일</div>
+      </div>
+      <div class="text-right">
+        <div class="text-[10px] text-[#6e7f7b]">사용 금액</div>
+        <div class="font-mono text-lg font-semibold" id="cardUsedAmount">0원</div>
+        <div class="text-xs text-[#6e7f7b] mt-1" id="cardUsedSub"></div>
+      </div>
+    </div>
+    <!-- 기간 표시 -->
+    <div class="flex items-center gap-2 mb-3 text-xs text-[#6e7f7b]">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v9.75"/></svg>
+      <span id="cardPeriodLabel"></span>
+      <span class="text-[10px] text-[#6e7f7b]/60" id="cardBizDaysLabel"></span>
+    </div>
+    <!-- 프로그레스 바 -->
+    <div class="h-3 bg-surface-2 rounded-full overflow-visible relative mb-3">
+      <div id="cardBarUsed" class="h-full rounded-full bg-gradient-to-r from-[#d97706] to-[#fbbf24] transition-all duration-700" style="width:0%"></div>
+    </div>
+    <div class="flex gap-4 flex-wrap">
+      <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+        <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-r from-[#d97706] to-[#fbbf24] inline-block"></span> 사용
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px] text-[#6e7f7b]">
+        <span class="w-2.5 h-2.5 rounded-sm bg-surface-2 inline-block"></span> 잔액
+      </div>
+    </div>
+    <!-- 교통비 별도 표시 -->
+    <div id="cardTransportSummary" class="hidden mt-3 flex items-center gap-2 bg-surface-2 rounded-xl px-3.5 py-2.5">
+      <span class="text-base leading-none">🚌</span>
+      <span class="text-[11px] text-[#6e7f7b]">교통비: <strong class="text-[#47635f] font-mono" id="cardTransportAmt">0원</strong> <span id="cardTransportCnt" class="opacity-60"></span></span>
+    </div>
+  </div>
+</section>
+
+<!-- 밥카 설정 통합 카드 -->
+<section class="mb-6 relative" id="cardAutoModeSection">
+  <div class="bg-surface border border-border rounded-2xl p-5">
+
+    <!-- Flow 알람 수신 -->
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">Flow 알람 수신</div>
+        <div id="cardAlarmDesc" class="text-[11px] text-[#6e7f7b]">평일 잔액, 미결재 리마인드, 초과환불 알림</div>
+      </div>
+    </div>
+    <div id="cardAlarmToggle" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative overflow-hidden">
+      <button onclick="setCardAlarmValue(true)" id="cardAlarmBtnOn"
+        class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
+        좋아
+      </button>
+      <button onclick="setCardAlarmValue(false)" id="cardAlarmBtnOff"
+        class="flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[#6e7f7b]">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 5.714 0m-5.714 0a3 3 0 1 1 5.714 0M3.688 15.772A8.966 8.966 0 0 0 6 9.75V9A6 6 0 0 1 18 9v.75c0 2.344.9 4.476 2.312 6.022"/></svg>
+        싫어
+      </button>
+    </div>
+    <!-- 비밀번호 미저장 안내 -->
+    <div id="cardNoPwGuide" class="hidden mt-2.5 flex items-start gap-2 bg-warn/8 border border-warn/20 rounded-xl px-3.5 py-2.5">
+      <svg class="w-4 h-4 text-warn shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+      <span class="text-[11px] text-warn leading-relaxed">이 기능이 필요하면 <strong>비밀번호 저장</strong>을 체크하고 다시 로그인해줘.</span>
+    </div>
+
+    <!-- 자동결재 + 결재 (밥카 카드만 표시) -->
+    <div id="cardLunchOnlySection">
+    <!-- 구분선 -->
+    <div class="border-t border-border/40 my-4"></div>
+
+    <!-- 자동결재 모드 -->
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.431.992a7.723 7.723 0 0 1 0 .255c-.007.378.138.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-semibold">자동결재 모드</div>
+        <div class="text-[11px] text-[#6e7f7b]">매월 14일+1영업일에 자동 실행</div>
+      </div>
+    </div>
+    <div id="cardAutoModeOptions" class="flex rounded-xl bg-surface-2 p-1 gap-0.5 relative"></div>
+    <div id="cardAutoNoPwGuide" class="hidden mt-2.5 flex items-start gap-2 bg-warn/8 border border-warn/20 rounded-xl px-3.5 py-2.5">
+      <svg class="w-4 h-4 text-warn shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+      <span class="text-[11px] text-warn leading-relaxed">임시저장/결재요청 모드는 <strong>비밀번호 저장</strong>이 필요해.</span>
+    </div>
+
+    <!-- 구분선 -->
+    <div class="border-t border-border/40 my-4"></div>
+
+    <!-- 밥카 결재 -->
+    <div>
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold">밥카 결재</div>
+          <div class="text-[11px] text-[#6e7f7b]">Bizplay 임시저장 또는 결재요청</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="cardBtnTemp" onclick="openCardApproval('temp')"
+          class="bg-accent/10 border border-accent/30 text-accent rounded-xl px-3 py-2 hover:bg-accent/20 transition flex items-center justify-center gap-1.5 text-[12px] font-semibold">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+          임시저장
+        </button>
+        <button id="cardBtnApprove" onclick="openCardApproval('approve')"
+          class="bg-accent/10 border border-accent/30 text-accent rounded-xl px-3 py-2 hover:bg-accent/20 transition flex items-center justify-center gap-1.5 text-[12px] font-semibold">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>
+          결재요청
+        </button>
+      </div>
+    </div>
+    </div><!-- /cardLunchOnlySection -->
+
+  </div>
+</section>
+
+<!-- 밥카 사용 내역 -->
+<section>
+  <div id="cardMonthTags" class="flex gap-2 flex-wrap mb-3"></div>
+  <div id="cardStatsWrap" class="hidden"></div>
+  <div id="cardRecordsWrap" class="bg-surface border border-border rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto record-table-wrap">
+      <table class="w-full" id="cardRecordsTable">
+        <thead>
+          <tr class="bg-surface-2 border-b border-border">
+            <th class="px-2 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">No</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">날짜</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">사용처</th>
+            <th class="px-4 py-3 text-right text-[10px] font-bold text-[#6e7f7b] uppercase tracking-wider">금액</th>
+          </tr>
+        </thead>
+        <tbody id="cardRecordsBody"></tbody>
+      </table>
+    </div>
+    <div id="cardRecordsCards" class="record-card p-3 space-y-3"></div>
+    <div id="cardNoRecords" class="hidden text-center py-10 text-[#6e7f7b] text-sm"><img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">아직 사용 내역이 없어.</div>
+  </div>
+  <div id="cardRatingWrap" class="hidden"></div>
+</section>
+
+</div><!-- /cardContent -->
+
+<!-- 카드 설정 시트 (모바일: 바텀시트 / PC: 오버레이 팝업) -->
+<div id="cardSettingsSheet" class="fixed inset-0 z-[60]" style="display:none;">
+  <div class="absolute inset-0 bg-black/30" onclick="window._closeCardSheet()"></div>
+  <!-- 모바일: 바텀시트 -->
+  <div id="cardSheetMobile" class="fixed bottom-0 inset-x-0 z-[61] rounded-t-2xl shadow-xl max-w-sm mx-auto p-5 transition-transform duration-300 sm:hidden bg-surface"
+       style="transform:translateY(100%);">
+    <div class="w-10 h-1 rounded-full bg-border mx-auto mb-4"></div>
+    <div id="cardSheetTitleM" class="text-sm font-bold text-[#47635f] mb-3"></div>
+    <div id="cardSheetBodyM"></div>
+  </div>
+  <!-- PC: 오버레이 팝업 -->
+  <div id="cardSheetPC" class="fixed z-[61] hidden sm:block rounded-2xl shadow-xl border-2 border-accent/20 p-5 w-[300px] transition-all duration-200 opacity-0 bg-surface"
+       style="transform:scale(.95);">
+    <div id="cardSheetTitleP" class="text-sm font-bold text-[#47635f] mb-3"></div>
+    <div id="cardSheetBodyP"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════ 밥카 모듈 ═══════════════ */
+(function() {
+  const $ = id => document.getElementById(id);
+
+  /* ─── 상태 ─── */
+  let cardRecords = [];       // 현재 표시 중인 월의 레코드
+  let cardCurrentRecords = []; // 현재 기간(이번 달) 레코드 — 상단 요약용
+  let cardAlarmOn = false;
+  // menuAlarmOn -> window._menuAlarmOn (emro-life.html과 공유)
+  let hasBizplayPw = false;
+  let cardAutoMode = 'off'; // 'off' | 'alarm' | 'draft' | 'submit'
+  let cardFetchState = 'idle'; // 'idle' | 'loading' | 'loaded' | 'no-session' | 'sso-fail' | 'error'
+  let cardFilteredRecords = []; // renderCardRecords에서 표시 중인 필터된 레코드
+  let cardViewMode = 'records'; // 'records' | 'stats' | 'rating'
+  let cardRatingSortMode = 'best'; // 'best' | 'worst'
+  let cardStatsCache = null;    // 6개월 통계 캐시
+  let cardRatingsCache = null;  // 맛집 평점 캐시
+  let cardIsRefreshing = false; // 탭 전환 재조회 중 (전체 스켈레톤 방지)
+  let cardStatsSelectedMonth = null; // 월 선택기 상태 (null=전체)
+  const TRANSPORT_CATEGORY = '대중교통';
+  const TRANSPORT_KEYWORDS = ['티머니 버스', '티머니 지하철', '시내버스', '시외버스'];
+  function isTransportRecord(r) {
+    if ((r.category || '') === TRANSPORT_CATEGORY) return true;
+    const m = (r.merchant || '').trim();
+    return TRANSPORT_KEYWORDS.some(k => m.includes(k));
+  }
+
+  /* ─── 다중카드 상태 ─── */
+  let userCards = [];           // [{cardNo, alias, limit, isLunchCard}]
+  let selectedCardNo = '';      // 현재 선택된 카드번호
+  let cardSetupState = 'idle';  // 'idle' | 'loading' | 'registered' | 'needs-choice'
+
+  /* ─── 카드번호 마스킹 ─── */
+  function maskCardNo(cardNo) {
+    if (!cardNo || cardNo.length < 8) return cardNo || '';
+    return cardNo.substring(0, 4) + '********' + cardNo.substring(cardNo.length - 4);
+  }
+  function cardDisplayName(card) {
+    if (!card) return '';
+    const masked = maskCardNo(card.cardNo);
+    return masked;
+  }
+
+  /* ─── 기간 계산: 매월 15일~다음달 14일 ─── */
+  function getCardPeriod(now) {
+    now = now || new Date();
+    let start, end;
+    if (now.getDate() >= 15) {
+      start = new Date(now.getFullYear(), now.getMonth(), 15);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 14);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+      end = new Date(now.getFullYear(), now.getMonth(), 14);
+    }
+    return { start, end };
+  }
+
+  function getPrevCardPeriod(now) {
+    now = now || new Date();
+    let start, end;
+    if (now.getDate() >= 15) {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+      end = new Date(now.getFullYear(), now.getMonth(), 14);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 15);
+      end = new Date(now.getFullYear(), now.getMonth() - 1, 14);
+    }
+    return { start, end };
+  }
+
+  /* ─── 공휴일 API (holidays.hyunbin.page) ─── */
+  const holidayCache = {}; // { 2026: Set(['2026-02-16', ...]) }
+
+  async function loadHolidays(year) {
+    if (holidayCache[year]) return holidayCache[year];
+    try {
+      const resp = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/KR`);
+      if (!resp.ok) throw new Error(resp.status);
+      const data = await resp.json();
+      holidayCache[year] = new Set(data.map(h => h.date));
+
+      // 근로자의 날(5/1)은 공휴일은 아니지만 회사 휴일
+      holidayCache[year].add(`${year}-05-01`);
+
+      return holidayCache[year];
+    } catch (e) {
+      console.warn('[card] 공휴일 로드 실패:', year, e.message);
+      holidayCache[year] = new Set();
+      return holidayCache[year];
+    }
+  }
+
+  function isHoliday(date, holidays) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return holidays.has(`${yyyy}-${mm}-${dd}`);
+  }
+
+  function getBusinessDays(startDate, endDate, holidays) {
+    let count = 0;
+    const d = new Date(startDate);
+    while (d <= endDate) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6 && !isHoliday(d, holidays)) count++;
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  async function getCardBudget(period) {
+    // 기간이 연도를 걸칠 수 있으므로 양쪽 연도 로드
+    const years = new Set([period.start.getFullYear(), period.end.getFullYear()]);
+    const sets = await Promise.all([...years].map(y => loadHolidays(y)));
+    const merged = new Set();
+    sets.forEach(s => s.forEach(d => merged.add(d)));
+
+    const bizDays = getBusinessDays(period.start, period.end, merged);
+    return { bizDays, budget: bizDays * 10000 };
+  }
+
+  /* ─── 뷰 탭 (현재월 / 6개월 통계) ─── */
+
+  /** 현재 기간 시작월 라벨 */
+  function getCurrentMonthLabel() {
+    const d = new Date();
+    let y = d.getFullYear(), m;
+    if (d.getDate() >= 15) {
+      m = d.getMonth() + 1;
+    } else {
+      m = d.getMonth();
+      if (m === 0) { m = 12; y--; }
+    }
+    return '📅 ' + String(y).slice(-2) + '년 ' + String(m).padStart(2, '0') + '월';
+  }
+
+  /** 최근 6개 청구월 배열 (현재→과거순, YYYYMM 형식) */
+  function getRecentBillingMonths() {
+    const d = new Date();
+    let y = d.getFullYear(), m;
+    if (d.getDate() >= 15) {
+      m = d.getMonth() + 1;
+    } else {
+      m = d.getMonth();
+      if (m === 0) { m = 12; y--; }
+    }
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+      months.push(String(y).padStart(4, '0') + String(m).padStart(2, '0'));
+      m--;
+      if (m === 0) { m = 12; y--; }
+    }
+    return months;
+  }
+
+  /** rawDate(YYYYMMDD) 기반 청구월 필터 (당월 15일~다음달 14일 주기) */
+  function filterStatsByMonth(records, billingMonth) {
+    if (!billingMonth) return records;
+    const by = parseInt(billingMonth.substring(0, 4), 10);
+    const bm = parseInt(billingMonth.substring(4, 6), 10) - 1; // 0-indexed
+    const startDt = new Date(by, bm, 15); // 당월 15일
+    const endDt = new Date(by, bm + 1, 14); // 다음달 14일
+    const fmt = d => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const startNum = fmt(startDt);
+    const endNum = fmt(endDt);
+    return records.filter(r => {
+      const rd = parseInt(r.rawDate || '0', 10);
+      return rd >= startNum && rd <= endNum;
+    });
+  }
+
+  /** 월 선택 버튼 라벨 (선택된 월 반영) */
+  function getMonthBtnLabel() {
+    if (cardStatsSelectedMonth) {
+      return '📅 ' + cardStatsSelectedMonth.substring(2, 4) + '년 ' + cardStatsSelectedMonth.substring(4, 6) + '월';
+    }
+    return getCurrentMonthLabel();
+  }
+
+  function renderViewTabs() {
+    const wrap = $('cardMonthTags');
+    if (!wrap) return;
+
+    const currentCard = userCards.find(c => c.cardNo === selectedCardNo) || {};
+    const isLunch = currentCard.isLunchCard !== false;
+    const tabs = [
+      { key: 'records', label: getMonthBtnLabel() },
+      { key: 'stats', label: isLunch ? '🏆 나의 TOP 5' : '🏆 TOP 5' },
+      { key: 'rating', label: '⭐ 맛집 평가' }
+    ];
+
+    const months = getRecentBillingMonths();
+
+    let html = '';
+    tabs.forEach(t => {
+      const isActive = t.key === cardViewMode;
+      const cls = isActive
+        ? 'bg-accent text-white'
+        : 'bg-surface-2 text-[#6e7f7b] hover:brightness-95';
+
+      if (t.key === 'records') {
+        // 현재월 버튼 — 클릭하면 월 드롭다운
+        html += '<div class="relative inline-block">';
+        html += '<button onclick="window._toggleMonthPicker(event)" class="px-3 py-1.5 text-xs font-semibold rounded-full border border-border/60 transition cursor-pointer ' + cls + '">'
+          + t.label + ' <svg class="w-3 h-3 inline-block opacity-50 -mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg></button>';
+        // 드롭다운
+        html += '<div id="monthPickerDropdown" class="hidden absolute left-0 top-full mt-1.5 z-30 bg-surface border border-border rounded-xl shadow-lg p-2 min-w-[170px]">';
+        html += '<div class="grid grid-cols-3 gap-1.5">';
+        months.forEach(m => {
+          const lbl = m.substring(2, 4) + '.' + m.substring(4, 6);
+          const isCurrent = !cardStatsSelectedMonth
+            ? m === months[0]
+            : cardStatsSelectedMonth === m;
+          const optCls = isCurrent ? 'bg-accent text-white' : 'bg-surface-2 text-[#47635f] hover:brightness-95';
+          html += '<button onclick="window._pickMonth(\'' + m + '\')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer border border-border/60 ' + optCls + '">' + lbl + '</button>';
+        });
+        html += '</div></div></div>';
+      } else {
+        html += '<button class="px-3 py-1.5 text-xs font-semibold rounded-full border border-border/60 transition cursor-pointer ' + cls + '" data-view="' + t.key + '">' + t.label + '</button>';
+      }
+    });
+
+    wrap.innerHTML = html;
+
+    // stats / rating 탭 이벤트
+    wrap.querySelectorAll('button[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        if (view === cardViewMode) return;
+        cardViewMode = view;
+
+        if (view === 'stats') {
+          fetchStats();
+        } else if (view === 'rating') {
+          renderCardDashboard();
+        }
+      });
+    });
+  }
+
+  /** 월 드롭다운 토글 */
+  window._toggleMonthPicker = function(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('monthPickerDropdown');
+    if (dd) dd.classList.toggle('hidden');
+  };
+
+  /** 월 선택 → records 뷰 전환 + 해당 월 데이터 로드 */
+  window._pickMonth = function(m) {
+    const dd = document.getElementById('monthPickerDropdown');
+    if (dd) dd.classList.add('hidden');
+
+    const months = getRecentBillingMonths();
+    // 현재월(=첫번째)이면 기존 현재기간 레코드 사용
+    if (m === months[0]) {
+      cardStatsSelectedMonth = null;
+      cardViewMode = 'records';
+      cardRecords = cardCurrentRecords;
+      renderCardDashboard();
+    } else {
+      // 다른 월 → stats 캐시에서 필터링하여 records로 표시
+      cardStatsSelectedMonth = m;
+      cardViewMode = 'records';
+      if (cardStatsCache) {
+        cardRecords = filterStatsByMonth(cardStatsCache, m);
+        renderCardDashboard();
+      } else {
+        // 아직 로딩 안 됐으면 fetch 후 표시
+        cardIsRefreshing = true;
+        renderCardDashboard();
+        fetchStats().then(function() {
+          cardRecords = filterStatsByMonth(cardStatsCache || [], m);
+          cardIsRefreshing = false;
+          renderCardDashboard();
+        });
+      }
+    }
+  };
+
+  // 외부 클릭 시 월 드롭다운 닫기 (한 번만 등록)
+  document.addEventListener('click', function(e) {
+    var dd = document.getElementById('monthPickerDropdown');
+    if (dd && !dd.classList.contains('hidden')) {
+      if (!dd.contains(e.target) && !e.target.closest('[onclick*="_toggleMonthPicker"]')) {
+        dd.classList.add('hidden');
+      }
+    }
+  });
+
+  /** 6개월 통계 조회 */
+  async function fetchStats() {
+    if (cardStatsCache) {
+      if (cardViewMode === 'stats') renderCardDashboard();
+      return;
+    }
+
+    const isStatsView = cardViewMode === 'stats';
+    if (isStatsView) {
+      cardIsRefreshing = true;
+      renderCardDashboard();
+    }
+
+    const period = getCardPeriod();
+    const sixStart = new Date(period.start);
+    sixStart.setMonth(sixStart.getMonth() - 5);
+    const fmt = d => d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    const fromDt = fmt(sixStart);
+    const toDt = fmt(period.end);
+    const token = localStorage.getItem('token');
+    try {
+      const url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token)
+        + '&fromDt=' + fromDt + '&toDt=' + toDt;
+      const data = await window.gasFetch(url);
+      if (data.status === 'success') {
+        cardStatsCache = data.records || [];
+      }
+    } catch (e) {
+    }
+
+    if (isStatsView) {
+      cardIsRefreshing = false;
+      renderCardDashboard();
+    }
+  }
+
+  /** TOP5 통계 렌더링 */
+  function renderStatsView() {
+    const wrap = $('cardStatsWrap');
+    if (!wrap) return;
+
+    if (cardIsRefreshing) {
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl p-8 text-center"><svg class="w-5 h-5 mx-auto spinner text-accent" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg></div>';
+      return;
+    }
+
+    const allRecords = cardStatsCache || [];
+    if (allRecords.length === 0) {
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl py-10 text-center text-[#6e7f7b] text-sm">통계 데이터가 없어.</div>';
+      return;
+    }
+
+    // 월 필터 적용
+    const records = cardStatsSelectedMonth ? filterStatsByMonth(allRecords, cardStatsSelectedMonth) : allRecords;
+
+    // 교통비 제외, 사용처별 집계
+    const merchantMap = {};
+    records.forEach(r => {
+      const merchant = (r.merchant || '').trim();
+      if (!merchant) return;
+      if (isTransportRecord(r)) return;
+      if (!merchantMap[merchant]) merchantMap[merchant] = { amount: 0, count: 0, address: '' };
+      merchantMap[merchant].amount += Number(r.cost) || 0;
+      merchantMap[merchant].count++;
+      if (!merchantMap[merchant].address && (r.address || '').trim()) {
+        merchantMap[merchant].address = r.address.trim();
+      }
+    });
+
+    const sorted = Object.entries(merchantMap)
+      .map(([name, d]) => ({ name, ...d }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    const headerLabel = cardStatsSelectedMonth
+      ? cardStatsSelectedMonth.substring(2, 4) + '년 ' + cardStatsSelectedMonth.substring(4, 6) + '월 기록'
+      : '최근 6개월간 기록';
+
+    let html = '<div class="bg-surface border border-border rounded-2xl p-5">';
+    html += '<div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px] mb-4">' + headerLabel + '</div>';
+
+    if (sorted.length === 0) {
+      html += '<div class="py-8 text-center text-[#6e7f7b] text-sm">해당 기간 데이터가 없어.</div>';
+      html += '</div>';
+      wrap.innerHTML = html;
+      return;
+    }
+
+    const maxAmt = sorted[0].amount;
+    const barColors = ['#2d8a7e', '#47a89a', '#6ec4b8', '#96d9d0', '#b8ece6'];
+
+    html += '<div class="space-y-4">';
+
+    const ratings = cardRatingsCache || {};
+    sorted.forEach((item, i) => {
+      const pct = maxAmt > 0 ? Math.max((item.amount / maxAmt) * 100, 4) : 0;
+      const mapQuery = encodeURIComponent(item.address || item.name);
+      const mapUrl = 'https://map.naver.com/v5/search/' + mapQuery;
+      const rInfo = ratings[item.name] || { likes: 0, dislikes: 0 };
+      html += `
+        <div>
+          <div class="flex items-center gap-2.5 mb-1.5">
+            <span class="text-xs font-bold w-5 shrink-0 text-center" style="color:${barColors[i]}">${['🥇','🥈','🥉','4','5'][i]}</span>
+            <span class="text-sm font-medium truncate flex-1">${escapeHtml(item.name)}</span>
+            <span class="text-[10px] shrink-0">⭐${rInfo.likes || 0} 💩${rInfo.dislikes || 0}</span>
+            <span class="text-[11px] font-mono text-[#6e7f7b] shrink-0">${formatMoney(item.amount)}원 · ${item.count}회</span>
+            <a href="${mapUrl}" target="_blank" rel="noopener" class="naver-map-link" title="네이버지도 검색"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>지도</a>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="w-5 shrink-0"></span>
+            <div class="flex-1 h-2.5 bg-surface-2 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-700" style="width:${pct}%;background:${barColors[i]}"></div>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    html += '</div></div>';
+    wrap.innerHTML = html;
+  }
+
+  /* ─── 맛집 평점 ─── */
+
+  /** 평점 데이터 로드 (records 로드 직후 자동 호출) */
+  // 구형(avg) → 신형(likes/dislikes) 변환
+  function normalizeRatings(raw) {
+    const result = {};
+    for (const m in raw) {
+      const r = raw[m];
+      if (r.likes !== undefined) {
+        result[m] = r;
+      } else {
+        result[m] = {
+          likes: r.myRating > 0 ? 1 : 0,
+          dislikes: r.myRating > 0 ? Math.max(0, (r.count || 0) - 1) : (r.count || 0),
+          count: r.count || 0,
+          myRating: r.myRating > 0 ? 1 : -1
+        };
+      }
+    }
+    return result;
+  }
+
+  async function fetchRatings() {
+    if (cardRatingsCache) return;
+
+    const token = localStorage.getItem('token');
+    try {
+      const url = window.API_URL + '?action=cardRatings&token=' + encodeURIComponent(token);
+      const data = await window.gasFetch(url);
+      if (data.status === 'success') {
+        cardRatingsCache = normalizeRatings(data.ratings || {});
+        renderCardDashboard();
+      }
+    } catch (e) {
+    }
+  }
+
+  /** 맛집 평가 탭 렌더링 (전체 사용자 합산 금액·횟수 + 평점) */
+  function renderRatingView() {
+    const wrap = $('cardRatingWrap');
+    if (!wrap) return;
+
+    if (!cardRatingsCache) {
+      wrap.innerHTML = `<div class="bg-surface border border-border rounded-2xl p-5">
+        <div class="skeleton w-20 h-2.5 mb-4 rounded"></div>
+        <div class="space-y-4">
+          <div><div class="flex items-center gap-2.5 mb-1.5"><div class="skeleton w-5 h-4 rounded"></div><div class="skeleton flex-1 h-4 rounded"></div><div class="skeleton w-24 h-3 rounded"></div></div><div class="flex items-center gap-2.5"><div class="w-5"></div><div class="skeleton flex-1 h-2.5 rounded-full"></div></div></div>
+          <div><div class="flex items-center gap-2.5 mb-1.5"><div class="skeleton w-5 h-4 rounded"></div><div class="skeleton flex-1 h-4 rounded"></div><div class="skeleton w-20 h-3 rounded"></div></div><div class="flex items-center gap-2.5"><div class="w-5"></div><div class="skeleton flex-1 h-2.5 rounded-full"></div></div></div>
+          <div><div class="flex items-center gap-2.5 mb-1.5"><div class="skeleton w-5 h-4 rounded"></div><div class="skeleton flex-1 h-4 rounded"></div><div class="skeleton w-16 h-3 rounded"></div></div><div class="flex items-center gap-2.5"><div class="w-5"></div><div class="skeleton flex-1 h-2.5 rounded-full"></div></div></div>
+        </div>
+      </div>`;
+      return;
+    }
+
+    const ratings = cardRatingsCache || {};
+
+    // 평가가 있는 식당
+    const rated = Object.keys(ratings).filter(m => ratings[m] && ratings[m].count > 0);
+
+    if (rated.length === 0) {
+      wrap.innerHTML = '<div class="bg-surface border border-border rounded-2xl py-10 text-center text-[#6e7f7b] text-sm">아직 맛집 평가가 없어.<br><span class="text-xs opacity-60 mt-1 inline-block">사용내역에서 추천/비추 평가를 남겨봐!</span></div>';
+      return;
+    }
+
+    // 정렬: best=추천율 내림차순, worst=비추율 내림차순
+    if (cardRatingSortMode === 'worst') {
+      rated.sort((a, b) => {
+        const dislA = ratings[a].count > 0 ? (ratings[a].dislikes || 0) / ratings[a].count : 0;
+        const dislB = ratings[b].count > 0 ? (ratings[b].dislikes || 0) / ratings[b].count : 0;
+        if (dislB !== dislA) return dislB - dislA;
+        return (ratings[b].dislikes || 0) - (ratings[a].dislikes || 0);
+      });
+    } else {
+      rated.sort((a, b) => {
+        const rateA = ratings[a].count > 0 ? ratings[a].likes / ratings[a].count : 0;
+        const rateB = ratings[b].count > 0 ? ratings[b].likes / ratings[b].count : 0;
+        if (rateB !== rateA) return rateB - rateA;
+        return (ratings[b].likes || 0) - (ratings[a].likes || 0);
+      });
+    }
+
+    const isBest = cardRatingSortMode === 'best';
+    let html = '<div class="bg-surface border border-border rounded-2xl p-5">';
+    html += '<div class="flex items-center justify-between mb-4">';
+    html += '<div class="text-[10px] font-bold text-[#6e7f7b] uppercase tracking-[1.5px]">맛집 평가 랭킹</div>';
+    html += '<div class="flex gap-1 bg-surface-2 rounded-full p-0.5">';
+    html += `<button onclick="window._setRatingSort('best')" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${isBest ? 'bg-[#059669] text-white shadow-sm' : 'text-[#6e7f7b] hover:text-[#059669]'}">⭐ 추천 TOP</button>`;
+    html += `<button onclick="window._setRatingSort('worst')" class="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${!isBest ? 'bg-[#dc2626] text-white shadow-sm' : 'text-[#6e7f7b] hover:text-[#dc2626]'}">💩 비추 TOP</button>`;
+    html += '</div></div>';
+    html += '<div class="space-y-4">';
+
+    // 최대 10개만 표시
+    const top = rated.slice(0, 10);
+    // 바 길이용: 목록 내 최대 좋아요/싫어요 수
+    const maxCount = Math.max(1, ...top.map(n => isBest ? (ratings[n].likes || 0) : (ratings[n].dislikes || 0)));
+
+    top.forEach((name, i) => {
+      const r = ratings[name];
+      const likes = r.likes || 0;
+      const dislikes = r.dislikes || 0;
+      const total = likes + dislikes;
+      const likePct = total > 0 ? Math.round((likes / total) * 100) : 0;
+      const dislikePct = total > 0 ? Math.round((dislikes / total) * 100) : 0;
+      const pct = isBest ? likePct : dislikePct;
+      // 바 길이: 절대 개수 기준 (최대값 대비)
+      const barPct = Math.max(4, Math.round(((isBest ? likes : dislikes) / maxCount) * 100));
+      // 순위별 그라데이션 (아래로 갈수록 연해짐)
+      const bestGrad = ['#059669','#1f9b78','#3aaf8a','#5cc0a0','#7dd1b5','#96d9c5','#a8e2d2','#b8ece6','#c8f0ec','#d8f5f2'];
+      const worstGrad = ['#dc2626','#e03c3c','#e55353','#e96a6a','#ed8181','#f09898','#f3aeae','#f4bfbf','#f7d0d0','#fae0e0'];
+      const gradColors = isBest ? bestGrad : worstGrad;
+      const barColor = gradColors[Math.min(i, gradColors.length - 1)];
+      const icon = i < 3 ? ['🥇','🥈','🥉'][i] : String(i + 1);
+      const mapQuery = encodeURIComponent(name);
+      const mapUrl = 'https://map.naver.com/v5/search/' + mapQuery;
+
+      html += `
+        <div>
+          <div class="flex items-center gap-2.5 mb-1.5">
+            <span class="text-[9px] font-bold w-5 shrink-0 text-center" style="color:${barColor}">${icon}</span>
+            <span class="text-sm font-medium truncate flex-1">${escapeHtml(name)}</span>
+            <span class="text-[10px] font-medium shrink-0" style="color:${barColor}">${pct}%</span>
+            <span class="text-[10px] shrink-0">⭐${likes} 💩${dislikes}</span>
+            <a href="${mapUrl}" target="_blank" rel="noopener" class="naver-map-link" title="네이버지도 검색"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>지도</a>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="w-5 shrink-0"></span>
+            <div class="flex-1 h-2.5 bg-surface-2 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-700" style="width:${barPct}%;background:${barColor}"></div>
+            </div>
+          </div>
+        </div>`;
+    });
+
+    html += '</div></div>';
+    wrap.innerHTML = html;
+  }
+
+  window._setRatingSort = function(mode) {
+    cardRatingSortMode = mode;
+    renderRatingView();
+  };
+
+  /** 좋아요/싫어요 버튼 렌더링 */
+  function renderLikeDislike(merchant, myRating, likes, dislikes) {
+    const esc = merchant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const likeActive = myRating === 1 ? ' rate-active-like' : '';
+    const dislikeActive = myRating === 0 ? ' rate-active-dislike' : '';
+    return `<button class="rate-like${likeActive}" onclick="window._rateRestaurant('${esc}',1)" title="추천">⭐ 추천 ${likes || 0}</button>` +
+           `<button class="rate-dislike${dislikeActive}" onclick="window._rateRestaurant('${esc}',0)" title="비추천">💩 비추 ${dislikes || 0}</button>`;
+  }
+
+  /** 좋아요/싫어요 등록 (팝 애니메이션 + 스피너) */
+  let _rateInProgress = false;
+  window._rateRestaurant = async function(merchant, rating) {
+    if (_rateInProgress) return;
+    _rateInProgress = true;
+    if (!cardRatingsCache) cardRatingsCache = {};
+
+    const SPINNER_SVG = '<svg class="spinner" style="width:14px;height:14px;vertical-align:middle" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg>';
+
+    // 1. 즉시 DOM 애니메이션 + 클릭된 버튼에 스피너
+    const targetBtns = [];
+    document.querySelectorAll('.rate-like, .rate-dislike').forEach(btn => {
+      const onclick = btn.getAttribute('onclick') || '';
+      if (!onclick.includes(merchant.replace(/'/g, "\\'"))) return;
+      targetBtns.push(btn);
+      btn.disabled = true;
+      btn.style.pointerEvents = 'none';
+      btn.classList.remove('rate-active-like', 'rate-active-dislike');
+      if (rating === 1 && btn.title === '추천') {
+        btn.classList.add('rate-active-like');
+        btn.style.animation = 'like-pop .3s ease-out';
+        btn.dataset.origHtml = btn.innerHTML;
+        btn.innerHTML = SPINNER_SVG + ' 추천';
+      } else if (rating === 0 && btn.title === '비추천') {
+        btn.classList.add('rate-active-dislike');
+        btn.style.animation = 'like-pop .3s ease-out';
+        btn.dataset.origHtml = btn.innerHTML;
+        btn.innerHTML = SPINNER_SVG + ' 비추';
+      }
+    });
+
+    // 2. 캐시 업데이트
+    const prev = cardRatingsCache[merchant] ? { ...cardRatingsCache[merchant] } : null;
+    if (!cardRatingsCache[merchant]) {
+      cardRatingsCache[merchant] = { likes: rating === 1 ? 1 : 0, dislikes: rating === 0 ? 1 : 0, count: 1, myRating: rating };
+    } else {
+      cardRatingsCache[merchant].myRating = rating;
+    }
+
+    // 3. GAS 호출
+    const token = localStorage.getItem('token');
+    try {
+      const url = window.API_URL + '?action=cardRate&token=' + encodeURIComponent(token)
+        + '&merchant=' + encodeURIComponent(merchant)
+        + '&rating=' + rating;
+      const data = await window.gasFetch(url);
+      if (data.status === 'success') {
+        const norm = normalizeRatings({ [merchant]: data });
+        cardRatingsCache[merchant] = norm[merchant];
+        window.showToast(merchant + ' ' + (rating === 1 ? '추천!' : '비추천'), 'smail');
+      } else {
+        if (prev) cardRatingsCache[merchant] = prev;
+        else delete cardRatingsCache[merchant];
+        window.showToast('평가 저장에 실패했어.', 'sad');
+      }
+    } catch (e) {
+      if (prev) cardRatingsCache[merchant] = prev;
+      else delete cardRatingsCache[merchant];
+      window.showToast('서버 연결에 실패했어.', 'sad');
+    }
+
+    // 4. 스피너 해제 + 최종 렌더
+    _rateInProgress = false;
+    renderCardDashboard();
+  };
+
+  /* ─── 스켈레톤 토글 ─── */
+  function updateCardVisibility() {
+    const skeleton = $('cardSkeleton');
+    const content = $('cardContent');
+    if (!skeleton || !content) return;
+    // 월 변경 재조회 시에는 전체 스켈레톤 대신 컨텐츠 유지
+    const isInitialLoading = (cardFetchState === 'idle' || cardFetchState === 'loading') && !cardIsRefreshing;
+    skeleton.classList.toggle('hidden', !isInitialLoading);
+    content.classList.toggle('hidden', isInitialLoading);
+  }
+
+  /* ─── 카드 선택기 렌더링 ─── */
+  let _cardListOpen = false;
+
+  function renderCardSelector() {
+    const el = $('cardSelector');
+    if (!el) return;
+    if (userCards.length < 2) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    // 라벨 업데이트
+    const cur = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const label = $('cardDropdownLabel');
+    if (label && cur) {
+      const badge = cur.isLunchCard
+        ? '<span class="text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded-full shrink-0">밥카</span>'
+        : (cur.alias ? '<span class="text-[10px] font-semibold text-[#6e7f7b] bg-[#6e7f7b]/10 px-1.5 py-0.5 rounded-full shrink-0">' + escapeHtml(cur.alias) + '</span>' : '');
+      label.innerHTML = '<span class="truncate">' + escapeHtml(cardDisplayName(cur)) + '</span>' + (badge ? ' ' + badge : '');
+    }
+    // 목록 렌더
+    _renderCardList();
+  }
+
+  function _renderCardList() {
+    const list = $('cardDropdownList');
+    if (!list) return;
+    list.innerHTML = userCards.map(c => {
+      const active = c.cardNo === selectedCardNo;
+      const tag = c.isLunchCard
+        ? '<span class="text-[10px] font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded-full ml-auto shrink-0">밥카</span>'
+        : (c.alias ? '<span class="text-[10px] font-semibold text-[#6e7f7b] bg-[#6e7f7b]/10 px-1.5 py-0.5 rounded-full ml-auto shrink-0">' + escapeHtml(c.alias) + '</span>' : '');
+      return '<div data-card="' + c.cardNo + '" onclick="window._pickCard(\'' + c.cardNo + '\')"'
+        + ' class="flex items-center gap-2.5 px-3.5 py-3 cursor-pointer transition-colors'
+        + (active ? ' bg-accent/8 text-accent font-semibold' : ' text-[#47635f] hover:bg-surface-2') + '">'
+        + '<svg class="w-3.5 h-3.5 shrink-0' + (active ? ' text-accent' : ' text-transparent') + '" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+        + '<div class="flex-1 min-w-0">'
+        + '<div class="text-sm truncate">' + escapeHtml(cardDisplayName(c)) + '</div>'
+        + ''
+        + '</div>' + tag + '</div>';
+    }).join('<div class="border-t border-border/50"></div>');
+  }
+
+  window._toggleCardList = function() {
+    const list = $('cardDropdownList');
+    const chevron = $('cardChevron');
+    _cardListOpen = !_cardListOpen;
+    list.classList.toggle('hidden', !_cardListOpen);
+    if (chevron) chevron.style.transform = _cardListOpen ? 'rotate(180deg)' : '';
+    if (_cardListOpen) {
+      // 외부 클릭으로 닫기
+      setTimeout(() => document.addEventListener('click', _closeCardList, { once: true }), 0);
+    }
+  };
+
+  function _closeCardList(e) {
+    const wrap = $('cardSelector');
+    if (wrap && wrap.contains(e?.target)) {
+      // 내부 클릭이면 다시 리스너 등록
+      setTimeout(() => document.addEventListener('click', _closeCardList, { once: true }), 0);
+      return;
+    }
+    _cardListOpen = false;
+    const list = $('cardDropdownList');
+    const chevron = $('cardChevron');
+    if (list) list.classList.add('hidden');
+    if (chevron) chevron.style.transform = '';
+  }
+
+  window._pickCard = function(cardNo) {
+    _cardListOpen = false;
+    $('cardDropdownList').classList.add('hidden');
+    $('cardChevron').style.transform = '';
+    window._switchCard(cardNo);
+  };
+
+  /* ─── 렌더링 ─── */
+  function formatMoney(n) { return Number(n).toLocaleString('ko-KR'); }
+  function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  async function renderCardDashboard() {
+    updateCardVisibility();
+    renderCardSelector();
+    renderViewTabs();
+
+    // ── 현재 선택된 카드 정보 ──
+    const currentCard = userCards.find(c => c.cardNo === selectedCardNo) || {};
+    const isLunchCard = currentCard.isLunchCard !== false; // 기본=true (카드정보 없으면 밥카)
+
+    // ── 상단 요약: 항상 현재 기간 기준 ──
+    const currentPeriod = getCardPeriod();
+    const { bizDays, budget: lunchBudget } = await getCardBudget(currentPeriod);
+
+    // 카드 종류별 예산 결정
+    let budget;
+    if (isLunchCard) {
+      budget = lunchBudget; // 영업일 × 10,000원
+    } else {
+      budget = Number(currentCard.limit) || 0; // 비밥카: 사용자 지정 한도
+    }
+
+    const fmtFull = d => d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+    $('cardPeriodLabel').textContent = fmtFull(currentPeriod.start) + ' ~ ' + fmtFull(currentPeriod.end);
+    $('cardBizDaysLabel').textContent = isLunchCard ? '(출근일 ' + bizDays + '일)' : (budget > 0 ? '(한도 ' + formatMoney(budget) + '원)' : '');
+
+    const now = new Date();
+    let nextReset;
+    if (now.getDate() >= 15) {
+      nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 15);
+    } else {
+      nextReset = new Date(now.getFullYear(), now.getMonth(), 15);
+    }
+    $('cardResetDays').textContent = Math.ceil((nextReset - now) / (1000 * 60 * 60 * 24));
+
+    const currentValid = cardCurrentRecords.filter(r => !isTransportRecord(r));
+    let usedSum = 0;
+    currentValid.forEach(r => { usedSum += Number(r.cost) || 0; });
+
+    // 비밥카 + 한도 없음: 잔액 대신 누적사용금액만 표시
+    const hasLimit = isLunchCard || budget > 0;
+    const remain = hasLimit ? budget - usedSum : 0;
+    const usedPct = budget > 0 ? Math.min((usedSum / budget) * 100, 100) : 0;
+
+    // 교통비 별도 집계
+    const transportRecords = cardCurrentRecords.filter(r => isTransportRecord(r));
+    let transportSum = 0;
+    transportRecords.forEach(r => { transportSum += Number(r.cost) || 0; });
+    const transportEl = $('cardTransportSummary');
+    if (transportRecords.length > 0) {
+      transportEl.classList.remove('hidden');
+      $('cardTransportAmt').textContent = formatMoney(transportSum) + '원';
+      $('cardTransportCnt').textContent = '(' + transportRecords.length + '건)';
+    } else {
+      transportEl.classList.add('hidden');
+    }
+
+    $('cardUsedAmount').textContent = formatMoney(usedSum) + '원';
+    $('cardUsedSub').textContent = '';
+    if (hasLimit) {
+      $('cardRemainAmount').textContent = formatMoney(remain) + '원';
+      $('cardRemainAmount').style.color = remain < 0 ? '#dc2626' : '';
+    } else {
+      // 한도 없는 비밥카: "남은 잔액" 라벨 대신 누적사용금액
+      $('cardRemainAmount').textContent = formatMoney(usedSum) + '원';
+      $('cardRemainAmount').style.color = '';
+    }
+    // 프로그레스 바 (hidden→visible 전환 후 확실히 애니메이션)
+    $('cardBarUsed').style.width = '0%';
+    if (hasLimit) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          $('cardBarUsed').style.width = usedPct + '%';
+        });
+      });
+    }
+
+    // ── 밥카 전용 섹션 전체 표시/숨김 (알람 토글 + 자동결재 + 결재) ──
+    const autoModeSection = $('cardAutoModeSection');
+    if (autoModeSection) autoModeSection.classList.toggle('hidden', !isLunchCard);
+
+    if (isLunchCard) {
+      setCardAlarmBtnState(cardAlarmOn);
+      renderAutoModeOptions();
+      // PW 미저장 시 토글 비활성화 + 안내 표시
+      const toggle = $('cardAlarmToggle');
+      const items = $('cardAlarmItems');
+      const guide = $('cardNoPwGuide');
+      if (!hasBizplayPw) {
+        if (toggle) { toggle.disabled = true; toggle.style.opacity = '0.35'; toggle.style.cursor = 'not-allowed'; }
+        if (items) items.style.opacity = '0.4';
+        if (guide) guide.classList.remove('hidden');
+      } else {
+        if (toggle) { toggle.disabled = false; toggle.style.opacity = '1'; toggle.style.cursor = 'pointer'; }
+        if (items) items.style.opacity = '1';
+        if (guide) guide.classList.add('hidden');
+      }
+    }
+
+    // ── "남은 잔액" 라벨 변경 (비밥카 + 한도없음) ──
+    const remainLabel = $('cardRemainLabel');
+    if (remainLabel) {
+      remainLabel.textContent = (!isLunchCard && !hasLimit) ? '누적 사용금액' : '남은 잔액';
+    }
+
+    // ── 하단: 뷰 모드별 분기 ──
+    const recordsWrap = $('cardRecordsWrap');
+    const statsWrap = $('cardStatsWrap');
+    const ratingWrap = $('cardRatingWrap');
+
+    if (cardViewMode === 'stats') {
+      recordsWrap.classList.add('hidden');
+      statsWrap.classList.remove('hidden');
+      if (ratingWrap) ratingWrap.classList.add('hidden');
+      renderStatsView();
+    } else if (cardViewMode === 'rating') {
+      recordsWrap.classList.add('hidden');
+      statsWrap.classList.add('hidden');
+      if (ratingWrap) {
+        ratingWrap.classList.remove('hidden');
+        renderRatingView();
+      }
+    } else {
+      statsWrap.classList.add('hidden');
+      recordsWrap.classList.remove('hidden');
+      if (ratingWrap) ratingWrap.classList.add('hidden');
+      const displayRecords = cardRecords.filter(r => !isTransportRecord(r));
+      renderCardRecords(displayRecords);
+    }
+  }
+
+  function renderCardRecords(filteredRecords) {
+    cardFilteredRecords = filteredRecords || [];
+    const body = $('cardRecordsBody');
+    const cards = $('cardRecordsCards');
+    body.innerHTML = '';
+    cards.innerHTML = '';
+
+    if (!filteredRecords || filteredRecords.length === 0) {
+      $('cardRecordsTable').parentElement.style.display = 'none';
+      cards.style.display = 'none';
+      $('cardNoRecords').classList.remove('hidden');
+      const noRec = $('cardNoRecords');
+      if (cardFetchState === 'no-session' || cardFetchState === 'sso-fail') {
+        noRec.innerHTML = '<div class="mb-2">' +
+          (cardFetchState === 'sso-fail' ? 'Bizplay 세션이 만료됐어.' : 'Bizplay 로그인 후 사용내역을 조회할 수 있어.') +
+          '</div><button onclick="window._cardBizLogin()" class="px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:brightness-110 transition">' +
+          'Bizplay 로그인</button>';
+      } else if (cardFetchState === 'error') {
+        noRec.textContent = '사용내역 조회에 실패했어. 다시 시도해줘.';
+      } else {
+        noRec.innerHTML = '<img src="../img/dance2.gif" alt="empty" class="w-16 h-16 mx-auto mb-3">아직 사용 내역이 없어.';
+      }
+      return;
+    }
+
+    $('cardRecordsTable').parentElement.style.display = '';
+    cards.style.display = '';
+    $('cardNoRecords').classList.add('hidden');
+
+    const ratings = cardRatingsCache || {};
+    filteredRecords.forEach((r, i) => {
+      const amt = Number(r.cost) || 0;
+      const merchant = r.merchant || '-';
+      const date = r.date || '';
+      const rInfo = ratings[merchant] || { likes: 0, dislikes: 0, count: 0, myRating: -1 };
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-border/80';
+      tr.innerHTML = `
+        <td class="px-2 py-3 text-sm text-[#6e7f7b] font-mono">${i + 1}</td>
+        <td class="px-4 py-3 text-sm text-[#6e7f7b] whitespace-nowrap">${escapeHtml(date)}</td>
+        <td class="px-4 py-3 text-sm">
+          <div>${escapeHtml(merchant)}</div>
+          <div class="flex items-center gap-0.5 mt-1">${renderLikeDislike(merchant, rInfo.myRating, rInfo.likes, rInfo.dislikes)}</div>
+        </td>
+        <td class="px-4 py-3 text-sm text-right font-mono font-medium">${formatMoney(amt)}원</td>
+      `;
+      body.appendChild(tr);
+
+      const addr = r.address || '';
+      const mapQuery = encodeURIComponent(addr || merchant);
+      const mapUrl = 'https://map.naver.com/v5/search/' + mapQuery;
+
+      const card = document.createElement('div');
+      card.className = 'bg-surface-2 border border-border/60 rounded-xl p-4';
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-semibold truncate flex-1 mr-2">${escapeHtml(merchant)}</span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${rInfo.myRating === 1 ? '<span class="text-[9px] font-semibold text-[#059669]">⭐ 추천</span>' : rInfo.myRating === 0 ? '<span class="text-[9px] font-semibold text-[#dc2626]">💩 비추</span>' : ''}
+            <a href="${mapUrl}" target="_blank" rel="noopener" class="naver-map-link" title="네이버지도 검색"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>지도</a>
+          </div>
+        </div>
+        <div class="flex items-center gap-0.5 mb-2">${renderLikeDislike(merchant, rInfo.myRating, rInfo.likes, rInfo.dislikes)}</div>
+        <div class="flex items-center justify-between text-xs text-[#6e7f7b]">
+          <span>${escapeHtml(date)}</span>
+          <span class="font-mono font-medium text-[#47635f]">${formatMoney(amt)}원</span>
+        </div>
+      `;
+      cards.appendChild(card);
+    });
+  }
+
+  /* ─── 슬라이딩 인디케이터 유틸 ─── */
+  function _moveSlider(container, sliderId, activeBtn) {
+    if (!container || !activeBtn) return;
+    // hidden→visible 직후 레이아웃 미완성 시 다음 프레임 재시도
+    if (activeBtn.offsetWidth === 0) {
+      requestAnimationFrame(function() { _moveSlider(container, sliderId, activeBtn); });
+      return;
+    }
+    var slider = document.getElementById(sliderId);
+    if (!slider) {
+      slider = document.createElement('div');
+      slider.id = sliderId;
+      slider.className = 'absolute rounded-lg bg-accent shadow-sm';
+      slider.style.cssText = 'top:4px;bottom:4px;pointer-events:none;z-index:0';
+      container.insertBefore(slider, container.firstChild);
+      slider.style.left = activeBtn.offsetLeft + 'px';
+      slider.style.width = activeBtn.offsetWidth + 'px';
+      requestAnimationFrame(function() {
+        slider.style.transition = 'left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1)';
+      });
+    } else {
+      if (!slider.style.transition) {
+        slider.style.transition = 'left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1)';
+      }
+      slider.style.left = activeBtn.offsetLeft + 'px';
+      slider.style.width = activeBtn.offsetWidth + 'px';
+    }
+  }
+
+  /* ─── 알람 토글 ─── */
+  var _cardAlarmLoading = false;
+  var _cardAlarmBtnOnIcon = '';
+  var _cardAlarmBtnOffIcon = '';
+
+  function setCardAlarmBtnState(on) {
+    const btnOn = $('cardAlarmBtnOn');
+    const btnOff = $('cardAlarmBtnOff');
+    if (!btnOn || !btnOff) return;
+    const el = $('cardAlarmToggle');
+    el.dataset.on = on ? '1' : '0';
+
+    if (!_cardAlarmBtnOnIcon) _cardAlarmBtnOnIcon = btnOn.querySelector('svg')?.outerHTML || '';
+    if (!_cardAlarmBtnOffIcon) _cardAlarmBtnOffIcon = btnOff.querySelector('svg')?.outerHTML || '';
+
+    const activeClass = 'text-white';
+    const inactiveClass = 'text-[#6e7f7b]';
+    const disabledClass = ' opacity-35 cursor-not-allowed';
+    const spinnerSvg = '<svg class="animate-spin h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
+
+    const base = 'flex-1 relative z-10 rounded-lg px-3 py-2 transition-colors duration-200 flex items-center justify-center gap-1.5 text-[12px] font-semibold ';
+    btnOn.className = base + (on ? activeClass : inactiveClass) + (_cardAlarmLoading ? disabledClass : '');
+    btnOff.className = base + (!on ? activeClass : inactiveClass) + (_cardAlarmLoading ? disabledClass : '');
+
+    const onIconEl = btnOn.querySelector('svg');
+    const offIconEl = btnOff.querySelector('svg');
+    if (_cardAlarmLoading) {
+      if (on && onIconEl) onIconEl.outerHTML = spinnerSvg;
+      if (!on && offIconEl) offIconEl.outerHTML = spinnerSvg;
+      btnOn.disabled = true;
+      btnOff.disabled = true;
+    } else {
+      if (onIconEl) onIconEl.outerHTML = _cardAlarmBtnOnIcon;
+      if (offIconEl) offIconEl.outerHTML = _cardAlarmBtnOffIcon;
+      btnOn.disabled = false;
+      btnOff.disabled = false;
+    }
+
+    // 슬라이딩 인디케이터
+    requestAnimationFrame(function() {
+      _moveSlider(el, 'cardAlarmSlider', on ? btnOn : btnOff);
+    });
+  }
+
+  window.setCardAlarmValue = async function(newVal) {
+    const el = $('cardAlarmToggle');
+    const isOn = el.dataset.on === '1';
+    if (_cardAlarmLoading || newVal === isOn) return;
+    // 비밥카에서는 변경 불가
+    const cur = userCards.find(c => c.cardNo === selectedCardNo);
+    if (cur && cur.isLunchCard === false) return;
+
+    _cardAlarmLoading = true;
+    setCardAlarmBtnState(newVal);
+    const token = localStorage.getItem('token');
+
+    try {
+      const data = await window.gasFetch(window.API_URL + '?action=updateCardAlarm&token=' + encodeURIComponent(token) + '&isAgreed=' + newVal);
+      if (data.status === 'success') {
+        cardAlarmOn = newVal;
+        const cur = userCards.find(c => c.cardNo === selectedCardNo);
+        const cardLabel = cur && cur.alias ? cur.alias : '밥카';
+        window.showToast(newVal ? cardLabel + ' Flow 알람 보내줄게!' : cardLabel + ' Flow 알람 안 보낼게.', 'smail');
+      } else {
+        setCardAlarmBtnState(isOn);
+        window.showToast('알람 설정 변경에 실패했어.', 'sad');
+      }
+    } catch (e) {
+      setCardAlarmBtnState(isOn);
+      window.showToast('서버 연결에 실패했어.', 'sad');
+    } finally {
+      _cardAlarmLoading = false;
+      setCardAlarmBtnState(el.dataset.on === '1');
+    }
+  };
+
+  // 하위호환
+  window.toggleCardAlarm = function() {
+    const el = $('cardAlarmToggle');
+    const isOn = el && el.dataset.on === '1';
+    window.setCardAlarmValue(!isOn);
+  };
+
+  /* ─── 자동결재 모드 ─── */
+  const AUTO_MODE_OPTIONS = [
+    { value: 'off',    label: '끔',          desc: '아무것도 안 할게',               icon: '<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/></svg>', needPw: false },
+    { value: 'alarm',  label: '알람', desc: '결재 안내 메시지만 보낼게',     icon: '<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>', needPw: false },
+    { value: 'draft',  label: '임시저장',    desc: '자동으로 Bizplay에 임시저장 후 메세지 보내줄게', icon: '<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>', needPw: true },
+    { value: 'submit', label: '결재요청',    desc: '자동으로 결재요청 후 메세지 보내줄게',      icon: '<svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>', needPw: true }
+  ];
+
+  var _autoModeLoading = false;
+
+  function renderAutoModeOptions() {
+    const container = $('cardAutoModeOptions');
+    if (!container) return;
+
+    // 기존 슬라이더 위치 저장 (innerHTML 재구성 시 애니메이션용)
+    var prevSlider = document.getElementById('cardAutoSlider');
+    var prevPos = prevSlider ? { left: prevSlider.style.left, width: prevSlider.style.width } : null;
+
+    container.innerHTML = AUTO_MODE_OPTIONS.map(function(opt) {
+      const selected = cardAutoMode === opt.value;
+      const disabled = opt.needPw && !hasBizplayPw;
+      const loading = _autoModeLoading && selected;
+      const iconHtml = loading
+        ? '<svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>'
+        : opt.icon;
+      return '<button type="button" onclick="setCardAutoMode(\'' + opt.value + '\')"'
+        + ' class="flex-1 relative z-10 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors duration-200 whitespace-nowrap'
+        + (selected ? ' text-white' : ' text-[#6e7f7b] hover:text-accent')
+        + (disabled || _autoModeLoading ? ' opacity-35 cursor-not-allowed' : ' cursor-pointer')
+        + '"' + (disabled || _autoModeLoading ? ' disabled' : '')
+        + '>' + iconHtml + '<span>' + opt.label + '</span></button>';
+    }).join('');
+
+    // 슬라이딩 인디케이터
+    requestAnimationFrame(function() {
+      var activeIdx = -1;
+      AUTO_MODE_OPTIONS.forEach(function(o, i) { if (o.value === cardAutoMode) activeIdx = i; });
+      var btns = container.querySelectorAll('button');
+      var activeBtn = btns[activeIdx];
+      if (!activeBtn) return;
+
+      var slider = document.createElement('div');
+      slider.id = 'cardAutoSlider';
+      slider.className = 'absolute rounded-lg bg-accent shadow-sm';
+      slider.style.cssText = 'top:4px;bottom:4px;pointer-events:none;z-index:0';
+
+      if (prevPos) {
+        slider.style.left = prevPos.left;
+        slider.style.width = prevPos.width;
+        container.insertBefore(slider, container.firstChild);
+        requestAnimationFrame(function() {
+          slider.style.transition = 'left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1)';
+          slider.style.left = activeBtn.offsetLeft + 'px';
+          slider.style.width = activeBtn.offsetWidth + 'px';
+        });
+      } else {
+        slider.style.left = activeBtn.offsetLeft + 'px';
+        slider.style.width = activeBtn.offsetWidth + 'px';
+        container.insertBefore(slider, container.firstChild);
+        requestAnimationFrame(function() {
+          slider.style.transition = 'left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1)';
+        });
+      }
+    });
+
+    const guide = $('cardAutoNoPwGuide');
+    if (guide) guide.classList.toggle('hidden', hasBizplayPw);
+  }
+
+  window.setCardAutoMode = async function(mode) {
+    if (_autoModeLoading) return;
+    if ((mode === 'draft' || mode === 'submit') && !hasBizplayPw) {
+      window.showToast('비밀번호 저장이 필요해.', 'sad');
+      renderAutoModeOptions();
+      return;
+    }
+
+    const prev = cardAutoMode;
+    cardAutoMode = mode;
+    _autoModeLoading = true;
+    renderAutoModeOptions();
+
+    try {
+      const token = localStorage.getItem('token');
+      const data = await window.gasFetch(
+        window.API_URL + '?action=updateCardAutoMode&token=' + encodeURIComponent(token) + '&mode=' + mode
+      );
+      if (data.status === 'success') {
+        const cur = AUTO_MODE_OPTIONS.find(function(o) { return o.value === mode; });
+        window.showToast(cur ? cur.desc : '변경됐어!', 'smail');
+      } else {
+        cardAutoMode = prev;
+        window.showToast(data.message || '설정 변경에 실패했어.', 'sad');
+      }
+    } catch (e) {
+      cardAutoMode = prev;
+      window.showToast('서버 연결에 실패했어.', 'sad');
+    }
+    _autoModeLoading = false;
+    renderAutoModeOptions();
+  };
+
+  /* ─── 결재 올리기 ─── */
+  let cardApprovalLoading = false;
+  window.openCardApproval = async function(mode) {
+    mode = mode || 'temp';
+    const isTemp = (mode === 'temp');
+
+    // 1. Bizplay 세션 확인
+    const session = localStorage.getItem('bizplay_session');
+    if (!session) {
+      window.showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad');
+      return;
+    }
+
+    // 2. 해당 월 전체 레코드 수집
+    const btnId = isTemp ? 'cardBtnTemp' : 'cardBtnApprove';
+    const anchorBtn = $(btnId);
+
+    // 임시저장은 현재 기간 내역 필요, 결재요청은 백엔드에서 직전 기간 조회
+    if (isTemp) {
+      if (cardFilteredRecords.length === 0) {
+        window.showToast('결재할 내역이 없어.', 'sad', anchorBtn);
+        return;
+      }
+      const ok = await window.showConfirm(cardFilteredRecords.length + '건을 임시저장할까?', anchorBtn);
+      if (!ok) return;
+    }
+
+    const selectedRecords = cardFilteredRecords.map(r => ({
+      cardNo: r.cardNo, txSeq: r.txSeq, seq: r.seq, apvNo: r.apvNo
+    }));
+
+    // 4. 로딩 상태
+    if (cardApprovalLoading) return;
+    cardApprovalLoading = true;
+    const btn = $(btnId);
+    const btnOrigHtml = btn ? btn.innerHTML : '';
+    const setLoading = (label) => {
+      if (!btn) return;
+      btn.innerHTML = '<svg class="w-5 h-5 mx-auto mb-1.5 spinner" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="32" stroke-dashoffset="12"/></svg><div class="text-sm font-semibold">' + label + '</div>';
+      btn.disabled = true;
+    };
+    const resetBtn = () => {
+      if (!btn) return;
+      btn.innerHTML = btnOrigHtml;
+      btn.disabled = false;
+    };
+
+    try {
+      const token = localStorage.getItem('token');
+      const selParam = '&selectedRecords=' + encodeURIComponent(JSON.stringify(selectedRecords));
+
+      // === 결재요청: 중복 체크 → 결재라인 팝업 → 전체 플로우 실행 ===
+      if (!isTemp) {
+        // 중복 결재 사전 체크
+        setLoading('확인 중...');
+        try {
+          const checkUrl = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token) + '&mode=check';
+          const checkData = await window.gasFetch(checkUrl);
+          window._lastCheckDebug = checkData;
+          if (checkData.error === 'ALREADY_SUBMITTED') {
+            window.showToast(checkData.message || '이번 달은 이미 결재요청했어.', 'sad', anchorBtn);
+            return;
+          }
+        } catch (ignore) {}
+        resetBtn();
+
+        // 밥카 결재라인 고정: 결재=재무그룹, 참조=관리그룹
+        const fixedApprLine = [
+          { APPR_ORD: '1', APPRLINE_KIND: '2', APPR_USER_GB: '1', APPR_USER_NM: '', DEPT_NM: '재무그룹', DEPT_CD: '19' },
+          { APPR_ORD: '0', APPRLINE_KIND: '4', APPR_USER_GB: '1', APPR_USER_NM: '', APPR_DEPT_CD: '157', APPR_DEPT_NM: '관리그룹' }
+        ];
+
+        // 결재라인 팝업 표시 (직전 기간 안내 포함)
+        const prev = getPrevCardPeriod();
+        const fmtPeriod = (d) => (d.getMonth()+1) + '/' + d.getDate();
+        const periodLabel = '결재 대상: ' + fmtPeriod(prev.start) + ' ~ ' + fmtPeriod(prev.end);
+        const apprResult = await window.showApprLinePopup(fixedApprLine, { subtitle: periodLabel });
+        if (!apprResult) return;
+
+        // 확인 후 전체 플로우 실행 (webank 세션 유지를 위해 한번에)
+        setLoading('결재 제출 중...');
+        const modifiedParam = '&modifiedApprLine=' + encodeURIComponent(JSON.stringify(apprResult));
+        const urlApprove = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
+          + '&mode=approve' + selParam + modifiedParam;
+        const data = await window.gasFetch(urlApprove);
+
+        if (data.status === 'success') {
+          window.showToast(selectedRecords.length + '건 결재요청 완료!', 'smail', anchorBtn);
+          const goCheck = await window.showConfirm('결재요청했어! 확인해볼까?');
+          if (goCheck && window.switchTab) window.switchTab('draft');
+        } else if (data.error === 'SESSION_EXPIRED' || data.error === 'NO_SESSION') {
+          window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
+        } else {
+          window.showToast(data.message || '결재요청에 실패했어.', 'sad', anchorBtn);
+        }
+        return;
+      }
+
+      // === 임시저장: 기존 플로우 ===
+      setLoading('임시저장 중...');
+      const url = window.API_URL + '?action=cardApproval&token=' + encodeURIComponent(token)
+        + '&mode=temp' + selParam;
+      const data = await window.gasFetch(url);
+
+      if (data.status === 'success') {
+        window.showToast(selectedRecords.length + '건 임시저장 완료!', 'smail', anchorBtn);
+      } else if (data.error === 'SESSION_EXPIRED' || data.error === 'NO_SESSION') {
+        window.showToast('세션이 만료됐어. Bizplay 재로그인 해줘.', 'sad', anchorBtn);
+      } else {
+        window.showToast(data.message || '임시저장에 실패했어.', 'sad', anchorBtn);
+      }
+    } catch (e) {
+      window.showToast('서버 연결에 실패했어.', 'sad', anchorBtn);
+    } finally {
+      cardApprovalLoading = false;
+      resetBtn();
+    }
+  };
+
+  /* ─── 카드 사용내역 API 조회 (현재 기간) ─── */
+  async function fetchCardRecords(force) {
+    if (!force && (cardFetchState === 'loaded' || cardFetchState === 'loading')) return;
+
+    const token = localStorage.getItem('token');
+    const session = localStorage.getItem('bizplay_session');
+    if (!token || !session) {
+      cardFetchState = 'no-session';
+      renderCardDashboard();
+      return;
+    }
+
+    // 최초 카드 등록 체크
+    if (userCards.length === 0 && cardSetupState !== 'loading') {
+      await _checkAndRegisterCards();
+    }
+
+    cardFetchState = 'loading';
+    renderCardDashboard();
+    if (window.showLoading) window.showLoading();
+    if (window.showToast && window._getLoadingToast) { const _m = window._getLoadingToast(true); if (_m) window.showToast(_m, 'smail', null, { timeout: 8000 }); }
+
+    // 평점 + 통계도 병렬로 로드 시작
+    fetchRatings();
+    fetchStats();
+
+    try {
+      let url = window.API_URL + '?action=cardRecords&token=' + encodeURIComponent(token);
+      if (selectedCardNo) url += '&cardNo=' + encodeURIComponent(selectedCardNo);
+      const data = await window.gasFetch(url);
+
+      if (data.status === 'success') {
+        cardRecords = data.records || [];
+        cardCurrentRecords = cardRecords;
+        cardFetchState = 'loaded';
+      } else if (data.error === 'SESSION_EXPIRED') {
+        cardFetchState = 'sso-fail';
+        if (window.showToast) window.showToast('세션이 만료됐어. 다시 로그인해줘.', 'sad');
+      } else if (data.error === 'NO_SESSION') {
+        cardFetchState = 'no-session';
+      } else if (data.error === 'WEBANK_SSO_FAIL') {
+        cardFetchState = 'sso-fail';
+        if (window.showToast) window.showToast('Bizplay 연결에 실패했어.', 'sad');
+      } else {
+        cardFetchState = 'error';
+      }
+    } catch (e) {
+      cardFetchState = 'error';
+    }
+
+    if (window.hideLoading) window.hideLoading();
+    renderCardDashboard();
+  }
+
+  /* ─── Bizplay 재로그인 안내 ─── */
+  window._cardBizLogin = function() {
+    window.showToast('로그아웃 후 Bizplay로 로그인해줘.', 'sad', $('cardNoRecords'));
+  };
+
+  /* ─── 카드 전환 ─── */
+  window._switchCard = function(cardNo) {
+    selectedCardNo = cardNo;
+    cardRecords = [];
+    cardCurrentRecords = [];
+    cardStatsCache = null;
+    cardStatsSelectedMonth = null;
+    cardFetchState = 'idle';
+    fetchCardRecords(true);
+  };
+
+  /* ─── 설정 시트 공통 (모바일: 바텀시트 / PC: 오버레이) ─── */
+  function _isPC() { return window.innerWidth >= 640; }
+  let _sheetAnchor = null;
+
+  function _openCardSheet(title, bodyHtml, anchorEl) {
+    _sheetAnchor = anchorEl || null;
+    $('cardSettingsSheet').style.display = '';
+
+    if (_isPC()) {
+      $('cardSheetTitleP').textContent = title;
+      $('cardSheetBodyP').innerHTML = bodyHtml;
+      const pc = $('cardSheetPC');
+      // 앵커 근처에 위치
+      if (_sheetAnchor) {
+        const r = _sheetAnchor.getBoundingClientRect();
+        pc.style.top = (r.bottom + 8) + 'px';
+        pc.style.left = Math.max(8, Math.min(r.left - 120, window.innerWidth - 316)) + 'px';
+      } else {
+        pc.style.top = '80px';
+        pc.style.left = '50%';
+        pc.style.transform = 'translateX(-50%) scale(.95)';
+      }
+      requestAnimationFrame(() => {
+        pc.classList.remove('opacity-0');
+        pc.classList.add('opacity-100');
+        pc.style.transform = _sheetAnchor ? 'scale(1)' : 'translateX(-50%) scale(1)';
+      });
+    } else {
+      $('cardSheetTitleM').textContent = title;
+      $('cardSheetBodyM').innerHTML = bodyHtml;
+      requestAnimationFrame(() => { $('cardSheetMobile').style.transform = 'translateY(0)'; });
+    }
+  }
+
+  function _closeCardSheet() {
+    if (_isPC()) {
+      const pc = $('cardSheetPC');
+      pc.classList.remove('opacity-100');
+      pc.classList.add('opacity-0');
+      pc.style.transform = _sheetAnchor ? 'scale(.95)' : 'translateX(-50%) scale(.95)';
+    } else {
+      $('cardSheetMobile').style.transform = 'translateY(100%)';
+    }
+    setTimeout(() => { $('cardSettingsSheet').style.display = 'none'; }, 250);
+  }
+  window._closeCardSheet = _closeCardSheet;
+
+  /* ─── 카드 설정 (별칭/한도/밥카 변경) ─── */
+  let _settingsAnchor = null;
+  window._editCardSettings = function(anchorEl) {
+    if (userCards.length === 0) return;
+    _settingsAnchor = anchorEl || null;
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const isLunch = card.isLunchCard;
+    const e = escapeHtml;
+
+    let html = '<div class="space-y-2">';
+    if (!isLunch) {
+      html += '<button onclick="window._showAliasEdit()" class="w-full text-left p-3 rounded-xl border border-border hover:border-accent/50 transition flex items-center gap-3 cursor-pointer">'
+        + '<span class="text-base">✏️</span><div><div class="text-sm font-semibold text-[#47635f]">별칭 변경</div>'
+        + '<div class="text-xs text-[#6e7f7b] mt-0.5">현재: ' + e(card.alias || '없음') + '</div></div></button>';
+      html += '<button onclick="window._showLimitEdit()" class="w-full text-left p-3 rounded-xl border border-border hover:border-accent/50 transition flex items-center gap-3 cursor-pointer">'
+        + '<span class="text-base">💰</span><div><div class="text-sm font-semibold text-[#47635f]">한도 변경</div>'
+        + '<div class="text-xs text-[#6e7f7b] mt-0.5">현재: ' + (card.limit ? formatMoney(card.limit) + '원' : '한도 없음') + '</div></div></button>';
+    }
+    html += '<button onclick="window._showLunchCardPick()" class="w-full text-left p-3 rounded-xl border border-border hover:border-accent/50 transition flex items-center gap-3 cursor-pointer">'
+      + '<span class="text-base">🍚</span><div><div class="text-sm font-semibold text-[#47635f]">밥카 카드 변경</div></div></button>';
+    html += '</div>';
+
+    _openCardSheet('카드 설정', html, _settingsAnchor);
+  };
+
+  /* ─── 시트 내용 교체 헬퍼 ─── */
+  function _updateSheetContent(title, bodyHtml) {
+    if (_isPC()) {
+      $('cardSheetTitleP').textContent = title;
+      $('cardSheetBodyP').innerHTML = bodyHtml;
+    } else {
+      $('cardSheetTitleM').textContent = title;
+      $('cardSheetBodyM').innerHTML = bodyHtml;
+    }
+  }
+
+  /* ─── 별칭 변경 뷰 ─── */
+  window._showAliasEdit = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const html = '<input id="cardAliasInput" type="text" value="' + escapeHtml(card.alias || '') + '" placeholder="별칭 입력 (비우면 삭제)"'
+      + ' class="w-full border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent" style="background:var(--surface,#fff);">'
+      + '<button onclick="window._saveAlias()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">저장</button>';
+    _updateSheetContent('별칭 변경', html);
+    setTimeout(() => { const inp = $('cardAliasInput'); if (inp) inp.focus(); }, 100);
+  };
+  window._saveAlias = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const val = ($('cardAliasInput') || {}).value || '';
+    _closeCardSheet();
+    _callCardInfo('updateAlias', { cardNo: card.cardNo, alias: val });
+  };
+
+  /* ─── 한도 변경 뷰 ─── */
+  window._showLimitEdit = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const html = '<input id="cardLimitInput" type="number" value="' + (card.limit || 0) + '" placeholder="금액 (0=한도없음)"'
+      + ' class="w-full border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent" style="background:var(--surface,#fff);">'
+      + '<p class="text-xs text-[#6e7f7b] mt-1.5">0을 입력하면 한도를 해제해</p>'
+      + '<button onclick="window._saveLimit()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">저장</button>';
+    _updateSheetContent('한도 변경', html);
+    setTimeout(() => { const inp = $('cardLimitInput'); if (inp) inp.focus(); }, 100);
+  };
+  window._saveLimit = function() {
+    const card = userCards.find(c => c.cardNo === selectedCardNo) || userCards[0];
+    const val = ($('cardLimitInput') || {}).value || '0';
+    _closeCardSheet();
+    _callCardInfo('updateLimit', { cardNo: card.cardNo, limit: val });
+  };
+
+  /* ─── 밥카 카드 변경 뷰 ─── */
+  window._showLunchCardPick = function() {
+    let html = '<div class="space-y-2">';
+    userCards.forEach(c => {
+      const checked = c.isLunchCard ? ' checked' : '';
+      const tag = c.isLunchCard ? '<span class="text-xs text-accent ml-auto font-semibold">현재 밥카</span>' : '';
+      html += '<label class="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:border-accent/50 transition'
+        + (c.isLunchCard ? ' border-accent bg-accent/5' : '') + '">'
+        + '<input type="radio" name="lunchPick" value="' + c.cardNo + '"' + checked + ' class="accent-[var(--accent)]">'
+        + '<span class="text-sm font-medium text-[#47635f]">' + escapeHtml(cardDisplayName(c)) + '</span>' + tag + '</label>';
+    });
+    html += '</div>';
+    html += '<button onclick="window._saveLunchCard()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">변경</button>';
+    _updateSheetContent('밥카 카드 변경', html);
+  };
+  window._saveLunchCard = function() {
+    const picked = document.querySelector('input[name="lunchPick"]:checked');
+    if (!picked) return;
+    _closeCardSheet();
+    _callCardInfo('setLunchCard', { cardNo: picked.value });
+  };
+
+  /* ─── 카드 목록 새로고침 ─── */
+  window._refreshCards = async function() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    if (window.showLoading) window.showLoading();
+    try {
+      const url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=refresh';
+      const data = await window.gasFetch(url);
+      if (data.status === 'success' && data.cards) {
+        userCards = data.cards;
+        if (window.showToast) window.showToast('카드 목록 갱신 완료', 'ok');
+        renderCardSelector();
+      } else {
+        if (window.showToast) window.showToast(data.message || '갱신 실패', 'sad');
+      }
+    } catch (e) {
+      if (window.showToast) window.showToast('갱신 실패: ' + e.message, 'sad');
+    }
+    if (window.hideLoading) window.hideLoading();
+  };
+
+  /* ─── 카드정보 API 호출 공통 ─── */
+  async function _callCardInfo(subAction, params) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    if (window.showLoading) window.showLoading();
+    try {
+      let url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=' + subAction;
+      Object.keys(params || {}).forEach(k => {
+        url += '&' + k + '=' + encodeURIComponent(params[k]);
+      });
+      const data = await window.gasFetch(url);
+      if (data.status === 'success' && data.cards) {
+        userCards = data.cards;
+        const lunch = userCards.find(c => c.isLunchCard);
+        if (lunch) selectedCardNo = lunch.cardNo;
+        localStorage.setItem('cardRegistered_' + (window._knoxId || ''), '1');
+        if (window.showToast) window.showToast('저장 완료', 'ok');
+        cardFetchState = 'idle';
+        fetchCardRecords(true);
+      } else if (data.status === 'needsChoice') {
+        _showLunchCardChoice(data.candidates, data.allCards);
+      } else {
+        if (window.showToast) window.showToast(data.message || '실패', 'sad');
+      }
+    } catch (e) {
+      if (window.showToast) window.showToast('오류: ' + e.message, 'sad');
+    }
+    if (window.hideLoading) window.hideLoading();
+  }
+
+  /* ─── 밥카 카드 선택 팝업 (신규 등록 시) ─── */
+  let _lunchChoiceCandidates = null, _lunchChoiceAllCards = null;
+  function _showLunchCardChoice(candidates, allCards) {
+    _lunchChoiceCandidates = candidates;
+    _lunchChoiceAllCards = allCards;
+    let html = '<div class="space-y-2">';
+    (candidates || []).forEach((c, i) => {
+      const checked = i === 0 ? ' checked' : '';
+      html += '<label class="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:border-accent/50 transition">'
+        + '<input type="radio" name="lunchInit" value="' + i + '"' + checked + ' class="accent-[var(--accent)]">'
+        + '<span class="text-sm font-medium text-[#47635f]">' + escapeHtml(maskCardNo(c.cardNo)) + '</span></label>';
+    });
+    html += '</div>';
+    html += '<button onclick="window._saveLunchInit()" class="w-full mt-3 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold hover:brightness-110 transition cursor-pointer">선택</button>';
+    _openCardSheet('밥카 카드를 선택해줘', html);
+  }
+  window._saveLunchInit = function() {
+    const picked = document.querySelector('input[name="lunchInit"]:checked');
+    if (!picked) return;
+    const idx = parseInt(picked.value);
+    _closeCardSheet();
+    if (_lunchChoiceAllCards && _lunchChoiceAllCards.length > 0) {
+      _lunchChoiceAllCards.forEach(c => { c.isLunchCard = c.cardNo === _lunchChoiceCandidates[idx].cardNo; });
+      const token = localStorage.getItem('token');
+      const url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=saveAllCards&cards=' + encodeURIComponent(JSON.stringify(_lunchChoiceAllCards));
+      window.gasFetch(url).then(data => {
+        if (data.status === 'success' && data.cards) {
+          userCards = data.cards;
+          const lunch = userCards.find(c => c.isLunchCard);
+          selectedCardNo = lunch ? lunch.cardNo : (userCards[0] || {}).cardNo || '';
+          cardSetupState = 'registered';
+          localStorage.setItem('cardRegistered_' + (window._knoxId || ''), '1');
+          fetchCardRecords(true);
+        }
+      });
+    } else {
+      _callCardInfo('setLunchCard', { cardNo: _lunchChoiceCandidates[idx].cardNo });
+    }
+  };
+
+  /* ─── 최초 카드 등록 플로우 ─── */
+  async function _checkAndRegisterCards() {
+    if (cardSetupState === 'registered' || cardSetupState === 'loading') return;
+    if (userCards.length > 0) { cardSetupState = 'registered'; return; }
+
+    // localStorage 캐시 확인
+    const knoxId = window._knoxId || '';
+    if (localStorage.getItem('cardRegistered_' + knoxId)) {
+      // 캐시 있지만 서버에 데이터 없음 → 재등록 필요할 수 있으나 일단 스킵
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    const session = localStorage.getItem('bizplay_session');
+    if (!token || !session) return;
+
+    cardSetupState = 'loading';
+    if (window.showToast) window.showToast('밥카를 찾고 있어!', 'info');
+
+    try {
+      const url = window.API_URL + '?action=cardInfo&token=' + encodeURIComponent(token) + '&subAction=register';
+      const data = await window.gasFetch(url);
+
+      if (data.status === 'success' && data.cards) {
+        userCards = data.cards;
+        const lunch = userCards.find(c => c.isLunchCard);
+        selectedCardNo = lunch ? lunch.cardNo : (userCards[0] || {}).cardNo || '';
+        cardSetupState = 'registered';
+        localStorage.setItem('cardRegistered_' + knoxId, '1');
+        if (window.showToast) window.showToast('밥카를 찾았어!', 'ok');
+      } else if (data.status === 'needsChoice') {
+        if (window.showToast) window.showToast('아.. 넌 법인카드가 더 있구나.. 좀 더 기다려줘', 'smail', null, { timeout: 3500 });
+        setTimeout(() => { _showLunchCardChoice(data.candidates, data.allCards); }, 2000);
+      } else {
+        cardSetupState = 'idle';
+      }
+    } catch (e) {
+      cardSetupState = 'idle';
+    }
+  }
+
+  /* ─── 외부 인터페이스 ─── */
+  window.initCardModule = function(data) {
+    cardAlarmOn = !!(data.userInfo && data.userInfo.isCardAlarmAgreed);
+    window._menuAlarmOn = !!(data.userInfo && data.userInfo.isMenuAlarmAgreed);
+    window._userInfoData = data.userInfo || {};
+    hasBizplayPw = !!(data.userInfo && data.userInfo.hasBizplayPw);
+    cardAutoMode = (data.userInfo && data.userInfo.cardAutoMode) || 'off';
+
+    // 다중카드 정보 로드
+    if (data.cardInfo && data.cardInfo.length > 0) {
+      userCards = data.cardInfo;
+      const lunch = userCards.find(c => c.isLunchCard);
+      selectedCardNo = lunch ? lunch.cardNo : (userCards[0] || {}).cardNo || '';
+      cardSetupState = 'registered';
+    }
+
+    renderCardDashboard();
+    // fetchCardRecords는 밥카 탭 클릭 시 switchTab에서 호출
+  };
+
+  window.fetchCardRecords = fetchCardRecords;
+
+  // 초기 렌더링 (예산 프레임만 표시)
+  renderCardDashboard();
+})();
+</script>
