@@ -145,7 +145,6 @@ tailwind.config = {
         <span class="px-1 rounded" style="background:rgba(71,99,95,0.12);">무료 인프라라 좀 느려!</span><br>
       </p>
       <div class="bg-surface-2 rounded-lg px-3 py-2 text-center">도움이 필요하면 <span class="text-[#6e7f7b] font-medium">인재성장파트 김우정 프로</span>에게!</div>
-      <p class="text-center text-[10px] text-[#6e7f7b]/50 mt-2 tracking-[0.12em] select-none">Engineered by D2S</p>
     </div>
   </div>
   </div>
@@ -158,9 +157,7 @@ tailwind.config = {
     <div class="max-w-2xl mx-auto px-5 py-3.5 flex items-center justify-between flex-wrap gap-3">
       <div class="flex items-center gap-3">
         <div class="header-icon-wrap">
-          <img id="headerSmail" src="../img/preview-full-256.png" alt="QuickLogin" class="icon-visible object-cover">
-          <img id="headerDance" src="../img/dance1.gif" alt="dancing" class="icon-hidden">
-          <img id="headerLoading" src="../img/dance2.gif" alt="loading" class="icon-hidden">
+          <img id="headerSmail" src="../img/crying.png" alt="mascot" class="icon-visible object-cover">
         </div>
         <div>
           <div class="text-xl font-bold leading-tight"><span class="brand-name">Biz<span class="brand-sub">Flow</span></span> <span id="verBadgeHeader" class="relative text-[9px] font-semibold bg-accent/15 text-accent px-1.5 py-0.5 rounded-full align-middle cursor-pointer hover:bg-accent/25 transition-colors" onclick="showReleaseNotes()"><span class="ver-new-dot hidden absolute -top-0.5 -right-0.5 w-2 h-2 bg-pink-400/70 rounded-full"></span></span></div>
@@ -1878,37 +1875,10 @@ Object.defineProperty(window, 'records', { get() { return records; } });
 Object.defineProperty(window, 'remainBudget', { get() { return remainBudget; } });
 
 /* ═══════════════ 헤더 아이콘 상태 관리 ═══════════════ */
-// 상태: 'smail' (기본) | 'dance' (idle) | 'loading' (로딩)
-let idleTimer = null;
-let iconState = 'smail';
 let isLoading = false;
-const IDLE_MS = 10000;
 
-function setHeaderIcon(state) {
-  const smail = $('headerSmail');
-  const dance = $('headerDance');
-  const loading = $('headerLoading');
-  const wrap = smail?.parentElement;
-  if (!smail || !dance || !loading) return;
-  iconState = state;
-  // 모두 숨김
-  smail.classList.remove('icon-visible'); smail.classList.add('icon-hidden');
-  dance.classList.remove('icon-visible'); dance.classList.add('icon-hidden');
-  loading.classList.remove('icon-visible'); loading.classList.add('icon-hidden');
-  if (wrap) wrap.classList.remove('dancing');
-  // 해당 상태만 표시
-  if (state === 'loading') {
-    loading.classList.remove('icon-hidden'); loading.classList.add('icon-visible');
-  } else if (state === 'dance') {
-    dance.classList.remove('icon-hidden'); dance.classList.add('icon-visible');
-    if (wrap) wrap.classList.add('dancing');
-  } else {
-    smail.classList.remove('icon-hidden'); smail.classList.add('icon-visible');
-  }
-}
-
-function showLoading() { isLoading = true; clearTimeout(idleTimer); setHeaderIcon('loading'); }
-function hideLoading() { isLoading = false; resetIdleTimer(); hideToast(); }
+function showLoading() { isLoading = true; }
+function hideLoading() { isLoading = false; hideToast(); }
 function hideToast() {
   clearTimeout(msgBoxTimer);
   const box = $('msgBox');
@@ -1918,22 +1888,7 @@ window.showLoading = showLoading;
 window.hideLoading = hideLoading;
 window.hideToast = hideToast;
 
-function showDance() { if (!isLoading) setHeaderIcon('dance'); }
-function showSmail() { if (!isLoading) setHeaderIcon('smail'); }
-
-function resetIdleTimer() {
-  if (isLoading) return;
-  showSmail();
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(showDance, IDLE_MS);
-}
-
-function initIdleWatcher() {
-  ['pointerdown','pointermove','keydown','scroll','touchstart'].forEach(evt =>
-    document.addEventListener(evt, resetIdleTimer, { passive: true })
-  );
-  idleTimer = setTimeout(showDance, IDLE_MS);
-}
+function initIdleWatcher() {}
 
 /* ═══════════════ 시작 ═══════════════ */
 document.addEventListener('DOMContentLoaded', init);
