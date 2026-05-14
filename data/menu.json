@@ -1,0 +1,162 @@
+[
+    {
+        "id": 5,
+        "name": "아메리카노",
+        "nameEnglish": "Americano",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "[진한 고소함] 견과류 풍미와 초콜릿처럼 달콤 쌉싸름한 맛이 밸런스 있게 어우러진 균형잡힌 바디감의 커피  ",
+        "price": 2500,
+        "imageUrl": "/images/menu/아메리카노.jpg",
+        "tags": [
+            "고소한",
+            "달지 않음",
+            "쓴맛",
+            "에스프레소",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "8,18,37,39,66,86,87,;18,36,39,41,86,;"
+    },
+    {
+        "id": 473,
+        "name": "시그니처아메리카노",
+        "nameEnglish": "Signature Americano",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "[화사한 산미] 은은한 과일향의 부담없는 산미와 카라멜의 단맛, 견과의 풍미가 어우러진 감칠맛이  가득한 커피 ",
+        "price": 2900,
+        "imageUrl": "/images/menu/시그니처아메리카노.jpg",
+        "tags": [
+            "고소한",
+            "달지 않음",
+            "신맛",
+            "에스프레소",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "8,18,37,65,66,86,87,;18,36,41,65,86,;"
+    },
+    {
+        "id": 9,
+        "name": "카페라떼",
+        "nameEnglish": "Cafe Latte",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "고소한 우유에 진한 에스프레소를 넣어 부드럽게 즐기는 커피 (두유로 변경가능해요.)",
+        "price": 3300,
+        "imageUrl": "/images/menu/카페라떼.jpg",
+        "tags": [
+            "고소한",
+            "달지 않음",
+            "쓴맛",
+            "에스프레소",
+            "우유",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "6,10,18,39,66,72,79,80,86,87,;10,18,39,72,79,80,86,;"
+    },
+    {
+        "id": 817,
+        "name": "핑크아메리카노",
+        "nameEnglish": "Pink Americano",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "은은한 과일향과 단맛, 꽃향기를 담은 바나프레소 핑크베이스에 에스프레소를 더해 화사한 맛을 살린 아메리카노(복숭아 함유)",
+        "price": 3000,
+        "imageUrl": "/images/menu/핑크아메리카노.jpg",
+        "tags": [
+            "과일",
+            "단맛",
+            "신맛",
+            "에스프레소",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "8,37,39,66,72,86,87,;36,39,41,72,86,;"
+    },
+    {
+        "id": 11,
+        "name": "바닐라라떼",
+        "nameEnglish": "Vanilla Latte",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "마다가스카르산 바닐라빈이 들어가 바닐라 맛과 향이 더욱 깊고 풍부해진 바닐라 라떼",
+        "price": 3900,
+        "imageUrl": "/images/menu/바닐라라떼.jpg",
+        "tags": [
+            "고소한",
+            "단맛",
+            "쓴맛",
+            "에스프레소",
+            "우유",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "2,5,6,10,39,66,72,79,80,86,87,90,;2,5,10,39,72,79,80,86,90,;"
+    },
+    {
+        "id": 818,
+        "name": "핑크카페라떼",
+        "nameEnglish": "Pink Cafe Latte",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "고소하고 풍부한 맛과 핑크 색상이 눈길을 사로잡는 고소하고 깊은 맛의 바나프레소 시그니처 핑크 카페라떼(견과류 함유)",
+        "price": 3500,
+        "imageUrl": "/images/menu/핑크카페라떼.jpg",
+        "tags": [
+            "고소한",
+            "달지 않음",
+            "에스프레소",
+            "우유",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "6,39,66,72,86,87,;39,72,86,;"
+    },
+    {
+        "id": 14,
+        "name": "콜드브루",
+        "nameEnglish": "Cold Brew",
+        "category": "커피",
+        "categoryEnglish": "COFFEE",
+        "description": "저온에서 천천히 우려내 더욱 깔끔한 맛을 자랑하는, 바나프레소 콜드브루",
+        "price": 3300,
+        "imageUrl": "/images/menu/콜드브루.jpg",
+        "tags": [
+            "고소한",
+            "달지 않음",
+            "카페인",
+            "콜드브루",
+            "ICE"
+        ],
+        "optionIds": "6,8,18,66,86,87,"
+    },
+    {
+        "id": 540,
+        "name": "제로슈가 스위트아메리카노",
+        "nameEnglish": "Zero Sugar Sweet Americano",
+        "category": "저당&제로슈가",
+        "categoryEnglish": "LOW & ZERO SUGAR",
+        "description": "스테비아가 첨가 된 아메리카노로 칼로리, 당 걱정없는 달콤한 아메리카노",
+        "price": 3100,
+        "imageUrl": "/images/menu/제로슈가 스위트아메리카노.jpg",
+        "tags": [
+            "고소한",
+            "단맛",
+            "쓴맛",
+            "에스프레소",
+            "카페인",
+            "HOT",
+            "ICE"
+        ],
+        "optionIds": "8,37,39,66,72,86,87,;36,39,41,72,86,;"
+    }
+]
